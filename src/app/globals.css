@@ -26,23 +26,23 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: Arial, Helvetica, sans-serif;
+  --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 :root {
   --radius: 0.75rem;
-  --background: #fafafa;
-  --foreground: #191919;
+  --background: #f5f5f5;
+  --foreground: #212121;
   --card: #ffffff;
-  --card-foreground: #191919;
-  --primary: #bb371e;
-  --primary-foreground: #ffffff;
-  --secondary: #f0f0ef;
-  --muted: #f4f4f3;
-  --muted-foreground: #656561;
-  --border: #e4e4e1;
-  --destructive: #b91c1c;
+  --card-foreground: #212121;
+  --primary: #f9b129;
+  --primary-foreground: #212121;
+  --secondary: #fef1cc;
+  --muted: #eeeeee;
+  --muted-foreground: #6b6b6b;
+  --border: #e1e1e1;
+  --destructive: #f45959;
 }
 
 .dark {
@@ -78,6 +78,56 @@
     cursor: pointer;
   }
   ::selection {
-    background: #bb371e22;
+    background: #f9b12966;
+  }
+}
+
+@layer components {
+  .dashboard-shell {
+    background: #f5f5f5;
+    color: #212121;
+  }
+
+  .dashboard-card {
+    border: 1px solid #e1e1e1;
+    border-radius: 16px;
+    background: #ffffff;
+  }
+
+  .map-grid {
+    background-color: #f6efe1;
+    background-image:
+      linear-gradient(#e8d9bd 1px, transparent 1px),
+      linear-gradient(90deg, #e8d9bd 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .lab-floor {
+    transform-origin: center;
+    transform-style: preserve-3d;
+  }
+
+  .lab-room {
+    box-shadow:
+      inset 0 -8px 0 rgb(33 33 33 / 7%),
+      0 14px 20px rgb(33 33 33 / 10%);
+    transition:
+      transform 180ms ease,
+      box-shadow 180ms ease,
+      border-color 180ms ease;
+  }
+
+  .lab-room:hover,
+  .lab-room:focus-visible {
+    transform: translateY(-4px);
+    box-shadow:
+      inset 0 -8px 0 rgb(33 33 33 / 7%),
+      0 18px 24px rgb(33 33 33 / 15%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lab-room {
+      transition: none;
+    }
   }
 }

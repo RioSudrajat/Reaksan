@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   index,
   pgTable,
@@ -22,7 +23,9 @@ export const notes = pgTable(
       .notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
-      .$onUpdate(() => new Date())
+      // Use the database clock so update timestamps never trail the insert
+      // timestamp when the app host clock runs slightly behind PostgreSQL.
+      .$onUpdate(() => sql`now()`)
       .notNull(),
   },
   (table) => [

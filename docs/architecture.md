@@ -7,7 +7,7 @@ src/
   app/
     page.tsx                    starter welcome and first prompt
     (auth)/                     sign-in and sign-up pages
-    (protected)/app/page.tsx     blank, authenticated application
+    (protected)/student/         authenticated student workspace
     api/auth/[...all]/route.ts   Better Auth's HTTP endpoints
     api/notes/route.ts           authenticated list/create example
     api/notes/[id]/route.ts      authenticated read/update/delete example
@@ -40,7 +40,7 @@ scripts/                        setup, diagnosis, migrations, safe copying
 
 ## Request flow
 
-The browser form calls Better Auth through `/api/auth`. Better Auth validates credentials, hashes passwords, writes through Drizzle, and manages session cookies. The browser redirects to `/app`. The protected layout and page read the session through Better Auth before displaying user information. Signout revokes the session through the same library.
+The browser form calls Better Auth through `/api/auth`. Better Auth validates credentials, hashes passwords, writes through Drizzle, and manages session cookies. The browser redirects to `/student`. The protected layout and page read the session through Better Auth before displaying user information. Signout revokes the session through the same library.
 
 `getSession()` is React-request-cached, not persistently cached between users. `requireSession()` redirects anonymous visitors to `/sign-in`. The base does not implement a second token system, middleware cookie-only authorization, or a custom password hasher.
 

@@ -65,6 +65,35 @@ The [Notes API](docs/backend.md) demonstrates the standard: **API routes → Bet
 
 The same doc covers **role-based access**: `src/lib/permissions.ts` declares resources and roles, `/api/admin/notes` and `/admin` are guarded by permissions rather than a session alone, and `npm run role:set -- you@example.com admin` promotes an account. Signup can never set a role.
 
+## Reaksan workspaces
+
+| Workspace | Path | Who can open it |
+| --------- | ---- | --------------- |
+| Student | `/student` | Any signed-in account |
+| PLP | `/plp/dashboard` | `plp` and `admin` |
+| Admin | `/admin/dashboard` | `admin` |
+
+The PLP workspace reviews requests, issues and returns resources, records inspection results, manages inventory views, incidents, and operational history. Every lab keeps its own equipment and material stock, and a PLP only sees the labs the admin assigned through `/admin/assignments`; a PLP without an assignment sees an empty workspace with a clear notice. The admin workspace owns master data, assignments, configuration, and audit logs, plus the runtime role-permission editor in **Peran & akses** (`/admin/roles`). Non-permitted accounts render the not-found page, and every API answers 403 before touching data.
+
+Seed demo accounts for local development only:
+
+```sh
+npm run db:seed:accounts
+```
+
+That creates `admin`, `plp`, `lecturer`, `aslab`, `student1`, and `student2` accounts at `@reaksan.local`. The default development password is documented in `scripts/seed-accounts.mjs`; override it with `SEED_ACCOUNT_PASSWORD`.
+
+### Test two roles in one browser
+
+A session cookie is shared by every tab on the same origin, so signing in as another account replaces the first one. Cookies are host-scoped, not port-scoped, so use the two local host aliases of the same dev server:
+
+```text
+http://localhost:3001    -> student account
+http://127.0.0.1:3001    -> PLP or admin account
+```
+
+Both hostnames hit the same app. In development the 127.0.0.1 alias of the configured origin is trusted automatically; add real extra hosts (staging, tunnels) with `BETTER_AUTH_TRUSTED_ORIGINS=https://staging.example.com` in `.env.local` when needed. Alternative: open the second account in an incognito window or another browser profile.
+
 ## Commands
 
 | Command                       | What it does                                                             |
@@ -79,6 +108,9 @@ The same doc covers **role-based access**: `src/lib/permissions.ts` declares res
 | `npm run doctor`              | Check config, database connection, auth tables, and AI files             |
 | `npm run db:generate`         | Generate migration SQL after a schema edit                               |
 | `npm run db:migrate`          | Apply committed migrations                                               |
+| `npm run db:seed`             | Seed the lab catalog (5 labs, equipment, materials); safe to rerun        |
+| `npm run db:seed:fresh`       | Delete demo catalog and transactions, then seed again (accounts kept)    |
+| `npm run db:seed:accounts`    | Seed local demo accounts for every role (development only)                |
 | `npm run role:set`            | Grant a role: `npm run role:set -- you@example.com admin`                |
 | `npm run db:studio`           | Inspect the database with Drizzle Studio                                 |
 | `npm run check`               | Lint, typecheck, and tests against disposable PostgreSQL                 |
@@ -92,7 +124,9 @@ Tests require Docker even if your app uses a hosted database. They launch a uniq
 ## Customize and extend
 
 - Identity: `starter.config.json` and `src/config/site.ts`.
-- Your first feature: `src/app/(protected)/app/page.tsx`.
+- Student workspace: `src/app/(protected)/student/` (the old `/app` links redirect).
+- PLP workspace: `src/app/(protected)/plp/` with services in `src/services/plp.service.ts` and `requests.service.ts`.
+- Admin workspace: `src/app/(protected)/admin/` with services in `src/services/admin.service.ts` and `settings.service.ts`.
 - UI tokens: `src/app/globals.css`.
 - Tables: `src/db/schema/` (export tables from `index.ts`); use `pgTable`, PostgreSQL booleans, and timestamps.
 - Add UI primitives: `npx shadcn@4.21.0 add dialog`.

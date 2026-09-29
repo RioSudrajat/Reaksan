@@ -1,0 +1,1 @@
+ALTER TABLE "media" ALTER COLUMN "uploaded_by_id" DROP NOT NULL;

@@ -1,0 +1,2 @@
+ALTER TABLE "issue_transaction" ADD COLUMN "equipment_unit_id" uuid;--> statement-breakpoint
+ALTER TABLE "issue_transaction" ADD CONSTRAINT "issue_transaction_equipment_unit_id_equipment_unit_id_fk" FOREIGN KEY ("equipment_unit_id") REFERENCES "public"."equipment_unit"("id") ON DELETE no action ON UPDATE no action;

@@ -7,12 +7,14 @@ import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { siteConfig } from "@/config/site";
 import { env } from "@/lib/env";
+import { trustedOrigins } from "@/lib/origins";
 import { ac, ADMIN_ROLES, DEFAULT_ROLE, roles } from "@/lib/permissions";
 
 export const auth = betterAuth({
   appName: siteConfig.name,
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
+  trustedOrigins: trustedOrigins(),
   database: drizzleAdapter(db, { provider: "pg", schema }),
   advanced: { cookiePrefix: `ngodingpakeai-${siteConfig.id}` },
   emailAndPassword: {

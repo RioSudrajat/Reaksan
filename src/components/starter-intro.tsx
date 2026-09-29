@@ -77,7 +77,7 @@ export function StarterIntro({ signedIn }: { signedIn: boolean }) {
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Button asChild size="lg">
-              <Link href={signedIn ? "/app" : "/sign-up"}>
+              <Link href={signedIn ? "/student" : "/sign-up"}>
                 {signedIn ? "Open your app" : "Create an account"}
                 <ArrowRight aria-hidden="true" />
               </Link>

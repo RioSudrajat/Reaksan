@@ -44,7 +44,10 @@ Errors use `{ "error": { "code": "...", "message": "..." } }`, with field `detai
 Ownership answers "is this row mine?". Roles answer "may this account reach past its own rows?". The starter ships a worked example of the second question using the Better Auth admin plugin.
 
 ```text
-src/lib/permissions.ts   statement (resources → actions) and roles built from it
+src/lib/permissions.ts   statement (resources → actions) and default roles built from it
+src/lib/permission-copy.ts  plain-language labels for the access screen
+src/db/schema/app-role.ts   app_role table: runtime permission overrides per role
+src/services/permissions.service.ts  permission checks and role editing
 src/lib/auth.ts          admin({ ac, roles, defaultRole, adminRoles })
 src/lib/auth-client.ts   adminClient({ ac, roles }) for UI-only checks
 src/lib/session.ts       requirePermission / hasPermission for pages
@@ -92,14 +95,20 @@ export function GET(request: Request) {
 const { user } = await requirePermission({ notes: ["read-any"] });
 ```
 
-Both helpers read the stored role, so revoking a role takes effect on the next request rather than when the session expires. Hiding a link with `hasPermission` or the client's `authClient.admin.checkRolePermission` is presentation only; it never replaces the server check.
+Both helpers read the stored role and the `app_role` overrides, so revoking a role or changing role permissions takes effect on the next request rather than when the session expires. Hiding a link with `hasPermission` or the client's `authClient.admin.checkRolePermission` is presentation only; it never replaces the server check.
+
+Admins edit non-admin roles at runtime from **Peran & akses** (`/admin/roles`), which calls `PATCH /api/admin/roles/:role`. A missing `app_role` row means the compile-time defaults in `src/lib/permissions.ts` apply, so a fresh database behaves exactly like the code. The `admin` role row is never editable and always resolves to the full default set, which keeps Better Auth's own account endpoints reachable. Better Auth's `user.*` and `session.*` resources stay admin-only and cannot be granted from the screen.
 
 | Method | Path                   | Result                                                   |
 | ------ | ---------------------- | -------------------------------------------------------- |
 | GET    | `/api/admin/notes`     | 200, every account's notes plus `ownerName`/`ownerEmail` |
 | DELETE | `/api/admin/notes/:id` | 204, deletes any account's note                          |
 
-Cross-account service functions carry an `Any` suffix (`listAnyNotes`, `deleteAnyNote`) because they deliberately skip the ownership filter. They are only safe behind a permission check — never call them from a handler that merely has a session. Ordinary `listNotes`/`deleteNote` stay scoped to the session user even for an admin, so `/admin` and `/app` show different things to the same person.
+Cross-account service functions carry an `Any` suffix (`listAnyNotes`, `deleteAnyNote`) because they deliberately skip the ownership filter. They are only safe behind a permission check — never call them from a handler that merely has a session. Ordinary `listNotes`/`deleteNote` stay scoped to the session user even for an admin, so `/admin` and `/student` show different things to the same person.
+
+Reaksan extends the statement with the resources its workspaces own: `plp`, `requests`, `inventory`, `schedule`, `history`, `incidents`, `labs`, `rooms`, `equipment`, `materials`, `assignments`, `configuration`, and `audit`. `roles.plp` holds request review, fulfillment, inventory reads, and incident handling. `roles.admin` adds master data, assignment, and configuration management. PLP pages guard with `requirePermission({ plp: ["view"] })`; PLP and admin APIs guard with the exact action they need, for example `{ requests: ["review-any"] }` or `{ equipment: ["manage-any"] }`. `npm run db:seed:accounts` creates one demo account per role for local development.
+
+PLP access is also scoped per lab. `src/services/access-scope.service.ts` resolves the active `assignment` rows (scope `ROOM` or `LABORATORY`) into room codes; admin bypasses the scope, and a PLP without an assignment sees nothing. Services accept `roomCodes` (`null` = no scope filter) and the API routes that act on a single request, incident, or opname session assert that the record belongs to an assigned lab.
 
 The admin plugin also adds `banned`, `banReason`, `banExpires`, and `session.impersonatedBy`, plus its own `/api/auth/admin/*` endpoints for user management. Those are guarded by the `user` and `session` actions in `defaultStatements`, which only `admin` holds here.
 

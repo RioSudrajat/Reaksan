@@ -1,0 +1,2474 @@
+"use client";
+
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
+import {
+  AlignLeft,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  FlaskConical,
+  GraduationCap,
+  Search,
+  Trash2,
+  UsersRound,
+  Wrench,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { cn } from "cn";
+import {
+  displayBarClasses,
+  displayBadgeClasses,
+  displayDotClasses,
+  displayLabels,
+  displayOrder,
+  equipmentBreakdown,
+  eventDisplayState,
+  eventsForRange,
+  formatRangeLabel,
+  isOwnEvent,
+  monthName,
+  requestStatusLabels,
+  splitEventTime,
+  type RequestEquipmentItem,
+  type RequestMaterialItem,
+  type RequestStatus,
+  type ScheduleEvent,
+} from "@/components/schedule-data";
+import { useLabCatalog } from "@/components/lab-catalog-context";
+import { apiRequest, errorMessage } from "@/components/student-api";
+import { StatusBadge } from "@/components/reaksan-dashboard";
+import { EquipmentGlyph } from "@/components/equipment-glyph";
+import { CatalogImage } from "@/components/catalog-image";
+
+// Small catalog thumbnail used inside dense lists and calendar bars.
+function ResourceThumb({
+  mediaId,
+  alt,
+  size = 24,
+  className,
+}: {
+  mediaId?: string | null;
+  alt: string;
+  size?: number;
+  className?: string;
+}) {
+  if (!mediaId) return null;
+  return (
+    <CatalogImage
+      mediaId={mediaId}
+      alt={alt}
+      size={size}
+      className={cn("shrink-0 rounded-md", className)}
+    />
+  );
+}
+
+export type { ScheduleEvent };
+
+export type DayRange = { start: number; end: number };
+
+export type ScheduleCardContext = {
+  range: DayRange;
+  label: string;
+  month: { year: number; month: number };
+  events: ScheduleEvent[];
+  source: "range" | "event";
+  eventId?: string;
+  selectionId: number;
+  close: () => void;
+};
+
+const WEEKDAYS = ["MIN", "SEN", "SEL", "RAB", "KAM", "JUM", "SAB"];
+
+const MAX_LANES = 3;
+
+function atMidnight(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function addDays(date: Date, days: number) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+}
+
+function sameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function dateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function subscribeToNothing() {
+  return () => {};
+}
+
+function readTodayKey() {
+  return new Date().toDateString();
+}
+
+function readServerTodayKey() {
+  return null;
+}
+
+function buildWeeks(view: Date) {
+  const first = new Date(view.getFullYear(), view.getMonth(), 1);
+  const daysInMonth = new Date(
+    view.getFullYear(),
+    view.getMonth() + 1,
+    0,
+  ).getDate();
+  const leading = first.getDay();
+  const total = Math.ceil((leading + daysInMonth) / 7) * 7;
+  const start = addDays(first, -leading);
+  const cells = Array.from({ length: total }, (_, index) =>
+    addDays(start, index),
+  );
+  const weeks: Date[][] = [];
+  for (let index = 0; index < cells.length; index += 7) {
+    weeks.push(cells.slice(index, index + 7));
+  }
+  return weeks;
+}
+
+type WeekBar = {
+  event: ScheduleEvent;
+  lane: number;
+  startCol: number;
+  endCol: number;
+  openStart: boolean;
+  openEnd: boolean;
+};
+
+function eventStartDate(event: ScheduleEvent, view: Date) {
+  return new Date(
+    view.getFullYear(),
+    view.getMonth(),
+    Math.min(event.startDay, event.endDay),
+  );
+}
+
+function eventEndDate(event: ScheduleEvent, view: Date) {
+  return new Date(
+    view.getFullYear(),
+    view.getMonth(),
+    Math.max(event.startDay, event.endDay),
+  );
+}
+
+function layoutWeek(week: Date[], events: ScheduleEvent[], view: Date) {
+  const weekStart = week[0];
+  const weekEnd = week[6];
+  const items = events
+    .map((event) => ({
+      event,
+      start: eventStartDate(event, view),
+      end: eventEndDate(event, view),
+    }))
+    .filter((item) => item.start <= weekEnd && item.end >= weekStart)
+    .sort(
+      (a, b) =>
+        a.start.getTime() - b.start.getTime() ||
+        b.end.getTime() -
+          b.start.getTime() -
+          (a.end.getTime() - a.start.getTime()),
+    );
+
+  const laneEnds: Date[] = [];
+  const bars: WeekBar[] = [];
+  for (const item of items) {
+    const segmentStart = item.start < weekStart ? weekStart : item.start;
+    const segmentEnd = item.end > weekEnd ? weekEnd : item.end;
+    let lane = laneEnds.findIndex((end) => end < segmentStart);
+    if (lane === -1) {
+      lane = laneEnds.length;
+      laneEnds.push(segmentEnd);
+    } else {
+      laneEnds[lane] = segmentEnd;
+    }
+    bars.push({
+      event: item.event,
+      lane,
+      startCol: Math.round(
+        (segmentStart.getTime() - weekStart.getTime()) / 86400000,
+      ),
+      endCol: Math.round(
+        (segmentEnd.getTime() - weekStart.getTime()) / 86400000,
+      ),
+      openStart: item.start < weekStart,
+      openEnd: item.end > weekEnd,
+    });
+  }
+  return { bars, laneCount: laneEnds.length };
+}
+
+function CalendarGrid({
+  view,
+  selection,
+  todayKey,
+  onCellPointerDown,
+  onCellPointerEnter,
+  onCellKeyDown,
+  renderCell,
+  rootRef,
+}: {
+  view: Date;
+  selection: { start: Date; end: Date } | null;
+  todayKey: string | null;
+  onCellPointerDown: (
+    event: ReactPointerEvent<HTMLDivElement>,
+    date: Date,
+    el: HTMLDivElement,
+    inMonth: boolean,
+  ) => void;
+  onCellPointerEnter?: (date: Date, inMonth: boolean) => void;
+  onCellKeyDown?: (
+    event: ReactKeyboardEvent<HTMLDivElement>,
+    date: Date,
+    el: HTMLDivElement,
+    inMonth: boolean,
+  ) => void;
+  renderCell?: (context: {
+    date: Date;
+    inMonth: boolean;
+    row: number;
+    col: number;
+  }) => ReactNode;
+  rootRef: RefObject<HTMLDivElement | null>;
+}) {
+  const weeks = useMemo(() => buildWeeks(view), [view]);
+  const rangeStart = selection
+    ? selection.start <= selection.end
+      ? selection.start
+      : selection.end
+    : null;
+  const rangeEnd = selection
+    ? selection.start <= selection.end
+      ? selection.end
+      : selection.start
+    : null;
+
+  return (
+    <div ref={rootRef} className="overflow-x-auto overscroll-x-contain">
+      <div>
+        <div className="grid grid-cols-7 border-b border-[#E1E1E1] bg-[#FAFAF8]">
+          {WEEKDAYS.map((weekday) => (
+            <div
+              key={weekday}
+              className="border-r border-[#E1E1E1] px-2 py-2 text-center text-[10px] font-bold tracking-[0.08em] text-[#6B6B6B] last:border-r-0"
+            >
+              {weekday}
+            </div>
+          ))}
+        </div>
+        <div
+          role="grid"
+          aria-label={`${monthName(view.getMonth())} ${view.getFullYear()}`}
+        >
+          {weeks.map((week, row) => (
+            <div key={dateKey(week[0])} className="grid grid-cols-7" role="row">
+              {week.map((date, col) => {
+                const inMonth = date.getMonth() === view.getMonth();
+                const inRange =
+                  Boolean(rangeStart && rangeEnd) &&
+                  date >= (rangeStart as Date) &&
+                  date <= (rangeEnd as Date);
+                const isToday = todayKey === date.toDateString();
+                const isEdge =
+                  Boolean(rangeStart && rangeEnd) &&
+                  (sameDay(date, rangeStart as Date) ||
+                    sameDay(date, rangeEnd as Date));
+                return (
+                  <div
+                    key={dateKey(date)}
+                    role="gridcell"
+                    tabIndex={inMonth ? 0 : -1}
+                    data-schedule-date={dateKey(date)}
+                    aria-selected={inRange}
+                    aria-label={`${date.getDate()} ${monthName(date.getMonth())} ${date.getFullYear()}`}
+                    onPointerDown={(event) =>
+                      onCellPointerDown(
+                        event,
+                        date,
+                        event.currentTarget,
+                        inMonth,
+                      )
+                    }
+                    onPointerEnter={() => onCellPointerEnter?.(date, inMonth)}
+                    onKeyDown={(event) =>
+                      onCellKeyDown?.(event, date, event.currentTarget, inMonth)
+                    }
+                    className={cn(
+                      "relative select-none border-b border-r border-[#E1E1E1] p-1.5 pb-1 last:border-r-0 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#6E8EDA]",
+                      "min-h-[104px] sm:min-h-[124px]",
+                      inMonth ? "bg-white" : "bg-[#FBFBFA]",
+                      inRange && "bg-[#E9EEFC]",
+                    )}
+                  >
+                    <div className="flex h-7 items-center justify-between gap-1">
+                      <span
+                        className={cn(
+                          "flex size-7 items-center justify-center rounded-full text-[12px] font-semibold tabular-nums",
+                          inMonth ? "text-[#212121]" : "text-[#B7B7B7]",
+                          isToday &&
+                            inMonth &&
+                            !isEdge &&
+                            "bg-[#DCE6FA] font-bold text-[#274077]",
+                          isEdge && inRange && "bg-[#38529B] text-white",
+                        )}
+                      >
+                        {date.getDate()}
+                      </span>
+                    </div>
+                    {renderCell?.({ date, inMonth, row, col })}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function ScheduleCalendar({
+  events,
+  eventsMonth,
+  toolbar,
+  footer,
+  emptyLabel = "No schedule blocks match this filter.",
+  renderCard,
+  className,
+  ariaLabel = "Monthly schedule",
+  selectable = true,
+}: {
+  events: ScheduleEvent[];
+  eventsMonth: { year: number; month: number };
+  toolbar?: ReactNode;
+  footer?: ReactNode;
+  emptyLabel?: string;
+  renderCard?: (context: ScheduleCardContext) => ReactNode;
+  className?: string;
+  ariaLabel?: string;
+  selectable?: boolean;
+}) {
+  const [view, setView] = useState(
+    () => new Date(eventsMonth.year, eventsMonth.month, 1),
+  );
+  const [selection, setSelection] = useState<{
+    start: Date;
+    end: Date;
+  } | null>(null);
+  const [card, setCard] = useState<{
+    range: DayRange;
+    source: "range" | "event";
+    eventId?: string;
+    selectionId: number;
+  } | null>(null);
+  const [cardPosition, setCardPosition] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    anchorTop: number;
+  } | null>(null);
+  const todayKey = useSyncExternalStore(
+    subscribeToNothing,
+    readTodayKey,
+    readServerTodayKey,
+  );
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [cardSize, setCardSize] = useState({ width: 0, height: 0 });
+
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const anchorElRef = useRef<HTMLElement | null>(null);
+  const selectionCounterRef = useRef(0);
+  const dragRef = useRef<{
+    start: Date;
+    end: Date;
+    lastEl: HTMLElement;
+    active: boolean;
+  } | null>(null);
+
+  // Events carry their real start date, so the grid can show the matching month
+  // even while the user navigates months beyond the initially rendered one.
+  const eventMonths = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Jakarta",
+      year: "numeric",
+      month: "2-digit",
+    });
+    const map = new Map<string, string>();
+    for (const event of events) {
+      map.set(event.id, formatter.format(new Date(event.startAt)));
+    }
+    return map;
+  }, [events]);
+  const viewKey = `${view.getFullYear()}-${String(view.getMonth() + 1).padStart(2, "0")}`;
+  const visibleEvents = useMemo(
+    () => events.filter((event) => eventMonths.get(event.id) === viewKey),
+    [events, eventMonths, viewKey],
+  );
+
+  const weekLayouts = useMemo(
+    () =>
+      buildWeeks(view).map((week) => ({
+        week,
+        ...layoutWeek(week, visibleEvents, view),
+      })),
+    [view, visibleEvents],
+  );
+
+  const closeCard = useCallback(() => {
+    setCard(null);
+    setCardPosition(null);
+    setSelectedEventId(null);
+  }, []);
+
+  const positionCard = useCallback((anchor: HTMLElement) => {
+    const rect = anchor.getBoundingClientRect();
+    const margin = 8;
+    const width = Math.min(380, window.innerWidth - margin * 2);
+    const left = Math.min(
+      Math.max(rect.left + rect.width / 2 - width / 2, margin),
+      window.innerWidth - width - margin,
+    );
+    setCardPosition({
+      left,
+      top: rect.bottom + 8,
+      width,
+      anchorTop: rect.top,
+    });
+  }, []);
+
+  const openCard = useCallback(
+    (
+      range: DayRange,
+      anchor: HTMLElement,
+      source: "range" | "event",
+      eventId?: string,
+    ) => {
+      selectionCounterRef.current += 1;
+      anchorElRef.current = anchor;
+      positionCard(anchor);
+      setCard({
+        range,
+        source,
+        eventId,
+        selectionId: selectionCounterRef.current,
+      });
+    },
+    [positionCard],
+  );
+
+  useLayoutEffect(() => {
+    if (!card || !cardRef.current) return;
+    const el = cardRef.current;
+    const observer = new ResizeObserver(() => {
+      const next = { width: el.offsetWidth, height: el.offsetHeight };
+      setCardSize((current) =>
+        current.width === next.width && current.height === next.height
+          ? current
+          : next,
+      );
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [card]);
+
+  useEffect(() => {
+    if (!card || !anchorElRef.current) return;
+    const anchor = anchorElRef.current;
+    let frame = 0;
+    const update = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => positionCard(anchor));
+    };
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [card, positionCard]);
+
+  useEffect(() => {
+    if (!card) return;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeCard();
+    };
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (cardRef.current?.contains(target)) return;
+      if (anchorElRef.current?.contains(target)) return;
+      closeCard();
+    };
+    document.addEventListener("keydown", handleKey);
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+    };
+  }, [card, closeCard]);
+
+  useEffect(() => {
+    const finish = () => {
+      const drag = dragRef.current;
+      if (!drag?.active) return;
+      dragRef.current = null;
+      const start = drag.start <= drag.end ? drag.start : drag.end;
+      const end = drag.start <= drag.end ? drag.end : drag.start;
+      setSelection({ start, end });
+      openCard(
+        { start: start.getDate(), end: end.getDate() },
+        drag.lastEl,
+        "range",
+      );
+    };
+    const cancel = () => {
+      dragRef.current = null;
+    };
+    window.addEventListener("pointerup", finish);
+    window.addEventListener("pointercancel", cancel);
+    return () => {
+      window.removeEventListener("pointerup", finish);
+      window.removeEventListener("pointercancel", cancel);
+    };
+  }, [openCard]);
+
+  const cardStyle = useMemo(() => {
+    if (!cardPosition) return undefined;
+    const margin = 8;
+    const height = cardSize.height;
+    let top = cardPosition.top;
+    if (height > 0 && top + height > window.innerHeight - margin) {
+      const above = cardPosition.anchorTop - height - margin;
+      top = above > margin ? above : Math.max(margin, top - height - 16);
+    }
+    return { left: cardPosition.left, top, width: cardPosition.width };
+  }, [cardPosition, cardSize.height]);
+
+  const handleCellPointerDown = useCallback(
+    (
+      event: ReactPointerEvent<HTMLDivElement>,
+      date: Date,
+      el: HTMLDivElement,
+      inMonth: boolean,
+    ) => {
+      if (!inMonth) {
+        if (event.pointerType !== "touch") {
+          setView(new Date(date.getFullYear(), date.getMonth(), 1));
+          setSelection(null);
+          closeCard();
+        }
+        return;
+      }
+      if (!selectable) return;
+      if (event.button !== 0) return;
+      const target = event.target as HTMLElement;
+      if (target.closest("[data-schedule-bar]")) return;
+      const normalized = atMidnight(date);
+      if (event.pointerType !== "touch") event.preventDefault();
+      dragRef.current = {
+        start: normalized,
+        end: normalized,
+        lastEl: el,
+        active: true,
+      };
+      setSelection({ start: normalized, end: normalized });
+      if (event.pointerType !== "touch") {
+        setCard(null);
+        setSelectedEventId(null);
+      }
+    },
+    [closeCard, selectable],
+  );
+
+  const handleCellPointerEnter = useCallback((date: Date, inMonth: boolean) => {
+    const drag = dragRef.current;
+    if (!drag?.active || !inMonth) return;
+    setSelection({ start: drag.start, end: atMidnight(date) });
+    drag.end = atMidnight(date);
+    const el = rootRef.current?.querySelector<HTMLElement>(
+      `[data-schedule-date="${dateKey(date)}"]`,
+    );
+    if (el) drag.lastEl = el;
+  }, []);
+
+  const handleCellKeyDown = useCallback(
+    (
+      event: ReactKeyboardEvent<HTMLDivElement>,
+      date: Date,
+      el: HTMLDivElement,
+      inMonth: boolean,
+    ) => {
+      if (!inMonth) return;
+      if ((event.key === "Enter" || event.key === " ") && selectable) {
+        event.preventDefault();
+        const normalized = atMidnight(date);
+        setSelection({ start: normalized, end: normalized });
+        setSelectedEventId(null);
+        openCard({ start: date.getDate(), end: date.getDate() }, el, "range");
+        return;
+      }
+      const offsets: Record<string, number> = {
+        ArrowLeft: -1,
+        ArrowRight: 1,
+        ArrowUp: -7,
+        ArrowDown: 7,
+      };
+      const offset = offsets[event.key];
+      if (offset === undefined) return;
+      event.preventDefault();
+      const next = addDays(date, offset);
+      const target = rootRef.current?.querySelector<HTMLElement>(
+        `[data-schedule-date="${dateKey(next)}"]`,
+      );
+      if (target) {
+        target.focus();
+      } else {
+        setView(new Date(next.getFullYear(), next.getMonth(), 1));
+      }
+    },
+    [openCard, selectable],
+  );
+
+  const handleBarSelect = useCallback(
+    (event: ScheduleEvent, el: HTMLElement) => {
+      const start = Math.min(event.startDay, event.endDay);
+      const end = Math.max(event.startDay, event.endDay);
+      setSelection({
+        start: new Date(view.getFullYear(), view.getMonth(), start),
+        end: new Date(view.getFullYear(), view.getMonth(), end),
+      });
+      setSelectedEventId(event.id);
+      openCard({ start, end }, el, "event", event.id);
+    },
+    [openCard, view],
+  );
+
+  const cardEvents = card
+    ? eventsForRange(visibleEvents, card.range)
+    : [];
+
+  return (
+    <div
+      className={cn(
+        "relative rounded-2xl border border-[#E1E1E1] bg-white",
+        className,
+      )}
+      aria-label={ariaLabel}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E1E1E1] px-4 py-3 sm:px-5">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#929292]">
+            {ariaLabel}
+          </p>
+          <h3 className="mt-1 text-[17px] font-bold text-[#212121] tabular-nums">
+            {monthName(view.getMonth())} {view.getFullYear()}
+          </h3>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => {
+              const target = todayKey ? new Date(todayKey) : new Date();
+              setView(new Date(target.getFullYear(), target.getMonth(), 1));
+              closeCard();
+            }}
+            className="flex h-10 items-center rounded-lg border border-[#E1E1E1] px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setView(new Date(view.getFullYear(), view.getMonth() - 1, 1));
+              closeCard();
+            }}
+            className="flex size-10 items-center justify-center rounded-lg border border-[#E1E1E1] text-[#6B6B6B] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+            aria-label="Previous month"
+          >
+            <ChevronLeft className="size-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setView(new Date(view.getFullYear(), view.getMonth() + 1, 1));
+              closeCard();
+            }}
+            className="flex size-10 items-center justify-center rounded-lg border border-[#E1E1E1] text-[#6B6B6B] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+            aria-label="Next month"
+          >
+            <ChevronRight className="size-4" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+
+      {toolbar && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-[#EEEEEE] px-4 py-3 sm:px-5">
+          {toolbar}
+        </div>
+      )}
+
+      {visibleEvents.length === 0 && (
+        <p className="border-b border-[#EEEEEE] bg-[#FAFAF8] px-4 py-2 text-[11px] text-[#6B6B6B] sm:px-5">
+          {emptyLabel}
+        </p>
+      )}
+
+      <CalendarGrid
+        view={view}
+        selection={selection}
+        todayKey={todayKey}
+        rootRef={rootRef}
+        onCellPointerDown={handleCellPointerDown}
+        onCellPointerEnter={handleCellPointerEnter}
+        onCellKeyDown={handleCellKeyDown}
+        renderCell={({ date, inMonth, row }) => {
+          if (!inMonth) return null;
+          const layout = weekLayouts[row];
+          if (!layout) return null;
+          const col = Math.round(
+            (date.getTime() - layout.week[0].getTime()) / 86400000,
+          );
+          const laneBars: Array<WeekBar | null> = Array.from(
+            { length: Math.min(layout.laneCount, MAX_LANES) },
+            (_, lane) =>
+              layout.bars.find(
+                (bar) =>
+                  bar.lane === lane &&
+                  bar.startCol <= col &&
+                  bar.endCol >= col,
+              ) ?? null,
+          );
+          const dayBars = layout.bars.filter(
+            (bar) => bar.startCol <= col && bar.endCol >= col,
+          );
+          const hiddenCount = Math.max(0, dayBars.length - MAX_LANES);
+          return (
+            <div className="-mx-1.5 mt-1 space-y-[3px]">
+              {laneBars.map((bar, lane) => {
+                if (!bar) {
+                  return (
+                    <span
+                      key={`empty-${lane}`}
+                      className="block h-[22px] sm:h-[18px]"
+                      aria-hidden="true"
+                    />
+                  );
+                }
+                const startsHere = bar.startCol === col;
+                const endsHere = bar.endCol === col;
+                const roundLeft = startsHere && !bar.openStart;
+                const roundRight = endsHere && !bar.openEnd;
+                return (
+                  <button
+                    type="button"
+                    data-schedule-bar="true"
+                    key={`${bar.event.id}-${dateKey(date)}`}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleBarSelect(bar.event, event.currentTarget);
+                    }}
+                    className={cn(
+                      "block h-[22px] w-full truncate border px-1.5 text-left text-[9.5px] font-semibold leading-[20px] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#212121] sm:h-[18px] sm:leading-[16px]",
+                      displayBarClasses[eventDisplayState(bar.event)],
+                      roundLeft && "rounded-l-[4px]",
+                      roundRight && "rounded-r-[4px]",
+                      !roundLeft && "border-l-0",
+                      !roundRight && "border-r-0",
+                      selectedEventId === bar.event.id &&
+                        "ring-2 ring-[#212121] ring-offset-1",
+                    )}
+                    aria-label={`${bar.event.title}, ${eventDisplayState(bar.event)}, ${bar.event.time}`}
+                  >
+                    <span className="hidden items-center gap-1 sm:inline-flex">
+                      {startsHere || bar.openStart ? (
+                        <>
+                          <ResourceThumb
+                            mediaId={bar.event.imageMediaId}
+                            alt=""
+                            size={12}
+                            className="rounded-[3px] border-0"
+                          />
+                          <span className="truncate">{bar.event.title}</span>
+                        </>
+                      ) : (
+                        "\u00A0"
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+              {hiddenCount > 0 &&
+                (selectable ? (
+                  <button
+                    type="button"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      const day = date.getDate();
+                      setSelection({
+                        start: atMidnight(date),
+                        end: atMidnight(date),
+                      });
+                      setSelectedEventId(null);
+                      openCard(
+                        { start: day, end: day },
+                        event.currentTarget,
+                        "range",
+                      );
+                    }}
+                    className="block w-full text-left text-[9.5px] font-bold text-[#38529B] hover:underline"
+                  >
+                    +{hiddenCount} more
+                  </button>
+                ) : (
+                  <span className="block w-full text-left text-[9.5px] font-bold text-[#6B6B6B]">
+                    +{hiddenCount} more
+                  </span>
+                ))}
+            </div>
+          );
+        }}
+      />
+
+      <div className="flex flex-wrap items-center gap-3 border-t border-[#E1E1E1] px-4 py-3 text-[10px] font-semibold text-[#6B6B6B] sm:px-5">
+        {displayOrder
+          .filter((state) =>
+            visibleEvents.some((event) => eventDisplayState(event) === state),
+          )
+          .map((state) => (
+            <span key={state} className="inline-flex items-center gap-1.5">
+              <span
+                className={cn(
+                  "size-2 rounded-full",
+                  displayDotClasses[state],
+                )}
+                aria-hidden="true"
+              />
+              {displayLabels[state]}
+            </span>
+          ))}
+        {footer ?? (
+          <span className="ml-auto text-[#929292]">
+            {selectable
+              ? "Drag across dates to block a range, or select a block for details"
+              : "Select a block to see its details"}
+          </span>
+        )}
+      </div>
+
+      {card && renderCard && cardStyle && (
+        <div
+          ref={cardRef}
+          role="dialog"
+          aria-label="Schedule details"
+          tabIndex={-1}
+          style={cardStyle}
+          className="fixed z-50 rounded-2xl border border-[#E1E1E1] bg-white p-4 shadow-[0_18px_40px_rgba(33,33,33,0.16)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+        >
+          <button
+            type="button"
+            onClick={closeCard}
+            aria-label="Close details"
+            className="absolute right-3 top-3 flex size-8 items-center justify-center rounded-lg text-[#6B6B6B] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+          >
+            <X className="size-4" aria-hidden="true" />
+          </button>
+          <div className="max-h-[min(70vh,540px)] overflow-y-auto pr-6">
+            {renderCard({
+              range: card.range,
+              label: formatRangeLabel(card.range, {
+                year: view.getFullYear(),
+                month: view.getMonth(),
+              }),
+              month: { year: view.getFullYear(), month: view.getMonth() },
+              events: cardEvents,
+              source: card.source,
+              eventId: card.eventId,
+              selectionId: card.selectionId,
+              close: closeCard,
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function statusSteps(event: ScheduleEvent) {
+  if (event.status === "CONFIRMED")
+    return [
+      { label: "Shared usage disetujui", state: "done" as const },
+      { label: "Terlihat di kalender semua pihak", state: "done" as const },
+    ];
+  const order: RequestStatus[] = [
+    "PENDING_PLP",
+    "APPROVED",
+    "READY_FOR_PICKUP",
+    "ACTIVE",
+    "RETURNED",
+    "COMPLETED",
+  ];
+  const labels = [
+    "Diajukan",
+    "Review PLP",
+    "Disetujui",
+    "Disiapkan",
+    "Sedang digunakan",
+    "Dikembalikan",
+    "Selesai",
+  ];
+  if (event.status === "REJECTED" || event.status === "CANCELLED")
+    return [
+      { label: "Diajukan", state: "done" as const },
+      { label: "Review PLP", state: "done" as const },
+      {
+        label: event.status === "REJECTED" ? "Ditolak" : "Dibatalkan",
+        state: "stopped" as const,
+      },
+    ];
+  const currentIndex =
+    event.status === "REQUEST_REVISION" ? 1 : order.indexOf(event.status) + 1;
+  return labels.map((label, index) => ({
+    label,
+    state:
+      index < currentIndex
+        ? ("done" as const)
+        : index === currentIndex
+          ? ("current" as const)
+          : ("todo" as const),
+  }));
+}
+
+export function ScheduleEventCard({
+  event,
+  rangeLabel,
+  roomName,
+  actions,
+  showTimeline = false,
+}: {
+  event: ScheduleEvent;
+  rangeLabel: string;
+  roomName?: string;
+  actions?: ReactNode;
+  showTimeline?: boolean;
+}) {
+  const display = eventDisplayState(event);
+  const steps = statusSteps(event);
+  return (
+    <article className="rounded-xl border border-[#EEEEEE] bg-white p-3">
+      <div className="flex items-start gap-3">
+        <span
+          className={cn(
+            "mt-1 size-2.5 shrink-0 rounded-full",
+            displayDotClasses[display],
+          )}
+          aria-hidden="true"
+        />
+        <div className="min-w-0 flex-1">
+          {event.requestCode && (
+            <p className="text-[10px] font-bold text-[#929292] [font-variant-numeric:tabular-nums]">
+              {event.requestCode}
+            </p>
+          )}
+          <h4 className="text-[14px] font-bold text-[#212121]">
+            {event.title}
+          </h4>
+          <p className="mt-1 text-[11px] font-medium text-[#6B6B6B]">
+            {rangeLabel} · {event.time}
+          </p>
+        </div>
+        <span
+          className={cn(
+            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
+            displayBadgeClasses[display],
+          )}
+        >
+          {requestStatusLabels[display]}
+        </span>
+      </div>
+      <dl className="mt-3 space-y-2 border-t border-[#F1F1F1] pt-3 text-[11px]">
+        <div className="flex gap-3">
+          <dt className="w-16 shrink-0 font-semibold text-[#929292]">User</dt>
+          <dd className="min-w-0 flex-1 text-[#212121]">{event.actor}</dd>
+        </div>
+        {roomName && (
+          <div className="flex gap-3">
+            <dt className="w-16 shrink-0 font-semibold text-[#929292]">Room</dt>
+            <dd className="min-w-0 flex-1 text-[#212121]">{roomName}</dd>
+          </div>
+        )}
+        {event.equipment && event.equipment.length > 0 ? (
+          <div className="flex gap-3">
+            <dt className="w-16 shrink-0 font-semibold text-[#929292]">
+              Equipment
+            </dt>
+            <dd className="min-w-0 flex-1 space-y-1 text-[#212121]">
+              {event.equipment.map((item) => (
+                <span key={item.unitId} className="flex items-start gap-2">
+                  <ResourceThumb
+                    mediaId={item.imageMediaId}
+                    alt={item.name}
+                    size={22}
+                    className="mt-0.5"
+                  />
+                  <span className="min-w-0">
+                    {item.name}
+                    <span className="text-[#929292]">
+                      {" "}
+                      · {item.unitLabel} · {item.unitId}
+                    </span>
+                  </span>
+                </span>
+              ))}
+            </dd>
+          </div>
+        ) : event.resourceId ? (
+          <div className="flex gap-3">
+            <dt className="w-16 shrink-0 font-semibold text-[#929292]">
+              Resource
+            </dt>
+            <dd className="min-w-0 flex-1 text-[#212121]">
+              {event.resourceId}
+              {event.resourceUnit ? ` · ${event.resourceUnit}` : ""}
+            </dd>
+          </div>
+        ) : null}
+        {event.materials && event.materials.length > 0 && (
+          <div className="flex gap-3">
+            <dt className="w-16 shrink-0 font-semibold text-[#929292]">
+              Materials
+            </dt>
+            <dd className="min-w-0 flex-1 space-y-1 text-[#212121]">
+              {event.materials.map((item) => (
+                <span key={item.id} className="flex items-start gap-2">
+                  <ResourceThumb
+                    mediaId={item.imageMediaId}
+                    alt={item.name}
+                    size={22}
+                    className="mt-0.5"
+                  />
+                  <span className="min-w-0">
+                    {item.name} · {item.quantity} {item.unit}
+                  </span>
+                </span>
+              ))}
+            </dd>
+          </div>
+        )}
+        {event.supervisor && (
+          <div className="flex gap-3">
+            <dt className="w-16 shrink-0 font-semibold text-[#929292]">
+              Supervisor
+            </dt>
+            <dd className="min-w-0 flex-1 text-[#212121]">{event.supervisor}</dd>
+          </div>
+        )}
+        {event.fieldPic && (
+          <div className="flex gap-3">
+            <dt className="w-16 shrink-0 font-semibold text-[#929292]">
+              Field PIC
+            </dt>
+            <dd className="min-w-0 flex-1 text-[#212121]">{event.fieldPic}</dd>
+          </div>
+        )}
+        {event.mode && (
+          <div className="flex gap-3">
+            <dt className="w-16 shrink-0 font-semibold text-[#929292]">Type</dt>
+            <dd className="min-w-0 flex-1 text-[#212121]">
+              {event.mode === "shared"
+                ? "Shared use request"
+                : "Borrow request"}
+            </dd>
+          </div>
+        )}
+        <div className="flex gap-3">
+          <dt className="w-16 shrink-0 font-semibold text-[#929292]">
+            Purpose
+          </dt>
+          <dd className="min-w-0 flex-1 leading-5 text-[#212121]">
+            {event.purpose}
+          </dd>
+        </div>
+        {event.issuedAt && (
+          <div className="flex gap-3">
+            <dt className="w-16 shrink-0 font-semibold text-[#929292]">
+              Issued
+            </dt>
+            <dd className="min-w-0 flex-1 text-[#212121]">
+              {new Date(event.issuedAt).toLocaleString("id-ID", {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
+            </dd>
+          </div>
+        )}
+        {event.returnedAt && (
+          <div className="flex gap-3">
+            <dt className="w-16 shrink-0 font-semibold text-[#929292]">
+              Returned
+            </dt>
+            <dd className="min-w-0 flex-1 text-[#212121]">
+              {new Date(event.returnedAt).toLocaleString("id-ID", {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
+            </dd>
+          </div>
+        )}
+      </dl>
+      {event.status === "REQUEST_REVISION" && event.revisionNote && (
+        <p className="mt-3 rounded-xl bg-[#FFF4D9] p-3 text-[11px] leading-5 text-[#705012]">
+          Revisi diminta: {event.revisionNote}
+        </p>
+      )}
+      {event.status === "REJECTED" && event.rejectionReason && (
+        <p className="mt-3 rounded-xl bg-[#FDE9E9] p-3 text-[11px] leading-5 text-[#9E3636]">
+          Alasan ditolak: {event.rejectionReason}
+        </p>
+      )}
+      {showTimeline && (
+        <ol className="mt-4 space-y-2 border-t border-[#F1F1F1] pt-3">
+          {steps.map((step) => (
+            <li key={step.label} className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "size-2 rounded-full",
+                  step.state === "done" && "bg-[#048444]",
+                  step.state === "current" && "bg-[#F9B129]",
+                  step.state === "stopped" && "bg-[#F45959]",
+                  step.state === "todo" && "bg-[#E1E1E1]",
+                )}
+                aria-hidden="true"
+              />
+              <span
+                className={cn(
+                  "text-[11px]",
+                  step.state === "todo"
+                    ? "text-[#929292]"
+                    : "font-semibold text-[#212121]",
+                )}
+              >
+                {step.label}
+              </span>
+              {step.state === "current" && (
+                <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#AE7C1D]">
+                  sekarang
+                </span>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+      {actions && (
+        <div className="mt-4 flex flex-wrap gap-2">{actions}</div>
+      )}
+    </article>
+  );
+}
+
+function FormRow({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: LucideIcon;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <Icon
+        className="mt-1 size-4 shrink-0 text-[#6B6B6B]"
+        aria-hidden="true"
+      />
+      <div className="min-w-0 flex-1">
+        <span className="block text-[10px] font-bold uppercase tracking-[0.08em] text-[#929292]">
+          {label}
+        </span>
+        <div className="mt-1">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+const fieldClass =
+  "h-11 w-full rounded-xl border border-[#E1E1E1] bg-white px-2.5 text-[12px] text-[#212121] outline-none focus:border-[#6E8EDA] focus:ring-2 focus:ring-[#6E8EDA]/20";
+
+function PickerThumb({
+  variant,
+  name = "",
+  mediaId,
+}: {
+  variant: "equipment" | "material";
+  name?: string;
+  mediaId?: string | null;
+}) {
+  if (mediaId) {
+    return (
+      <CatalogImage
+        mediaId={mediaId}
+        alt={name || (variant === "equipment" ? "Equipment" : "Material")}
+        size={64}
+        className="shrink-0"
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/70",
+        variant === "equipment"
+          ? "bg-[radial-gradient(circle_at_35%_25%,#FFFFFF_0,#D9E2F8_36%,#B5C5ED_100%)] text-[#38529B]"
+          : "bg-[radial-gradient(circle_at_35%_25%,#FFFFFF_0,#FDE9C8_38%,#F9D39A_100%)] text-[#A45C1B]",
+      )}
+    >
+      <span className="absolute inset-x-3 bottom-2 h-1.5 rounded-full bg-black/10 blur-sm" />
+      <span className="relative flex size-9 items-center justify-center rounded-xl bg-white/75 shadow-[0_6px_12px_rgba(33,33,33,0.14)]">
+        {variant === "equipment" ? (
+          <EquipmentGlyph name={name} className="size-4" />
+        ) : (
+          <FlaskConical className="size-4" aria-hidden="true" />
+        )}
+      </span>
+    </span>
+  );
+}
+
+function PickerShell({
+  title,
+  description,
+  onClose,
+  children,
+  footer,
+}: {
+  title: string;
+  description: string;
+  onClose: () => void;
+  children: ReactNode;
+  footer: ReactNode;
+}) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const element = dialogRef.current;
+    if (!element) return;
+    element.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusables = Array.from(
+        element.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((node) => !node.hasAttribute("disabled"));
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    element.addEventListener("keydown", handleKeyDown);
+    return () => element.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-[#212121]/45 sm:items-center sm:p-4"
+      onPointerDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+        className="flex max-h-[88vh] w-full max-w-[620px] flex-col rounded-t-2xl bg-white shadow-[0_24px_60px_rgba(33,33,33,0.24)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA] sm:rounded-2xl"
+      >
+        <div className="border-b border-[#EEEEEE] p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-[15px] font-bold text-[#212121]">{title}</h3>
+              <p className="mt-1 text-[11px] leading-4 text-[#6B6B6B]">
+                {description}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={`Close ${title}`}
+              className="flex size-10 shrink-0 items-center justify-center rounded-xl text-[#6B6B6B] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+            >
+              <X className="size-4" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#EEEEEE] p-4">
+          {footer}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EquipmentPickerModal({
+  roomId,
+  selected,
+  onChange,
+  onClose,
+}: {
+  roomId: string;
+  selected: RequestEquipmentItem[];
+  onChange: (items: RequestEquipmentItem[]) => void;
+  onClose: () => void;
+}) {
+  const catalog = useLabCatalog();
+  const [query, setQuery] = useState("");
+  const [unitChoice, setUnitChoice] = useState<Record<string, string>>({});
+  const list = catalog.equipment.filter(
+    (asset) =>
+      asset.roomId === roomId &&
+      `${asset.name} ${asset.id} ${asset.room}`
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+  );
+  const catalogRoom = catalog.rooms.find((room) => room.id === roomId);
+  const addedUnitIds = selected.map((item) => item.unitId);
+
+  const addUnit = (assetId: string) => {
+    const asset = catalog.equipment.find((item) => item.id === assetId);
+    if (!asset) return;
+    const units = asset.units;
+    const available = units.filter(
+      (unit) =>
+        unit.status === "Available" && !addedUnitIds.includes(unit.id),
+    );
+    if (available.length === 0) return;
+    const chosen =
+      available.find((unit) => unit.id === unitChoice[assetId]) ??
+      available[0];
+    onChange([
+      ...selected,
+      {
+        id: asset.id,
+        name: asset.name,
+        unitId: chosen.id,
+        unitLabel: chosen.label,
+        imageMediaId: asset.imageMediaId,
+      },
+    ]);
+    const next = available.find((unit) => unit.id !== chosen.id);
+    setUnitChoice((current) => ({ ...current, [assetId]: next?.id ?? "" }));
+  };
+
+  const removeUnit = (unitId: string) => {
+    onChange(selected.filter((item) => item.unitId !== unitId));
+  };
+
+  return (
+    <PickerShell
+      title="Choose equipment"
+      description={`Only equipment tracked in ${catalogRoom?.name ?? roomId} is listed. Units that are in use or under maintenance cannot be selected, and a unit can only be added once.`}
+      onClose={onClose}
+      footer={
+        <>
+          <span className="text-[11px] font-semibold text-[#6B6B6B]">
+            {selected.length} unit{selected.length === 1 ? "" : "s"} selected
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F9B129] px-4 text-[11px] font-bold text-[#212121] hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+          >
+            Done
+          </button>
+        </>
+      }
+    >
+      <label className="relative block">
+        <span className="sr-only">Search equipment</span>
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#929292]"
+          aria-hidden="true"
+        />
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search equipment"
+          className="h-11 w-full rounded-xl border border-[#E1E1E1] pl-9 pr-3 text-[12px] outline-none placeholder:text-[#929292] focus:border-[#6E8EDA] focus:ring-2 focus:ring-[#6E8EDA]/20"
+        />
+      </label>
+      {list.length === 0 && (
+        <p className="mt-4 rounded-xl bg-[#FAFAF8] p-4 text-center text-[11px] leading-5 text-[#6B6B6B]">
+          No equipment is tracked in this room yet. Switch the room in the form
+          to see other equipment.
+        </p>
+      )}
+      <ul className="mt-3 space-y-2">
+        {list.map((asset) => {
+          const units = asset.units;
+          const addedForAsset = selected.filter((item) => item.id === asset.id);
+          const remaining = units.filter(
+            (unit) =>
+              unit.status === "Available" && !addedUnitIds.includes(unit.id),
+          );
+          const chosenId =
+            remaining.find((unit) => unit.id === unitChoice[asset.id])?.id ??
+            remaining[0]?.id ??
+            "";
+          const disabled = remaining.length === 0;
+          return (
+            <li
+              key={asset.id}
+              className={cn(
+                "rounded-2xl border p-3",
+                addedForAsset.length > 0
+                  ? "border-[#F9B129] bg-[#FFFCF3]"
+                  : disabled
+                    ? "border-[#F1F1F1] bg-[#FAFAF8]"
+                    : "border-[#E1E1E1] bg-white",
+              )}
+            >
+              <div className="flex items-start gap-3">
+                <PickerThumb
+                  variant="equipment"
+                  name={asset.name}
+                  mediaId={asset.imageMediaId}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong className="text-[13px] text-[#212121]">
+                      {asset.name}
+                    </strong>
+                    <StatusBadge tone={asset.tone}>{asset.status}</StatusBadge>
+                  </div>
+                  <p className="mt-1 text-[11px] text-[#6B6B6B]">
+                    {asset.room} · {asset.usage} · {equipmentBreakdown(asset)}
+                  </p>
+                  {addedForAsset.length > 0 && (
+                    <ul className="mt-2 space-y-1">
+                      {addedForAsset.map((item) => (
+                        <li
+                          key={item.unitId}
+                          className="flex items-center justify-between gap-2 rounded-lg bg-white px-2 py-1.5 text-[10px] text-[#212121]"
+                        >
+                          <span>
+                            {item.unitLabel} · {item.unitId}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeUnit(item.unitId)}
+                            aria-label={`Remove ${item.unitId}`}
+                            className="inline-flex min-h-8 items-center rounded-md px-2 font-bold text-[#9E3636] hover:bg-[#FDE9E9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <label className="sr-only" htmlFor={`unit-${asset.id}`}>
+                      Unit for {asset.name}
+                    </label>
+                    <select
+                      id={`unit-${asset.id}`}
+                      value={chosenId}
+                      onChange={(event) =>
+                        setUnitChoice((current) => ({
+                          ...current,
+                          [asset.id]: event.target.value,
+                        }))
+                      }
+                      disabled={disabled}
+                      className={cn(fieldClass, "h-10 max-w-[260px] min-w-0 flex-1")}
+                    >
+                      {units.map((unit) => {
+                        const added = addedUnitIds.includes(unit.id);
+                        const unavailable = unit.status !== "Available";
+                        return (
+                          <option
+                            key={unit.id}
+                            value={unit.id}
+                            disabled={unavailable || added}
+                          >
+                            {unit.label} · {unit.id}
+                            {unavailable
+                              ? ` (${unit.status}${unit.holder ? ` · ${unit.holder}` : ""})`
+                              : added
+                                ? " (added)"
+                                : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => addUnit(asset.id)}
+                      disabled={disabled}
+                      className="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#212121] px-3 text-[11px] font-bold text-white hover:bg-[#3A3A3A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA] disabled:cursor-not-allowed disabled:bg-[#E1E1E1] disabled:text-[#929292]"
+                    >
+                      {disabled ? "No free unit" : "Add unit"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </PickerShell>
+  );
+}
+
+function MaterialPickerModal({
+  roomId,
+  selected,
+  onChange,
+  onClose,
+}: {
+  roomId: string;
+  selected: RequestMaterialItem[];
+  onChange: (items: RequestMaterialItem[]) => void;
+  onClose: () => void;
+}) {
+  const catalog = useLabCatalog();
+  const roomMaterials = catalog.materials.filter(
+    (material) => material.roomId === roomId,
+  );
+  const toggle = (id: string) => {
+    const existing = selected.find((item) => item.id === id);
+    if (existing) {
+      onChange(selected.filter((item) => item.id !== id));
+      return;
+    }
+    const material = catalog.materials.find((item) => item.id === id);
+    if (!material || material.options.length === 0) return;
+    onChange([
+      ...selected,
+      {
+        id: material.id,
+        name: material.name,
+        quantity: material.options[0],
+        unit: material.unit,
+        imageMediaId: material.imageMediaId,
+      },
+    ]);
+  };
+
+  const setQuantity = (id: string, quantity: number) => {
+    onChange(
+      selected.map((item) => (item.id === id ? { ...item, quantity } : item)),
+    );
+  };
+
+  return (
+    <PickerShell
+      title="Choose materials"
+      description={`Only materials stored in ${catalog.rooms.find((room) => room.id === roomId)?.name ?? roomId} are listed. Amounts follow the configured dispensing steps, and out-of-stock materials cannot be selected.`}
+      onClose={onClose}
+      footer={
+        <>
+          <span className="text-[11px] font-semibold text-[#6B6B6B]">
+            {selected.length} selected
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F9B129] px-4 text-[11px] font-bold text-[#212121] hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+          >
+            Done
+          </button>
+        </>
+      }
+    >
+      {roomMaterials.length === 0 ? (
+        <div className="rounded-xl bg-[#FAFAF8] p-5 text-center">
+          <p className="text-[12px] font-semibold text-[#212121]">
+            No material is stored in this lab
+          </p>
+          <p className="mt-1 text-[11px] leading-5 text-[#6B6B6B]">
+            Each lab keeps its own stock. Pick equipment from this lab, or ask
+            the lab admin to restock the materials this activity needs.
+          </p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {roomMaterials.map((material) => {
+            const selectedItem = selected.find(
+              (item) => item.id === material.id,
+            );
+            const disabled = material.options.length === 0;
+            return (
+              <li
+                key={material.id}
+                className={cn(
+                  "relative rounded-2xl border p-3",
+                  selectedItem
+                    ? "border-[#F9B129] bg-[#FFFCF3]"
+                    : disabled
+                      ? "border-[#F1F1F1] bg-[#FAFAF8]"
+                      : "border-[#E1E1E1] bg-white hover:border-[#D6C6A6]",
+                )}
+              >
+                <button
+                  type="button"
+                  disabled={disabled}
+                  aria-pressed={Boolean(selectedItem)}
+                  onClick={() => toggle(material.id)}
+                  className="absolute inset-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA] disabled:cursor-not-allowed"
+                >
+                  <span className="sr-only">
+                    {selectedItem
+                      ? `Remove ${material.name} from the request`
+                      : `Add ${material.name} to the request`}
+                  </span>
+                </button>
+                <div className="pointer-events-none relative flex items-start gap-3">
+                  <PickerThumb
+                    variant="material"
+                    name={material.name}
+                    mediaId={material.imageMediaId}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <strong className="text-[13px] text-[#212121]">
+                        {material.name}
+                      </strong>
+                      <StatusBadge tone={material.tone}>
+                        {disabled ? "Out of stock" : "Available"}
+                      </StatusBadge>
+                    </span>
+                    <span className="mt-1 block text-[11px] text-[#6B6B6B]">
+                      {material.id} · {material.category} · {material.room}
+                    </span>
+                    <span className="mt-0.5 block text-[10px] text-[#929292]">
+                      {material.available} {material.unit} tersedia ·{" "}
+                      {material.physical} physical · {material.reserved} reserved
+                      · {material.rule}
+                    </span>
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                      <span
+                        className={cn(
+                          "text-[10px] font-bold",
+                          disabled
+                            ? "text-[#9E3636]"
+                            : selectedItem
+                              ? "text-[#03683A]"
+                              : "text-[#929292]",
+                        )}
+                      >
+                        {disabled
+                          ? "Cannot be added right now"
+                          : selectedItem
+                            ? "Added to this request"
+                            : "Select this card to add it"}
+                      </span>
+                      {selectedItem && (
+                        <span className="pointer-events-auto flex items-center gap-2">
+                          <label
+                            className="text-[10px] font-bold uppercase text-[#929292]"
+                            htmlFor={`pick-material-qty-${material.id}`}
+                          >
+                            Amount
+                          </label>
+                          <select
+                            id={`pick-material-qty-${material.id}`}
+                            value={selectedItem.quantity}
+                            onChange={(event) =>
+                              setQuantity(
+                                material.id,
+                                Number(event.target.value),
+                              )
+                            }
+                            className="h-10 rounded-xl border border-[#E1E1E1] bg-white px-2 text-[12px] tabular-nums"
+                          >
+                            {material.options.map((value) => (
+                              <option key={value} value={value}>
+                                {value} {material.unit}
+                              </option>
+                            ))}
+                          </select>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </PickerShell>
+  );
+}
+
+export type RequestFormDefaults = {
+  title?: string;
+  roomCode?: string;
+  equipment?: RequestEquipmentItem[];
+  materials?: RequestMaterialItem[];
+  startTime?: string;
+  endTime?: string;
+  purpose?: string;
+  supervisor?: string;
+  fieldPic?: string;
+};
+
+function jakartaIso(day: number, time: string, month: { year: number; month: number }) {
+  const date = `${month.year}-${String(month.month + 1).padStart(2, "0")}-${String(
+    day,
+  ).padStart(2, "0")}`;
+  return `${date}T${time}:00+07:00`;
+}
+
+export function ScheduleRequestForm({
+  range,
+  label,
+  month,
+  defaults,
+  editingId,
+  onCancel,
+}: {
+  range: DayRange;
+  label: string;
+  month: { year: number; month: number };
+  defaults?: RequestFormDefaults;
+  editingId?: string;
+  onCancel: () => void;
+}) {
+  const catalog = useLabCatalog();
+  const router = useRouter();
+  const [title, setTitle] = useState(defaults?.title ?? "");
+  const [roomId, setRoomId] = useState(
+    defaults?.roomCode ?? catalog.rooms[0]?.id ?? "",
+  );
+  const [equipment, setEquipment] = useState<RequestEquipmentItem[]>(
+    defaults?.equipment ?? [],
+  );
+  const [materials, setMaterials] = useState<RequestMaterialItem[]>(
+    defaults?.materials ?? [],
+  );
+  const [startTime, setStartTime] = useState(defaults?.startTime ?? "08:00");
+  const [endTime, setEndTime] = useState(defaults?.endTime ?? "12:00");
+  const [purpose, setPurpose] = useState(defaults?.purpose ?? "");
+  const [supervisor, setSupervisor] = useState(defaults?.supervisor ?? "");
+  const [fieldPic, setFieldPic] = useState(defaults?.fieldPic ?? "");
+  const [picker, setPicker] = useState<"equipment" | "materials" | null>(null);
+  const [sent, setSent] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const equipmentTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const materialTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const editing = Boolean(editingId);
+
+  const setMaterialQuantity = (id: string, quantity: number) => {
+    setMaterials((current) =>
+      current.map((item) => (item.id === id ? { ...item, quantity } : item)),
+    );
+  };
+
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    try {
+      await apiRequest(editingId ? `/api/requests/${editingId}` : "/api/requests", {
+        method: editingId ? "PATCH" : "POST",
+        body: {
+          title: title.trim(),
+          purpose: purpose.trim(),
+          roomCode: roomId,
+          startAt: jakartaIso(Math.min(range.start, range.end), startTime, month),
+          endAt: jakartaIso(Math.max(range.start, range.end), endTime, month),
+          supervisor: supervisor.trim(),
+          fieldPic: fieldPic.trim(),
+          equipment: equipment.map((item) => ({
+            unitCode: item.unitId,
+            purpose: purpose.trim(),
+          })),
+          materials: materials.map((item) => ({
+            materialCode: item.id,
+            quantity: item.quantity,
+          })),
+        },
+      });
+      setSent(true);
+      router.refresh();
+    } catch (caught) {
+      setError(errorMessage(caught));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  if (sent) {
+    return (
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#03683A]">
+          Request sent
+        </p>
+        <h4 className="mt-1 text-[15px] font-bold text-[#212121]">
+          {title.trim() || "Untitled request"}
+        </h4>
+        <p className="mt-1 text-[11px] font-medium text-[#6B6B6B]">
+          {label} · {startTime}–{endTime}
+        </p>
+        <p className="mt-2 rounded-xl bg-[#F4FCF7] p-3 text-[11px] leading-5 text-[#03683A]">
+          Request tersimpan di database dan menunggu review PLP. Request ini
+          hanya muncul di room schedule setelah disetujui.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+          >
+            Close
+          </button>
+          <Link
+            href="/student/calendar"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#212121] px-3 text-[11px] font-bold text-white hover:bg-[#3A3A3A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+          >
+            Open My calendar
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <form onSubmit={submit}>
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#929292]">
+          {editing ? "Edit request" : "New request"}
+        </p>
+        <input
+          autoFocus
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="Add title"
+          aria-label="Request title"
+          className="mt-1 w-full border-b-2 border-[#38529B] bg-transparent pb-2 text-[17px] font-semibold text-[#212121] outline-none placeholder:text-[#B7B7B7] focus:border-[#F9B129]"
+        />
+        {error && (
+          <p
+            role="alert"
+            className="mt-3 rounded-xl bg-[#FDE9E9] p-2.5 text-[11px] leading-5 text-[#9E3636]"
+          >
+            {error}
+          </p>
+        )}
+        <div className="mt-4 space-y-4">
+          <FormRow icon={CalendarDays} label="Dates">
+            <p className="text-[13px] font-semibold text-[#212121]">{label}</p>
+            <p className="mt-1 text-[10px] leading-4 text-[#929292]">
+              Block other dates on the calendar to change this range.
+            </p>
+          </FormRow>
+          <FormRow icon={Clock3} label="Time">
+            <div className="flex items-center gap-2">
+              <input
+                type="time"
+                value={startTime}
+                onChange={(event) => setStartTime(event.target.value)}
+                aria-label="Start time"
+                className={cn(fieldClass, "w-[108px] tabular-nums")}
+              />
+              <span className="text-[12px] text-[#6B6B6B]">–</span>
+              <input
+                type="time"
+                value={endTime}
+                onChange={(event) => setEndTime(event.target.value)}
+                aria-label="End time"
+                className={cn(fieldClass, "w-[108px] tabular-nums")}
+              />
+            </div>
+          </FormRow>
+          <FormRow icon={FlaskConical} label="Room">
+            <select
+              value={roomId}
+              onChange={(event) => {
+                const nextRoom = event.target.value;
+                setRoomId(nextRoom);
+                setEquipment((current) =>
+                  current.filter(
+                    (item) =>
+                      catalog.equipment.find((asset) => asset.id === item.id)
+                        ?.roomId === nextRoom,
+                  ),
+                );
+                setMaterials((current) =>
+                  current.filter(
+                    (item) =>
+                      catalog.materials.find(
+                        (material) => material.id === item.id,
+                      )?.roomId === nextRoom,
+                  ),
+                );
+              }}
+              aria-label="Room"
+              className={fieldClass}
+            >
+              {catalog.rooms.map((room) => (
+                <option key={room.id} value={room.id}>
+                  {room.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-[10px] leading-4 text-[#929292]">
+              Equipment and material lists follow this room.
+            </p>
+          </FormRow>
+          <FormRow icon={GraduationCap} label="Supervisor">
+            <input
+              value={supervisor}
+              onChange={(event) => setSupervisor(event.target.value)}
+              aria-label="Supervisor"
+              placeholder="Nama dosen pembimbing"
+              className={fieldClass}
+            />
+            <p className="mt-0.5 text-[10px] text-[#929292]">
+              Tercatat pada request dan terlihat oleh PLP
+            </p>
+          </FormRow>
+          <FormRow icon={UsersRound} label="Field PIC">
+            <input
+              value={fieldPic}
+              onChange={(event) => setFieldPic(event.target.value)}
+              aria-label="Field PIC"
+              placeholder="Aslab atau PLP pendamping"
+              className={fieldClass}
+            />
+          </FormRow>
+          <FormRow icon={Wrench} label="Equipment">
+            <button
+              ref={equipmentTriggerRef}
+              type="button"
+              onClick={() => setPicker("equipment")}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#E1E1E1] bg-white px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+            >
+              Choose equipment
+              {equipment.length > 0 && (
+                <span className="rounded-full bg-[#E9EEFC] px-2 py-0.5 text-[10px] font-bold text-[#38529B]">
+                  {equipment.length}
+                </span>
+              )}
+            </button>
+            {equipment.length > 0 && (
+              <ul className="mt-2 space-y-1.5">
+                {equipment.map((item) => (
+                  <li
+                    key={item.unitId}
+                    className="flex items-center gap-2 rounded-xl border border-[#EEEEEE] bg-[#FAFAF8] px-2.5 py-2"
+                  >
+                    <ResourceThumb
+                      mediaId={item.imageMediaId}
+                      alt={item.name}
+                      size={28}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <strong className="block truncate text-[11px] text-[#212121]">
+                        {item.name}
+                      </strong>
+                      <span className="block text-[10px] text-[#929292]">
+                        {item.unitLabel} · {item.unitId}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEquipment((current) =>
+                          current.filter(
+                            (entry) => entry.unitId !== item.unitId,
+                          ),
+                        )
+                      }
+                      aria-label={`Remove ${item.unitId}`}
+                      className="flex size-10 items-center justify-center rounded-xl text-[#6B6B6B] hover:bg-[#EEEEEE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+                    >
+                      <Trash2 className="size-4" aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </FormRow>
+          <FormRow icon={AlignLeft} label="Materials">
+            <button
+              ref={materialTriggerRef}
+              type="button"
+              onClick={() => setPicker("materials")}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#E1E1E1] bg-white px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+            >
+              Choose materials
+              {materials.length > 0 && (
+                <span className="rounded-full bg-[#E9EEFC] px-2 py-0.5 text-[10px] font-bold text-[#38529B]">
+                  {materials.length}
+                </span>
+              )}
+            </button>
+            {materials.length > 0 && (
+              <ul className="mt-2 space-y-1.5">
+                {materials.map((item) => {
+                  const option = catalog.materials.find(
+                    (entry) => entry.id === item.id,
+                  );
+                  return (
+                    <li
+                      key={item.id}
+                      className="flex items-center gap-2 rounded-xl border border-[#EEEEEE] bg-[#FAFAF8] px-2.5 py-2"
+                    >
+                      <ResourceThumb
+                        mediaId={item.imageMediaId ?? option?.imageMediaId}
+                        alt={item.name}
+                        size={28}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <strong className="block truncate text-[11px] text-[#212121]">
+                          {item.name}
+                        </strong>
+                        <span className="block text-[10px] text-[#929292]">
+                          {item.id} · {option?.available ?? ""}
+                        </span>
+                      </span>
+                      <label
+                        className="text-[10px] font-bold uppercase text-[#929292]"
+                        htmlFor={`material-qty-${item.id}`}
+                      >
+                        Amount
+                      </label>
+                      <select
+                        id={`material-qty-${item.id}`}
+                        value={item.quantity}
+                        onChange={(event) =>
+                          setMaterialQuantity(item.id, Number(event.target.value))
+                        }
+                        className="h-10 rounded-xl border border-[#E1E1E1] bg-white px-2 text-[12px] tabular-nums"
+                      >
+                        {(option?.options ?? [item.quantity]).map((value) => (
+                          <option key={value} value={value}>
+                            {value} {item.unit}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setMaterials((current) =>
+                            current.filter((entry) => entry.id !== item.id),
+                          )
+                        }
+                        aria-label={`Remove ${item.name}`}
+                        className="flex size-10 items-center justify-center rounded-xl text-[#6B6B6B] hover:bg-[#EEEEEE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </FormRow>
+          <FormRow icon={AlignLeft} label="Purpose">
+            <textarea
+              value={purpose}
+              onChange={(event) => setPurpose(event.target.value)}
+              rows={2}
+              placeholder="Temperature, sequence, or coordination notes"
+              aria-label="Purpose"
+              className="w-full rounded-xl border border-[#E1E1E1] p-2.5 text-[12px] leading-5 text-[#212121] outline-none placeholder:text-[#B7B7B7] focus:border-[#6E8EDA] focus:ring-2 focus:ring-[#6E8EDA]/20"
+            />
+          </FormRow>
+        </div>
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-4 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={pending}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F9B129] px-4 text-[11px] font-bold text-[#212121] hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA] disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {pending
+              ? "Memproses..."
+              : editing
+                ? "Simpan & kirim ulang"
+                : "Send request"}
+          </button>
+        </div>
+      </form>
+      {picker === "equipment" && (
+        <EquipmentPickerModal
+          roomId={roomId}
+          selected={equipment}
+          onChange={setEquipment}
+          onClose={() => {
+            setPicker(null);
+            equipmentTriggerRef.current?.focus();
+          }}
+        />
+      )}
+      {picker === "materials" && (
+        <MaterialPickerModal
+          roomId={roomId}
+          selected={materials}
+          onChange={setMaterials}
+          onClose={() => {
+            setPicker(null);
+            materialTriggerRef.current?.focus();
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function toLocalInputValue(iso: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Jakarta",
+  }).formatToParts(new Date(iso));
+  const pick = (type: string) =>
+    parts.find((part) => part.type === type)?.value ?? "00";
+  return `${pick("year")}-${pick("month")}-${pick("day")}T${pick("hour") === "24" ? "00" : pick("hour")}:${pick("minute")}`;
+}
+
+export function SharedUsageForm({
+  event,
+  onCancel,
+}: {
+  event: ScheduleEvent;
+  onCancel: () => void;
+}) {
+  const router = useRouter();
+  const [startAt, setStartAt] = useState(toLocalInputValue(event.startAt));
+  const [endAt, setEndAt] = useState(toLocalInputValue(event.endAt));
+  const [purpose, setPurpose] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+
+  if (!event.reservationId) return null;
+
+  if (sent) {
+    return (
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#03683A]">
+          Permintaan terkirim
+        </p>
+        <h4 className="mt-1 text-[15px] font-bold text-[#212121]">
+          Menunggu jawaban {event.actor}
+        </h4>
+        <p className="mt-2 rounded-xl bg-[#E9EEFC] p-3 text-[11px] leading-5 text-[#38529B]">
+          Pemilik reservation menerima notifikasi. Kalau disetujui, shared usage
+          muncul di kalender kamu tanpa membuat reservation baru.
+        </p>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5]"
+        >
+          Close
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={async (submitEvent) => {
+        submitEvent.preventDefault();
+        setPending(true);
+        setError(null);
+        try {
+          await apiRequest("/api/shared-usage", {
+            method: "POST",
+            body: {
+              reservationId: event.reservationId,
+              startAt: `${startAt}:00+07:00`,
+              endAt: `${endAt}:00+07:00`,
+              purpose: purpose.trim(),
+            },
+          });
+          setSent(true);
+          router.refresh();
+        } catch (caught) {
+          setError(errorMessage(caught));
+        } finally {
+          setPending(false);
+        }
+      }}
+    >
+      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#929292]">
+        Shared usage request
+      </p>
+      <h4 className="mt-1 text-[15px] font-bold text-[#212121]">
+        {event.equipment?.[0]?.name ?? event.resourceId} · {event.resourceUnit}
+      </h4>
+      <p className="mt-1 text-[11px] text-[#6B6B6B]">
+        Reservation {event.actor} · {event.roomName}
+      </p>
+      {error && (
+        <p
+          role="alert"
+          className="mt-3 rounded-xl bg-[#FDE9E9] p-2.5 text-[11px] leading-5 text-[#9E3636]"
+        >
+          {error}
+        </p>
+      )}
+      <div className="mt-4 space-y-3">
+        <label className="block text-[11px] font-semibold text-[#212121]">
+          Mulai
+          <input
+            type="datetime-local"
+            value={startAt}
+            min={toLocalInputValue(event.startAt)}
+            max={toLocalInputValue(event.endAt)}
+            onChange={(input) => setStartAt(input.target.value)}
+            className={cn(fieldClass, "mt-1")}
+            required
+          />
+        </label>
+        <label className="block text-[11px] font-semibold text-[#212121]">
+          Selesai
+          <input
+            type="datetime-local"
+            value={endAt}
+            min={startAt}
+            max={toLocalInputValue(event.endAt)}
+            onChange={(input) => setEndAt(input.target.value)}
+            className={cn(fieldClass, "mt-1")}
+            required
+          />
+        </label>
+        <p className="text-[10px] leading-4 text-[#929292]">
+          Interval harus berada di dalam reservation utama (
+          {toLocalInputValue(event.startAt).replace("T", " ")} –{" "}
+          {toLocalInputValue(event.endAt).replace("T", " ")} WIB).
+        </p>
+        <label className="block text-[11px] font-semibold text-[#212121]">
+          Purpose
+          <textarea
+            value={purpose}
+            onChange={(input) => setPurpose(input.target.value)}
+            rows={2}
+            placeholder="Bagian mana yang akan kamu kerjakan"
+            className="mt-1 w-full rounded-xl border border-[#E1E1E1] p-2.5 text-[12px] outline-none focus:border-[#6E8EDA] focus:ring-2 focus:ring-[#6E8EDA]/20"
+          />
+        </label>
+      </div>
+      <div className="mt-4 flex flex-wrap justify-end gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-4 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5]"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={pending}
+          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#212121] px-4 text-[11px] font-bold text-white hover:bg-[#3A3A3A] disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {pending ? "Memproses..." : "Kirim permintaan"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export function ScheduleEventPopover({
+  event,
+  rangeLabel,
+  month,
+  extraActions,
+}: {
+  event: ScheduleEvent;
+  rangeLabel: string;
+  month: { year: number; month: number };
+  extraActions?: ReactNode;
+}) {
+  const router = useRouter();
+  const [mode, setMode] = useState<"view" | "edit" | "shared">("view");
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const mine = isOwnEvent(event);
+  const editable =
+    mine &&
+    event.kind === "request" &&
+    (event.status === "PENDING_PLP" || event.status === "REQUEST_REVISION");
+  const cancellable =
+    mine &&
+    event.kind === "request" &&
+    ["PENDING_PLP", "REQUEST_REVISION", "APPROVED", "READY_FOR_PICKUP"].includes(
+      event.status,
+    );
+  const canShare =
+    !mine &&
+    event.kind === "reservation" &&
+    (event.status === "APPROVED" || event.status === "ACTIVE") &&
+    Boolean(event.reservationId);
+
+  if (mode === "edit") {
+    const times = splitEventTime(event.time);
+    return (
+      <ScheduleRequestForm
+        range={{ start: event.startDay, end: event.endDay }}
+        label={rangeLabel}
+        month={month}
+        editingId={event.requestId}
+        defaults={{
+          title: event.title,
+          roomCode: event.roomId,
+          equipment: event.equipment ?? [],
+          materials: event.materials ?? [],
+          startTime: times.startTime,
+          endTime: times.endTime,
+          purpose: event.purpose,
+          supervisor: event.supervisor ?? "",
+          fieldPic: event.fieldPic ?? "",
+        }}
+        onCancel={() => setMode("view")}
+      />
+    );
+  }
+
+  if (mode === "shared") {
+    return <SharedUsageForm event={event} onCancel={() => setMode("view")} />;
+  }
+
+  return (
+    <>
+      <ScheduleEventCard
+        event={event}
+        rangeLabel={rangeLabel}
+        roomName={event.roomName}
+        showTimeline={event.kind === "request"}
+        actions={
+          <>
+            {editable && (
+              <button
+                type="button"
+                onClick={() => setMode("edit")}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F9B129] px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+              >
+                {event.status === "REQUEST_REVISION"
+                  ? "Edit & resubmit"
+                  : "Edit request"}
+              </button>
+            )}
+            {canShare && (
+              <button
+                type="button"
+                onClick={() => setMode("shared")}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#212121] px-3 text-[11px] font-bold text-white hover:bg-[#3A3A3A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+              >
+                Request shared use
+              </button>
+            )}
+            {cancellable && event.requestId && (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={async () => {
+                  if (!confirmCancel) {
+                    setConfirmCancel(true);
+                    return;
+                  }
+                  setPending(true);
+                  setError(null);
+                  try {
+                    await apiRequest(`/api/requests/${event.requestId}`, {
+                      method: "DELETE",
+                    });
+                    router.refresh();
+                  } catch (caught) {
+                    setError(errorMessage(caught));
+                  } finally {
+                    setPending(false);
+                    setConfirmCancel(false);
+                  }
+                }}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#F5D0D0] bg-[#FFF7F7] px-3 text-[11px] font-bold text-[#9E3636] hover:bg-[#FDE9E9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA] disabled:opacity-60"
+              >
+                {pending
+                  ? "Memproses..."
+                  : confirmCancel
+                    ? "Konfirmasi batalkan"
+                    : "Batalkan request"}
+              </button>
+            )}
+            {event.resourceId && (
+              <Link
+                href={`/student/laboratory/equipment/${event.resourceId}`}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+              >
+                View equipment
+              </Link>
+            )}
+            {extraActions}
+          </>
+        }
+      />
+      {error && (
+        <p
+          role="alert"
+          className="mt-3 rounded-xl bg-[#FDE9E9] p-3 text-[11px] leading-5 text-[#9E3636]"
+        >
+          {error}
+        </p>
+      )}
+    </>
+  );
+}
+
+

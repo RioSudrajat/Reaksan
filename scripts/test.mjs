@@ -79,6 +79,7 @@ try {
   };
   delete testEnv.__NEXT_PROCESSED_ENV;
   await run(process.execPath, ["scripts/migrate.mjs"], testEnv);
+  await run(process.execPath, ["scripts/seed.mjs"], testEnv);
   if (mode === "unit") {
     const files = readdirSync(resolve(root, "tests"))
       .filter((file) => file.endsWith(".test.mjs"))

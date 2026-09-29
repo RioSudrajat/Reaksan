@@ -139,7 +139,7 @@ test("a granted role reaches every account, and losing it revokes access", async
   await ownerContext.close();
 });
 
-test("the admin page and its link appear only for a permitted role", async ({
+test("the admin page is reachable only for a permitted role", async ({
   page,
 }) => {
   const email = `roles-${randomUUID()}@example.com`;
@@ -148,16 +148,103 @@ test("the admin page and its link appear only for a permitted role", async ({
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill("Roles-test-password-123!");
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page.getByRole("heading", { name: /Welcome, / })).toBeVisible();
+  // The auth server rate-limits rapid sign-ups. Retry once inside its window
+  // so this UI test does not depend on how many accounts other specs created.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      await expect(page).toHaveURL(/\/student$/, { timeout: 4000 });
+      break;
+    } catch {
+      await page.waitForTimeout(4000);
+      const button = page.getByRole("button", { name: "Create account" });
+      if (await button.isVisible()) await button.click();
+    }
+  }
+  await expect(page).toHaveURL(/\/student$/);
+  await expect(
+    page.getByRole("heading", { name: /Plan your next lab session/i }),
+  ).toBeVisible();
 
-  await expect(page.getByRole("link", { name: "Open admin" })).toHaveCount(0);
   await page.goto("/admin");
-  await expect(page.getByText("Every account’s notes")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Admin workspace" }),
+  ).toHaveCount(0);
 
   await setRole(email, "admin");
-  await page.goto("/app");
-  await page.getByRole("link", { name: "Open admin" }).click();
+  await page.goto("/admin");
   await expect(
-    page.getByRole("heading", { name: "Every account’s notes" }),
+    page.getByRole("heading", { name: "Admin workspace" }),
   ).toBeVisible();
+  // Admin reads the same global schedule calendar as PLP.
+  await page.goto("/admin/schedule");
+  await expect(page.getByText("Global lab schedule").first()).toBeVisible();
+
+  // The access screen renders role cards and the permission editor.
+  await page.goto("/admin/roles");
+  await expect(
+    page.getByRole("heading", { name: "Peran & akses" }),
+  ).toBeVisible();
+  await expect(page.getByText("PLP — operator lab").first()).toBeVisible();
+  await expect(page.getByText("Keamanan akun (khusus admin)").first()).toBeVisible();
+});
+
+test("admin can edit role permissions at runtime and admin stays locked", async ({
+  request,
+  playwright,
+}) => {
+  const adminEmail = await signUp(request, "Access Admin");
+  await setRole(adminEmail, "admin");
+  const plpContext = await playwright.request.newContext({ baseURL: origin });
+  const plpEmail = await signUp(plpContext, "Access PLP");
+  await setRole(plpEmail, "plp");
+
+  const plpBefore = await plpContext.get("/api/plp/requests?limit=5", {
+    headers,
+  });
+  expect(plpBefore.status()).toBe(200);
+
+  const locked = await request.patch("/api/admin/roles/admin", {
+    headers,
+    data: { permissions: { requests: [] } },
+  });
+  expect(locked.status()).toBe(403);
+  expect((await locked.json()).error.code).toBe("ADMIN_ROLE_LOCKED");
+
+  const restricted = await request.patch("/api/admin/roles/plp", {
+    headers,
+    data: {
+      permissions: {
+        plp: ["view"],
+        inventory: ["read-any", "manage-any"],
+        schedule: ["read-any"],
+        history: ["read-any"],
+        incidents: ["read-any", "assess-any", "resolve-any"],
+      },
+    },
+  });
+  expect(restricted.status()).toBe(200);
+
+  try {
+    const plpAfter = await plpContext.get("/api/plp/requests?limit=5", {
+      headers,
+    });
+    expect(plpAfter.status()).toBe(403);
+    expect((await plpAfter.json()).error.code).toBe("FORBIDDEN");
+  } finally {
+    const restored = await request.patch("/api/admin/roles/plp", {
+      headers,
+      data: {
+        permissions: {
+          plp: ["view"],
+          requests: ["read-any", "review-any", "issue-any", "return-any"],
+          inventory: ["read-any", "manage-any"],
+          schedule: ["read-any"],
+          history: ["read-any"],
+          incidents: ["read-any", "assess-any", "resolve-any"],
+        },
+      },
+    });
+    expect(restored.status()).toBe(200);
+    await plpContext.dispose();
+  }
 });

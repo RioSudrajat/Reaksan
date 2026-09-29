@@ -1,18 +1,12 @@
 import "server-only";
 import { ZodError } from "zod";
 import { auth } from "@/lib/auth";
-import { env } from "@/lib/env";
+import { trustedOrigins } from "@/lib/origins";
+import { ApiError } from "@/lib/api-error";
 import type { Permissions } from "@/lib/permissions";
+import { userHasPermission } from "@/services/permissions.service";
 
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    public code: string,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+export { ApiError };
 
 type Session = NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>;
 
@@ -32,8 +26,10 @@ export async function withApiSession(
 
     // Better Auth protects its own endpoints. Custom cookie-authenticated mutations need this check too.
     if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
+      const origin = request.headers.get("origin");
       if (
-        request.headers.get("origin") !== new URL(env.BETTER_AUTH_URL).origin ||
+        !origin ||
+        !trustedOrigins().includes(origin) ||
         request.headers.get("sec-fetch-site") === "cross-site"
       )
         throw new ApiError(
@@ -92,10 +88,7 @@ export function withApiPermission(
   handler: (session: Session) => Promise<Response>,
 ) {
   return withApiSession(request, async (session) => {
-    const { success } = await auth.api.userHasPermission({
-      body: { userId: session.user.id, permissions },
-    });
-    if (!success)
+    if (!(await userHasPermission(session.user.id, permissions)))
       throw new ApiError(
         403,
         "FORBIDDEN",

@@ -8,7 +8,7 @@ import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { siteConfig } from "@/config/site";
+import { landingPathForRole } from "@/lib/landing";
 
 export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
   const signingUp = mode === "sign-up";
@@ -42,7 +42,14 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
         );
         return;
       }
-      router.replace(siteConfig.homePath);
+      // The session response carries the stored role, so PLP and admin land in
+      // their own workspace instead of the student dashboard.
+      let role = result.data?.user?.role;
+      if (!role) {
+        const session = await authClient.getSession();
+        role = session.data?.user?.role;
+      }
+      router.replace(landingPathForRole(role));
       router.refresh();
     } catch {
       setError(

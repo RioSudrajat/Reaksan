@@ -22,6 +22,48 @@
       "when": 1788950762062,
       "tag": "0002_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790026710880,
+      "tag": "0003_even_timeslip",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790026955689,
+      "tag": "0004_vengeful_toro",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790034704192,
+      "tag": "0005_bumpy_namora",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790109396800,
+      "tag": "0006_yellow_mephisto",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790181548771,
+      "tag": "0007_lush_jack_murdock",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790183480800,
+      "tag": "0008_wonderful_randall",
+      "breakpoints": true
     }
   ]
 }

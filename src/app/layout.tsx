@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: `${siteConfig.name} — Your starting point`,
+    default: `${siteConfig.name} | Laboratory coordination`,
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,
@@ -15,7 +15,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="id">
       <body>
         <Providers>
           <a
