@@ -11,6 +11,7 @@ export type BatchStockRow = {
   lotNumber: string | null;
   quantity: string;
   reserved: string;
+  issued: string;
   expiryDate: Date | null;
 };
 
@@ -44,14 +45,17 @@ export async function listBatchStock(
     : await batchQuery;
   if (batches.length === 0) return [];
 
-  // Reserved allocation is derived from stock transactions. Two plain queries
-  // keep the aggregate unambiguous instead of interpolating columns into raw SQL.
-  const reservations = await exec
+  // Reserved and issued allocation are derived from stock transactions.
+  const transactions = await exec
     .select({
       batchId: stockTransaction.materialBatchId,
       reserved: sql<string>`COALESCE(SUM(CASE
         WHEN ${stockTransaction.type} = 'RESERVE' THEN ${stockTransaction.quantity}
         WHEN ${stockTransaction.type} IN ('RELEASE', 'ISSUE') THEN -${stockTransaction.quantity}
+        ELSE 0
+      END), 0)`,
+      issued: sql<string>`COALESCE(SUM(CASE
+        WHEN ${stockTransaction.type} = 'ISSUE' THEN ${stockTransaction.quantity}
         ELSE 0
       END), 0)`,
     })
@@ -64,12 +68,16 @@ export async function listBatchStock(
     )
     .groupBy(stockTransaction.materialBatchId);
   const reservedByBatch = new Map(
-    reservations.map((row) => [row.batchId, row.reserved]),
+    transactions.map((row) => [row.batchId, row.reserved]),
+  );
+  const issuedByBatch = new Map(
+    transactions.map((row) => [row.batchId, row.issued]),
   );
 
   return batches.map<BatchStockRow>((batch) => ({
     ...batch,
     reserved: reservedByBatch.get(batch.batchId) ?? "0",
+    issued: issuedByBatch.get(batch.batchId) ?? "0",
   }));
 }
 
@@ -79,9 +87,13 @@ export function stockTotalsForMaterial(rows: BatchStockRow[], materialId: string
     batches.reduce((total, row) => total + pick(row), 0);
   const physical = sum((row) => Number(row.quantity));
   const reserved = sum((row) => Number(row.reserved));
+  const issued = sum((row) => Number(row.issued ?? 0));
+  const totalCapacity = physical + issued;
   return {
     physical,
     reserved: Math.max(0, reserved),
+    issued: Math.max(0, issued),
+    totalCapacity,
     available: Math.max(0, physical - reserved),
     batches,
   };

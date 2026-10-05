@@ -48,7 +48,7 @@ export async function getRoomScope(
     WHERE a.user_id = ${userId}
       AND a.active
       AND a.scope_type = 'ROOM'
-      AND a.assignment_type IN ('PLP', 'ASLAB', 'PIC')
+      AND a.assignment_type IN ('PLP', 'PIC')
       AND (a.start_date IS NULL OR a.start_date <= now())
       AND (a.end_date IS NULL OR a.end_date >= now())
     UNION
@@ -59,7 +59,7 @@ export async function getRoomScope(
     WHERE a.user_id = ${userId}
       AND a.active
       AND a.scope_type = 'LABORATORY'
-      AND a.assignment_type IN ('PLP', 'ASLAB', 'PIC')
+      AND a.assignment_type IN ('PLP', 'PIC')
       AND (a.start_date IS NULL OR a.start_date <= now())
       AND (a.end_date IS NULL OR a.end_date >= now())
   `);

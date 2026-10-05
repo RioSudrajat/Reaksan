@@ -1,6 +1,6 @@
 import { ApiError, withApiPermission } from "@/lib/api";
 import { scopeForSession } from "@/services/access-scope.service";
-import { getPlpMaterialDetail } from "@/services/plp.service";
+import { deletePlpMaterial, getPlpMaterialDetail } from "@/services/plp.service";
 import { entityCodeSchema } from "@/validators/catalog";
 import { z } from "zod";
 
@@ -26,3 +26,16 @@ export function GET(request: Request, context: Context) {
     },
   );
 }
+
+export function DELETE(request: Request, context: Context) {
+  return withApiPermission(
+    request,
+    { inventory: ["manage-any"] },
+    async (session) => {
+      const code = entityCodeSchema.parse((await context.params).code);
+      const result = await deletePlpMaterial(session.user.id, code);
+      return Response.json({ data: result });
+    },
+  );
+}
+

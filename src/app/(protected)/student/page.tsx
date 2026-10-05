@@ -9,7 +9,7 @@ import { listMyRequests } from "@/services/requests.service";
 import { listConfirmedSharedUsage } from "@/services/shared-usage.service";
 import { buildCalendarEvents, incidentToView } from "@/services/view.service";
 
-export const metadata: Metadata = { title: "Dashboard" };
+export const metadata: Metadata = { title: "Dashboard Mahasiswa · Reaksan" };
 
 export default async function StudentDashboardPage() {
   const { user } = await requireSession();

@@ -77,10 +77,10 @@ export function QuickIncidentDialog({
 
   const triggerClasses =
     triggerVariant === "warning"
-      ? "inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#FDE9E9] border border-[#F45959]/30 px-3.5 text-[12px] font-bold text-[#9E3636] transition hover:bg-[#FCD8D8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+      ? "inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3.5 py-1.5 text-[12px] font-semibold text-[#DC2626] transition hover:bg-[#FEE2E2] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#DC2626]"
       : triggerVariant === "outline"
-        ? "inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#E1E1E1] bg-white px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
-        : "inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]";
+        ? "inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#E5E7EB] bg-white px-3.5 py-1.5 text-[12px] font-semibold text-[#121826] transition hover:bg-[#FEF7E6] hover:border-[#FDE68A] hover:text-[#8D6500] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
+        : "inline-flex min-h-9 items-center gap-2 rounded-lg bg-[#FDB913] px-3.5 py-1.5 text-[12px] font-bold text-[#121826] shadow-xs transition hover:bg-[#EAA805] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]";
 
   return (
     <>
@@ -103,23 +103,23 @@ export function QuickIncidentDialog({
           aria-modal="true"
           aria-labelledby="incident-dialog-title"
         >
-          <div className="relative w-full max-w-lg rounded-2xl border border-[#EEEEEE] bg-white p-6 shadow-2xl">
+          <div className="relative w-full max-w-lg rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3
                   id="incident-dialog-title"
-                  className="text-[15px] font-bold text-[#212121]"
+                  className="text-[15px] font-bold text-[#121826]"
                 >
                   Lapor Insiden Operasional
                 </h3>
-                <p className="mt-0.5 text-[12px] text-[#6B6B6B]">
+                <p className="mt-0.5 text-[12px] text-[#64748B]">
                   Catat kerusakan alat, kendala lab, atau anomali fasilitas.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-lg p-1.5 text-[#929292] hover:bg-[#F5F5F5] hover:text-[#212121]"
+                className="rounded-lg p-1.5 text-[#64748B] hover:bg-[#F8F9FA] hover:text-[#121826]"
                 aria-label="Tutup"
               >
                 <X className="size-5" />
@@ -129,7 +129,7 @@ export function QuickIncidentDialog({
             {error && (
               <p
                 role="alert"
-                className="mt-4 rounded-xl border border-[#F3C7C7] bg-[#FDE9E9] px-3.5 py-2.5 text-[12px] font-medium text-[#9E3636]"
+                className="mt-4 rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-3.5 py-2.5 text-[12px] font-medium text-[#DC2626]"
               >
                 {error}
               </p>
@@ -137,8 +137,8 @@ export function QuickIncidentDialog({
 
             <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
               <div>
-                <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B6B6B]">
-                  Judul Insiden <span className="text-[#9E3636]">*</span>
+                <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#64748B]">
+                  Judul Insiden <span className="text-[#DC2626]">*</span>
                 </label>
                 <input
                   type="text"
@@ -152,7 +152,7 @@ export function QuickIncidentDialog({
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B6B6B]">
+                  <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#64748B]">
                     Kode Ruangan / Lab
                   </label>
                   <input
@@ -164,7 +164,7 @@ export function QuickIncidentDialog({
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B6B6B]">
+                  <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#64748B]">
                     Kode Asset Alat (Opsional)
                   </label>
                   <input
@@ -178,7 +178,7 @@ export function QuickIncidentDialog({
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B6B6B]">
+                <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#64748B]">
                   Tingkat Keparahan
                 </label>
                 <select
@@ -196,8 +196,8 @@ export function QuickIncidentDialog({
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B6B6B]">
-                  Deskripsi & Kronologi <span className="text-[#9E3636]">*</span>
+                <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#64748B]">
+                  Deskripsi & Kronologi <span className="text-[#DC2626]">*</span>
                 </label>
                 <textarea
                   required
@@ -214,14 +214,14 @@ export function QuickIncidentDialog({
                   type="button"
                   onClick={() => setOpen(false)}
                   disabled={pending}
-                  className="inline-flex min-h-11 items-center rounded-xl border border-[#E1E1E1] bg-white px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F5F5F5] disabled:opacity-60"
+                  className="inline-flex min-h-10 items-center rounded-lg border border-[#E5E7EB] bg-white px-4 text-[12px] font-semibold text-[#121826] transition hover:bg-[#F8F9FA] disabled:opacity-60"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={pending}
-                  className="inline-flex min-h-11 items-center rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] disabled:opacity-60"
+                  className="inline-flex min-h-10 items-center rounded-lg bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] shadow-xs transition hover:bg-[#EAA805] disabled:opacity-60"
                 >
                   {pending ? "Menyimpan..." : "Kirim Laporan"}
                 </button>

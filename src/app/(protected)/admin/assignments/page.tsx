@@ -13,12 +13,11 @@ import {
   listRoomsAdmin,
 } from "@/services/admin.service";
 
-export const metadata: Metadata = { title: "Assignments" };
+export const metadata: Metadata = { title: "Penugasan Staf & PLP · Admin Reaksan" };
 
 const typeOptions = [
-  { value: "PLP", label: "PLP (penanggung jawab lab)" },
-  { value: "ASLAB", label: "Aslab" },
-  { value: "PIC", label: "PIC" },
+  { value: "PLP", label: "PLP (Penanggung Jawab Operasional Lab)" },
+  { value: "PIC", label: "PIC Ruangan Khusus" },
 ];
 
 export default async function AdminAssignmentsPage() {
@@ -51,26 +50,26 @@ export default async function AdminAssignmentsPage() {
     })),
   };
   const scopeFields = [
-    { name: "scopeType", label: "Scope", type: "external" as const },
-    { name: "scopeId", label: "Data scope", type: "external" as const },
+    { name: "scopeType", label: "Cakupan Penugasan", type: "external" as const },
+    { name: "scopeId", label: "Target Wewenang", type: "external" as const },
   ];
 
   return (
     <>
       <PageHeader
-        eyebrow="Operasional"
-        title="Assignments"
-        description="Penugasan menghubungkan akun PLP, Aslab, atau PIC dengan lab yang menjadi tanggung jawabnya. PLP hanya melihat operasional lab yang ditugaskan."
+        eyebrow="Operasional & SDM"
+        title="Penugasan PLP & Penanggung Jawab Lab"
+        description="Penugasan menghubungkan akun PLP dan Penanggung Jawab Ruangan (PIC) dengan laboratorium yang menjadi wewenang operasionalnya. PLP hanya dapat memvalidasi inventaris dan request pada lab yang ditugaskan."
       />
 
-      <Panel context="Tambah" title="Assignment baru" className="mb-5">
+      <Panel context="Formulir" title="Tambah Penugasan Baru" className="mb-5">
         <CrudForm
           endpoint="/api/admin/assignments"
           columns={3}
           fields={[
             {
               name: "userId",
-              label: "User",
+              label: "Pengguna / Staf Lab",
               type: "select",
               required: true,
               options: userOptions,
@@ -78,30 +77,30 @@ export default async function AdminAssignmentsPage() {
             ...scopeFields,
             {
               name: "assignmentType",
-              label: "Tipe",
+              label: "Tipe Penugasan",
               type: "select",
               required: true,
               options: typeOptions,
-              help: "PLP untuk role plp, Aslab untuk role aslab, PIC untuk role staff atau admin.",
+              help: "Pilih peran penugasan yang sesuai dengan SK atau tanggung jawab staf.",
             },
-            { name: "startDate", label: "Mulai", type: "date" },
-            { name: "endDate", label: "Selesai", type: "date" },
-            { name: "notes", label: "Catatan", type: "textarea" },
-            { name: "active", label: "Aktif", type: "checkbox", defaultValue: true },
+            { name: "startDate", label: "Tanggal Mulai", type: "date" },
+            { name: "endDate", label: "Tanggal Berakhir", type: "date" },
+            { name: "notes", label: "Catatan Penugasan", type: "textarea", placeholder: "Nomor SK penugasan atau rincian wewenang..." },
+            { name: "active", label: "Status Aktif", type: "checkbox", defaultValue: true },
           ]}
-          submitLabel="Tambah assignment"
-          successMessage="Assignment ditambahkan."
+          submitLabel="Simpan Penugasan"
+          successMessage="Penugasan staf berhasil ditambahkan."
         >
           <AssignmentScopeFields {...scopeData} />
         </CrudForm>
       </Panel>
 
-      <Panel context={`${assignments.length} assignment`} title="Daftar" padded={false}>
+      <Panel context={`${assignments.length} penugasan`} title="Daftar Penugasan Laboratorium" padded={false}>
         {assignments.length === 0 ? (
           <div className="p-5">
             <EmptyState
-              title="Belum ada assignment"
-              description="Tambahkan assignment pertama lewat form di atas."
+              title="Belum ada penugasan terdaftar"
+              description="Tambahkan penugasan pertama melalui formulir di atas."
             />
           </div>
         ) : (
@@ -172,8 +171,8 @@ export default async function AdminAssignmentsPage() {
                           defaultValue: assignment.active,
                         },
                       ]}
-                      submitLabel="Simpan perubahan"
-                      successMessage="Assignment diperbarui."
+                      submitLabel="Simpan Perubahan"
+                      successMessage="Penugasan berhasil diperbarui."
                     >
                       <AssignmentScopeFields
                         {...scopeData}

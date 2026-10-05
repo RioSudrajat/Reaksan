@@ -5,38 +5,65 @@ import { cn } from "cn";
 // reference, which is undefined during production rendering.
 export const toneClasses = {
   yellow: {
-    soft: "bg-[#FEF1CC] text-[#705012]",
-    dot: "bg-[#F9B129]",
-    line: "bg-[#F9B129]",
+    soft: "bg-[#FEF7E6] text-[#8D6500] border border-[#FDE68A]/80",
+    dot: "bg-[#FDB913]",
+    line: "bg-[#FDB913]",
   },
   blue: {
-    soft: "bg-[#E9EEFC] text-[#38529B]",
-    dot: "bg-[#6E8EDA]",
-    line: "bg-[#6E8EDA]",
+    soft: "bg-[#F1F5F9] text-[#1E3A5F] border border-[#CBD5E1]/80",
+    dot: "bg-[#2563EB]",
+    line: "bg-[#2563EB]",
   },
   green: {
-    soft: "bg-[#E5F5ED] text-[#03683A]",
-    dot: "bg-[#048444]",
-    line: "bg-[#048444]",
+    soft: "bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0]/80",
+    dot: "bg-[#16A34A]",
+    line: "bg-[#16A34A]",
   },
   cream: {
-    soft: "bg-[#F1F0EC] text-[#5D5B53]",
+    soft: "bg-[#F8FAFC] text-[#475569] border border-[#E2E8F0]",
+    dot: "bg-[#94A3B8]",
+    line: "bg-[#94A3B8]",
+  },
+  rose: {
+    soft: "bg-[#FEF2F2] text-[#991B1B] border border-[#FECACA]/80",
+    dot: "bg-[#DC2626]",
+    line: "bg-[#DC2626]",
+  },
+  neutral: {
+    soft: "bg-[#F8F9FA] text-[#475569] border border-[#E5E7EB]",
+    dot: "bg-[#94A3B8]",
+    line: "bg-[#94A3B8]",
+  },
+  amber: {
+    soft: "bg-[#FEF7E6] text-[#8D6500] border border-[#FDE68A]/80",
+    dot: "bg-[#D97706]",
+    line: "bg-[#D97706]",
+  },
+  dark: {
+    soft: "bg-[#212121] text-white border border-[#212121]",
+    dot: "bg-white",
+    line: "bg-white",
+  },
+  "yellow-light": {
+    soft: "bg-[#FFF9E6] text-[#AE7C1D] border border-[#FDE68A]",
+    dot: "bg-[#FCDD94]",
+    line: "bg-[#FCDD94]",
+  },
+  muted: {
+    soft: "bg-[#F5F5F5] text-[#6B6B6B] border border-[#E1E1E1]",
     dot: "bg-[#929292]",
     line: "bg-[#929292]",
   },
-  rose: {
-    soft: "bg-[#FDE9E9] text-[#9E3636]",
-    dot: "bg-[#F45959]",
-    line: "bg-[#F45959]",
-  },
 } as const;
+
+export type BadgeTone = keyof typeof toneClasses;
 
 export function StatusBadge({
   children,
   tone,
 }: {
   children: React.ReactNode;
-  tone: keyof typeof toneClasses;
+  tone: BadgeTone;
 }) {
   return (
     <span

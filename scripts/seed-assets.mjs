@@ -269,6 +269,42 @@ const equipmentShapes = {
 <rect x="74" y="156" width="40" height="14" rx="4" fill="${WHITE}"/>
 <circle cx="140" cy="163" r="6" fill="${PRIMARY}"/>
 <circle cx="158" cy="163" r="5" fill="${GREEN}"/>`,
+  beaker: () => `
+<path d="M72 64 h96 v100 a16 16 0 0 1 -16 16 h-64 a16 16 0 0 1 -16 -16 z" fill="${WHITE}"/>
+<path d="M68 64 h10" stroke-width="4"/>
+<line x1="84" y1="96" x2="114" y2="96"/>
+<line x1="84" y1="124" x2="124" y2="124"/>
+<line x1="84" y1="152" x2="108" y2="152"/>
+<path d="M74 120 h92 v44 a16 16 0 0 1 -16 16 h-60 a16 16 0 0 1 -16 -16 z" fill="${BLUE_SOFT}"/>`,
+  erlenmeyer: () => `
+<path d="M106 54 h28 v32 l46 76 a14 14 0 0 1 -12 20 h-96 a14 14 0 0 1 -12 -20 l46 -76 v-32 z" fill="${WHITE}"/>
+<rect x="100" y="48" width="40" height="10" rx="4" fill="${WHITE}"/>
+<path d="M86 136 l24 46 h-40 a14 14 0 0 0 16 -46 z" fill="${AMBER_SOFT}"/>
+<line x1="100" y1="110" x2="140" y2="110"/>
+<line x1="90" y1="136" x2="150" y2="136"/>`,
+  buret: () => `
+<rect x="110" y="36" width="20" height="140" rx="4" fill="${WHITE}"/>
+<line x1="110" y1="60" x2="124" y2="60"/>
+<line x1="110" y1="80" x2="124" y2="80"/>
+<line x1="110" y1="100" x2="124" y2="100"/>
+<line x1="110" y1="120" x2="124" y2="120"/>
+<circle cx="120" cy="184" r="8" fill="${PRIMARY}"/>
+<path d="M117 192 l3 16 l3 -16 z" fill="${WHITE}"/>`,
+  "measuring-cylinder": () => `
+<rect x="108" y="46" width="24" height="140" rx="6" fill="${WHITE}"/>
+<line x1="108" y1="70" x2="122" y2="70"/>
+<line x1="108" y1="95" x2="122" y2="95"/>
+<line x1="108" y1="120" x2="122" y2="120"/>
+<line x1="108" y1="145" x2="122" y2="145"/>
+<rect x="96" y="184" width="48" height="12" rx="4" fill="${WHITE}"/>`,
+  "volumetric-flask": () => `
+<path d="M112 50 h16 v54 l36 58 a14 14 0 0 1 -12 20 h-64 a14 14 0 0 1 -12 -20 l36 -58 v-54 z" fill="${WHITE}"/>
+<circle cx="120" cy="46" r="8" fill="${GREEN}"/>
+<line x1="112" y1="84" x2="128" y2="84" stroke="${ROSE}" stroke-width="3"/>`,
+  "glass-tool": () => `
+<line x1="68" y1="172" x2="172" y2="68" stroke-width="8"/>
+<ellipse cx="176" cy="64" rx="14" ry="8" fill="${NEUTRAL_SOFT}"/>
+<ellipse cx="64" cy="176" rx="8" ry="14" fill="${NEUTRAL_SOFT}"/>`,
 };
 
 export function equipmentArt(shape, tone = "cream") {

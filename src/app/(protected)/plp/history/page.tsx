@@ -24,7 +24,8 @@ type SearchParams = Record<string, string | string[] | undefined>;
 
 function pick(params: SearchParams, key: string) {
   const value = params[key];
-  return Array.isArray(value) ? value[0] : value;
+  const str = Array.isArray(value) ? value[0] : value;
+  return str && str.trim().length > 0 ? str.trim() : undefined;
 }
 
 const entityOptions = [
@@ -190,31 +191,31 @@ export default async function PlpHistoryPage({
         ) : (
           <div>
             {/* Mobile Card List */}
-            <ul className="divide-y divide-[#EEEEEE] sm:hidden">
+            <ul className="divide-y divide-[#E5E7EB] sm:hidden">
               {result.data.map((entry) => (
                 <li key={entry.id} className="p-4 space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="rounded-md bg-[#FAFAFA] border border-[#EEEEEE] px-2 py-0.5 text-[11px] font-bold text-[#212121]">
+                    <span className="rounded-md bg-[#F8F9FA] border border-[#E5E7EB] px-2 py-0.5 text-[11px] font-bold text-[#121826]">
                       {entry.action}
                     </span>
-                    <span className="text-[11px] text-[#929292] tabular-nums">
+                    <span className="text-[11px] text-[#64748B] tabular-nums">
                       {formatDateTime(entry.createdAt)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-2 text-[12px]">
-                    <span className="font-semibold text-[#212121]">
+                    <span className="font-semibold text-[#121826]">
                       {entry.actorName ?? "Sistem"}
                     </span>
-                    <span className="text-[11px] text-[#6B6B6B]">
+                    <span className="text-[11px] text-[#475569]">
                       {entry.entityType}
                     </span>
                   </div>
                   {entry.reason && (
-                    <p className="text-[11px] text-[#6B6B6B] italic">
+                    <p className="text-[11px] text-[#475569] italic">
                       &ldquo;{entry.reason}&rdquo;
                     </p>
                   )}
-                  <p className="truncate font-mono text-[10px] text-[#B7B7B7]">
+                  <p className="truncate font-mono text-[10px] text-[#94A3B8]">
                     {entry.entityId}
                   </p>
                 </li>
@@ -226,7 +227,7 @@ export default async function PlpHistoryPage({
               <table className="w-full border-collapse text-left">
                 <caption className="sr-only">Jejak audit operasional</caption>
                 <thead>
-                  <tr className="border-b border-[#EEEEEE] text-[11px] uppercase tracking-[0.08em] text-[#929292]">
+                  <tr className="border-b border-[#E5E7EB] text-[11px] uppercase tracking-[0.08em] text-[#64748B]">
                     <th scope="col" className="px-4 py-3 font-semibold">
                       Waktu
                     </th>
@@ -248,24 +249,26 @@ export default async function PlpHistoryPage({
                   {result.data.map((entry) => (
                     <tr
                       key={entry.id}
-                      className="border-b border-[#F1F0EC] last:border-0"
+                      className="border-b border-[#E5E7EB] last:border-0 hover:bg-[#F8F9FA]/60 transition"
                     >
-                      <td className="whitespace-nowrap px-4 py-3 text-[12px] text-[#212121] [font-variant-numeric:tabular-nums]">
+                      <td className="whitespace-nowrap px-4 py-3 text-[12px] text-[#121826] [font-variant-numeric:tabular-nums]">
                         {formatDateTime(entry.createdAt)}
                       </td>
-                      <td className="px-4 py-3 text-[12px] text-[#212121]">
+                      <td className="px-4 py-3 text-[12px] text-[#121826]">
                         {entry.actorName ?? "Sistem"}
                       </td>
-                      <td className="px-4 py-3 text-[12px] font-semibold text-[#212121]">
-                        {entry.action}
+                      <td className="px-4 py-3 text-[12px]">
+                        <span className="rounded-md bg-[#F8F9FA] border border-[#E5E7EB] px-2 py-0.5 text-[11px] font-semibold text-[#121826]">
+                          {entry.action}
+                        </span>
                       </td>
-                      <td className="px-4 py-3 text-[12px] text-[#6B6B6B]">
+                      <td className="px-4 py-3 text-[12px] text-[#475569]">
                         {entry.entityType}
-                        <span className="mt-0.5 block max-w-[220px] truncate text-[11px] text-[#929292]">
+                        <span className="mt-0.5 block max-w-[220px] truncate text-[11px] text-[#64748B]">
                           {entry.entityId}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-[12px] text-[#6B6B6B]">
+                      <td className="px-4 py-3 text-[12px] text-[#475569]">
                         {entry.reason ?? "-"}
                       </td>
                     </tr>

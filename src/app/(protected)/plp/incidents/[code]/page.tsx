@@ -36,7 +36,7 @@ export default async function PlpIncidentDetailPage({
     <>
       <Link
         href="/plp/incidents"
-        className="mb-4 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-[12px] font-bold text-[#38529B] hover:bg-[#E9EEFC] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+        className="mb-4 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#121826] transition hover:bg-[#FEF7E6] hover:border-[#FDE68A] hover:text-[#8D6500] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
       >
         <ArrowLeft className="size-4" aria-hidden="true" />
         Semua incident
@@ -57,12 +57,12 @@ export default async function PlpIncidentDetailPage({
       />
 
       {critical && incident.status !== "RESOLVED" && (
-        <div className="mb-5 flex items-start gap-3 rounded-2xl border border-[#F3C7C7] bg-[#FDE9E9] p-4">
+        <div className="mb-5 flex items-start gap-3 rounded-2xl border border-[#FECACA] bg-[#FEF2F2] p-4">
           <AlertTriangle
-            className="mt-0.5 size-4 shrink-0 text-[#9E3636]"
+            className="mt-0.5 size-4 shrink-0 text-[#DC2626]"
             aria-hidden="true"
           />
-          <p className="text-[12px] font-semibold leading-5 text-[#9E3636]">
+          <p className="text-[12px] font-semibold leading-5 text-[#DC2626]">
             Severity {incident.severity}. Prioritaskan pemeriksaan dan pastikan
             area kerja aman sebelum equipment dipakai lagi.
           </p>
@@ -72,7 +72,7 @@ export default async function PlpIncidentDetailPage({
       <div className="grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
         <div className="space-y-5">
           <Panel context="Laporan" title="Deskripsi">
-            <p className="text-[13px] leading-6 text-[#212121]">
+            <p className="text-[13px] leading-6 text-[#121826]">
               {incident.description}
             </p>
           </Panel>
@@ -84,33 +84,33 @@ export default async function PlpIncidentDetailPage({
         <Panel context="Konteks" title="Identitas">
           <dl className="space-y-3 text-[12px]">
             <div className="flex justify-between gap-3">
-              <dt className="text-[#929292]">Equipment</dt>
-              <dd className="text-right font-medium text-[#212121]">
+              <dt className="text-[#64748B]">Equipment</dt>
+              <dd className="text-right font-medium text-[#121826]">
                 {incident.equipmentCode ?? "-"}
                 {incident.equipmentName ? ` · ${incident.equipmentName}` : ""}
               </dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-[#929292]">Room</dt>
-              <dd className="text-right font-medium text-[#212121]">
+              <dt className="text-[#64748B]">Room</dt>
+              <dd className="text-right font-medium text-[#121826]">
                 {incident.roomName ?? "-"}
               </dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-[#929292]">Request</dt>
-              <dd className="text-right font-medium text-[#212121]">
+              <dt className="text-[#64748B]">Request</dt>
+              <dd className="text-right font-medium text-[#121826]">
                 {incident.requestCode ?? "-"}
               </dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-[#929292]">Pelapor</dt>
-              <dd className="text-right font-medium text-[#212121]">
+              <dt className="text-[#64748B]">Pelapor</dt>
+              <dd className="text-right font-medium text-[#121826]">
                 {incident.reporterName}
               </dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-[#929292]">Terjadi</dt>
-              <dd className="text-right font-medium text-[#212121]">
+              <dt className="text-[#64748B]">Terjadi</dt>
+              <dd className="text-right font-medium text-[#121826]">
                 {formatDateTime(incident.occurredAt ?? incident.createdAt)}
               </dd>
             </div>

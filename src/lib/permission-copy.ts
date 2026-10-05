@@ -4,16 +4,12 @@
 export const roleLabels: Record<string, string> = {
   user: "Mahasiswa (dasar)",
   plp: "PLP — operator lab",
-  lecturer: "Dosen",
-  aslab: "Aslab",
   admin: "Administrator",
 };
 
 export const roleDescriptions: Record<string, string> = {
   user: "Akses dasar. Hanya mengelola request dan data miliknya sendiri.",
   plp: "Menangani permintaan, inventaris, dan insiden di lab yang ditugaskan.",
-  lecturer: "Memantau jadwal, permintaan, dan laporan insiden.",
-  aslab: "Membantu operasional dan inventaris laboratorium.",
   admin: "Akses penuh: data master, akun, penugasan, dan konfigurasi.",
 };
 

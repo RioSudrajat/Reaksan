@@ -26,8 +26,22 @@ type SearchParams = Record<string, string | string[] | undefined>;
 
 function pick(params: SearchParams, key: string) {
   const value = params[key];
-  return Array.isArray(value) ? value[0] : value;
+  const str = Array.isArray(value) ? value[0] : value;
+  return str && str.trim().length > 0 ? str.trim() : undefined;
 }
+
+const PLP_STATUS_OPTIONS: { value: (typeof requestStatusValues)[number]; label: string }[] = [
+  { value: "PENDING_PLP", label: "Menunggu PLP" },
+  { value: "REQUEST_REVISION", label: "Perlu revisi" },
+  { value: "APPROVED", label: "Disetujui" },
+  { value: "READY_FOR_PICKUP", label: "Siap diambil" },
+  { value: "ACTIVE", label: "Sedang digunakan" },
+  { value: "OVERDUE", label: "Lewat tenggat" },
+  { value: "RETURNED", label: "Dikembalikan" },
+  { value: "COMPLETED", label: "Selesai" },
+  { value: "REJECTED", label: "Ditolak" },
+  { value: "CANCELLED", label: "Dibatalkan" },
+];
 
 export default async function PlpRequestsPage({
   searchParams,
@@ -58,6 +72,7 @@ export default async function PlpRequestsPage({
       search: query.student || query.activity,
       from: query.from ? new Date(`${query.from}T00:00:00+07:00`) : undefined,
       to: query.to ? new Date(`${query.to}T23:59:59.999+07:00`) : undefined,
+      orderBy: "statusPriority",
       limit: query.limit,
       offset: query.offset,
     }),
@@ -88,9 +103,9 @@ export default async function PlpRequestsPage({
         <FilterField label="Status" className="w-full sm:w-40">
           <select name="status" defaultValue={query.status ?? ""} className={controlClass}>
             <option value="">Semua status</option>
-            {requestStatusValues.map((status) => (
-              <option key={status} value={status}>
-                {status.replaceAll("_", " ")}
+            {PLP_STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
               </option>
             ))}
           </select>
@@ -131,7 +146,7 @@ export default async function PlpRequestsPage({
               action={
                 <Link
                   href="/plp/requests"
-                  className="inline-flex min-h-11 items-center rounded-xl border border-[#E1E1E1] bg-white px-4 text-[12px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+                  className="inline-flex min-h-11 items-center rounded-xl border border-[#E5E7EB] bg-white px-4 text-[12px] font-bold text-[#121826] hover:bg-[#F8F9FA] hover:border-[#FDE68A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
                 >
                   Hapus filter
                 </Link>
@@ -140,16 +155,16 @@ export default async function PlpRequestsPage({
           </div>
         ) : (
           <>
-            <ul className="divide-y divide-[#EEEEEE] md:hidden">
+            <ul className="divide-y divide-[#E5E7EB] md:hidden">
               {result.data.map((request) => (
                 <li key={request.id} className="p-4">
                   <Link href={`/plp/requests/${request.id}`} className="block">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-[13px] font-semibold text-[#212121]">
+                        <p className="truncate text-[13px] font-semibold text-[#121826]">
                           {request.title}
                         </p>
-                        <p className="mt-0.5 text-[11px] text-[#929292]">
+                        <p className="mt-0.5 text-[11px] text-[#94A3B8]">
                           {request.code}
                         </p>
                       </div>
@@ -157,20 +172,20 @@ export default async function PlpRequestsPage({
                     </div>
                     <dl className="mt-3 grid grid-cols-2 gap-2 text-[12px]">
                       <div>
-                        <dt className="text-[#929292]">Mahasiswa</dt>
-                        <dd className="font-medium text-[#212121]">
+                        <dt className="text-[#94A3B8]">Mahasiswa</dt>
+                        <dd className="font-medium text-[#121826]">
                           {request.actorName}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-[#929292]">Room</dt>
-                        <dd className="font-medium text-[#212121]">
+                        <dt className="text-[#94A3B8]">Room</dt>
+                        <dd className="font-medium text-[#121826]">
                           {request.roomName}
                         </dd>
                       </div>
                       <div className="col-span-2">
-                        <dt className="text-[#929292]">Jadwal</dt>
-                        <dd className="font-medium text-[#212121] [font-variant-numeric:tabular-nums]">
+                        <dt className="text-[#94A3B8]">Jadwal</dt>
+                        <dd className="font-medium text-[#121826] [font-variant-numeric:tabular-nums]">
                           {formatRange(request.startAt, request.endAt)}
                         </dd>
                       </div>
@@ -186,7 +201,7 @@ export default async function PlpRequestsPage({
                   Daftar request menunggu dan sudah direview
                 </caption>
                 <thead>
-                  <tr className="border-b border-[#EEEEEE] text-[11px] uppercase tracking-[0.08em] text-[#929292]">
+                  <tr className="border-b border-[#E5E7EB] text-[11px] uppercase tracking-[0.08em] text-[#94A3B8]">
                     <th scope="col" className="px-4 py-3 font-semibold">Request</th>
                     <th scope="col" className="px-4 py-3 font-semibold">Mahasiswa</th>
                     <th scope="col" className="px-4 py-3 font-semibold">Room</th>
@@ -200,26 +215,26 @@ export default async function PlpRequestsPage({
                   {result.data.map((request) => (
                     <tr
                       key={request.id}
-                      className="border-b border-[#F1F0EC] align-top last:border-0"
+                      className="border-b border-[#F1F3F5] align-top transition hover:bg-[#F8F9FA]/80 last:border-0"
                     >
-                      <th scope="row" className="px-4 py-3">
-                        <p className="text-[13px] font-semibold text-[#212121]">
+                      <th scope="row" className="px-4 py-3 font-normal">
+                        <p className="text-[13px] font-semibold text-[#121826]">
                           {request.title}
                         </p>
-                        <p className="mt-0.5 text-[11px] text-[#929292]">
+                        <p className="mt-0.5 text-[11px] text-[#94A3B8]">
                           {request.code} · {request.activityTitle}
                         </p>
                       </th>
-                      <td className="px-4 py-3 text-[12px] text-[#212121]">
+                      <td className="px-4 py-3 text-[12px] text-[#121826]">
                         {request.actorName}
                       </td>
-                      <td className="px-4 py-3 text-[12px] text-[#212121]">
+                      <td className="px-4 py-3 text-[12px] text-[#121826]">
                         {request.roomName}
                       </td>
-                      <td className="px-4 py-3 text-[12px] text-[#212121] [font-variant-numeric:tabular-nums]">
+                      <td className="px-4 py-3 text-[12px] text-[#121826] [font-variant-numeric:tabular-nums]">
                         {formatRange(request.startAt, request.endAt)}
                       </td>
-                      <td className="px-4 py-3 text-[12px] text-[#6B6B6B]">
+                      <td className="px-4 py-3 text-[12px] text-[#64748B]">
                         {request.equipment.length} equipment ·{" "}
                         {request.materials.length} material
                       </td>
@@ -229,7 +244,7 @@ export default async function PlpRequestsPage({
                       <td className="px-4 py-3">
                         <Link
                           href={`/plp/requests/${request.id}`}
-                          className="inline-flex min-h-11 items-center rounded-xl px-3 text-[12px] font-bold text-[#38529B] hover:bg-[#E9EEFC] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+                          className="inline-flex min-h-9 items-center rounded-lg border border-[#E5E7EB] bg-white px-3 text-[12px] font-semibold text-[#121826] transition hover:bg-[#FEF7E6] hover:border-[#FDE68A] hover:text-[#8D6500] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
                         >
                           Review
                         </Link>

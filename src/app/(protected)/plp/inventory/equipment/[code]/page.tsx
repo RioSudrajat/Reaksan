@@ -17,6 +17,8 @@ import {
 } from "@/services/access-scope.service";
 import { UnitStatusAction } from "@/components/plp/unit-status-action";
 import { AddUnitDialog } from "@/components/plp/add-unit-dialog";
+import { DeleteConfirmButton } from "@/components/plp/delete-confirm-button";
+import { QrTagDialog } from "@/components/qr/qr-tag-dialog";
 
 export const metadata: Metadata = { title: "Asset Detail" };
 
@@ -36,9 +38,9 @@ export default async function PlpEquipmentDetailPage({
     <>
       <Link
         href="/plp/inventory/equipment"
-        className="mb-4 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-[12px] font-bold text-[#38529B] hover:bg-[#E9EEFC] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+        className="mb-4 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-3 text-[12px] font-semibold text-[#121826] transition hover:bg-[#F8F9FA] hover:border-[#FDE68A] hover:text-[#8D6500] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
       >
-        <ArrowLeft className="size-4" aria-hidden="true" />
+        <ArrowLeft className="size-3.5" aria-hidden="true" />
         Semua equipment
       </Link>
 
@@ -49,7 +51,20 @@ export default async function PlpEquipmentDetailPage({
           asset.usageType === "BORROWABLE" ? "Borrowable" : "Usage only"
         }`}
         actions={
-          <CatalogImage mediaId={asset.imageMediaId} alt={asset.name} size={72} />
+          <div className="flex items-center gap-3">
+            <DeleteConfirmButton
+              endpoint={`/api/plp/inventory/equipment/${asset.assetCode}`}
+              title="Hapus Aset Peralatan"
+              description="Apakah Anda yakin ingin menghapus aset ini beserta seluruh unit fisiknya? Data tidak dapat dipulihkan."
+              itemName={`${asset.name} (${asset.assetCode})`}
+              buttonText="Hapus Aset"
+              buttonVariant="outline"
+              redirectOnSuccess="/plp/inventory/equipment"
+              disabled={asset.status === "IN_USE"}
+              disabledReason="Aset sedang berstatus dipakai"
+            />
+            <CatalogImage mediaId={asset.imageMediaId} alt={asset.name} size={72} />
+          </div>
         }
       />
 
@@ -77,7 +92,9 @@ export default async function PlpEquipmentDetailPage({
                 <thead>
                   <tr className="border-b border-[#EEEEEE] text-[11px] uppercase tracking-[0.08em] text-[#929292]">
                     <th scope="col" className="px-3 py-2 font-semibold">Kode</th>
+                    <th scope="col" className="px-3 py-2 font-semibold">Tag QR</th>
                     <th scope="col" className="px-3 py-2 font-semibold">Label</th>
+                    <th scope="col" className="px-3 py-2 font-semibold">Lokasi Meja/Rak</th>
                     <th scope="col" className="px-3 py-2 font-semibold">Status</th>
                     <th scope="col" className="px-3 py-2 font-semibold">Kondisi</th>
                     <th scope="col" className="px-3 py-2 font-semibold">Catatan</th>
@@ -93,18 +110,36 @@ export default async function PlpEquipmentDetailPage({
                       <th scope="row" className="px-3 py-2 text-[12px] font-semibold text-[#212121]">
                         {unit.code}
                       </th>
+                      <td className="px-3 py-2 text-[12px]">
+                        <QrTagDialog
+                          item={{
+                            targetType: "UNIT",
+                            targetId: unit.unitId,
+                            code: unit.code,
+                            name: `${asset.name} (${unit.label})`,
+                            classification: asset.classification,
+                            storageLocation: unit.storageLocation,
+                            qrCode: unit.qrCode,
+                          }}
+                        />
+                      </td>
                       <td className="px-3 py-2 text-[12px] text-[#212121]">
                         {unit.label}
                       </td>
-                      <td className="px-3 py-2 text-[12px] text-[#212121]">
+                      <td className="px-3 py-2 text-[12px] text-[#6B6B6B]">
+                        {unit.storageLocation ?? "-"}
+                      </td>
+                      <td className="px-3 py-2 text-[12px] text-[#121826]">
                         <span
                           className={
-                            "rounded-full px-2.5 py-1 text-[11px] font-semibold " +
+                            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold " +
                             (unit.status === "AVAILABLE"
-                              ? "bg-[#E5F5ED] text-[#03683A]"
-                              : unit.status === "IN_USE" || unit.status === "RESERVED"
-                                ? "bg-[#E9EEFC] text-[#38529B]"
-                                : "bg-[#FDE9E9] text-[#9E3636]")
+                              ? "border border-[#BBF7D0]/80 bg-[#F0FDF4] text-[#166534]"
+                              : unit.status === "IN_USE"
+                                ? "border border-[#E2E8F0] bg-[#F8FAFC] text-[#475569]"
+                                : unit.status === "RESERVED"
+                                  ? "border border-[#FDE68A]/80 bg-[#FEF7E6] text-[#8D6500]"
+                                  : "border border-[#FECACA]/80 bg-[#FEF2F2] text-[#991B1B]")
                           }
                         >
                           {unit.status.replaceAll("_", " ")}
@@ -142,6 +177,15 @@ export default async function PlpEquipmentDetailPage({
                               notes: unit.notes,
                             }}
                             variant="full"
+                          />
+                          <DeleteConfirmButton
+                            endpoint={`/api/plp/inventory/equipment/units/${unit.unitId}`}
+                            title="Hapus Unit Fisik"
+                            description="Apakah Anda yakin ingin menghapus unit fisik ini dari inventaris?"
+                            itemName={`Unit ${unit.code} (${unit.label})`}
+                            buttonVariant="icon"
+                            disabled={unit.status === "IN_USE" || unit.status === "RESERVED"}
+                            disabledReason="Unit sedang dipinjam atau direservasi"
                           />
                         </div>
                       </td>

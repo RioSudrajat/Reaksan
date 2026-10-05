@@ -14,7 +14,7 @@ type Params = { params: Promise<{ assetId: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { assetId } = await params;
-  return { title: `Equipment ${assetId}` };
+  return { title: `Instrumen ${assetId} · Reaksan` };
 }
 
 export default async function StudentEquipmentDetailPage({

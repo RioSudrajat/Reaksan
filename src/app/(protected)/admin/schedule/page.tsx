@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PlpScheduleCalendar } from "@/components/plp/schedule-calendar";
+import { PlpScheduleSection } from "@/components/plp/schedule-calendar";
 import { ScheduleToolbar } from "@/components/plp/schedule-toolbar";
 import { PageHeader } from "@/components/workspace";
 import { currentScheduleMonth } from "@/components/schedule-data";
@@ -8,7 +8,7 @@ import { loadScheduleCalendar } from "@/services/plp.service";
 import { requirePermission } from "@/lib/session";
 import { scheduleViewSchema } from "@/validators/plp";
 
-export const metadata: Metadata = { title: "Schedule" };
+export const metadata: Metadata = { title: "Jadwal & Agenda Global · Admin Reaksan" };
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -40,16 +40,18 @@ export default async function AdminSchedulePage({
     listRoomViews(),
   ]);
 
+  const currentRoomName = rooms.find((r) => r.id === query.room)?.name;
+
   return (
     <>
       <PageHeader
-        eyebrow="Operasional"
-        title="Global schedule"
-        description="Kalender operasional yang sama dengan PLP workspace. Admin tidak mengubah jadwal di sini; gunakan request detail atau audit untuk menelusuri perubahan."
+        eyebrow="Operasional & Pemantauan"
+        title="Jadwal & Agenda Laboratorium"
+        description="Pemantauan kalender operasional laboratorium terpadu secara menyeluruh. Menampilkan seluruh sesi praktikum, riset mahasiswa, dan alokasi instrumen di tiap ruangan."
       />
-      <PlpScheduleCalendar
+      <PlpScheduleSection
         events={events}
-        month={month}
+        initialMonth={month}
         toolbar={
           <ScheduleToolbar
             rooms={rooms}
@@ -58,6 +60,8 @@ export default async function AdminSchedulePage({
             basePath="/admin/schedule"
           />
         }
+        currentRoomCode={query.room}
+        currentRoomName={currentRoomName}
       />
     </>
   );

@@ -108,18 +108,17 @@ export function StatCard({
   const body = (
     <>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[12px] font-medium text-[#6B6B6B]">{label}</p>
-        <span className={cn("size-2 rounded-full", toneClasses[tone].dot)} />
+        <p className="text-[12px] font-medium text-[#64748B]">{label}</p>
       </div>
-      <p className="mt-3 text-[28px] font-bold leading-8 tracking-[-0.03em] text-[#212121] [font-variant-numeric:tabular-nums]">
+      <p className="mt-3 text-[28px] font-bold leading-8 tracking-[-0.03em] text-[#121826] [font-variant-numeric:tabular-nums]">
         {value}
       </p>
-      {detail && <p className="mt-1 text-[11px] text-[#6B6B6B]">{detail}</p>}
+      {detail && <p className="mt-1 text-[11px] text-[#64748B]">{detail}</p>}
     </>
   );
   const className =
-    "dashboard-card block p-4 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA] " +
-    (href ? "hover:-translate-y-0.5 hover:border-[#D6C6A6]" : "");
+    "dashboard-card block p-4 transition duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] " +
+    (href ? "hover:-translate-y-0.5 hover:border-[#FDB913]/70 hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)]" : "");
   return href ? (
     <Link href={href} className={className}>
       {body}
@@ -246,7 +245,7 @@ export const SkeletonBlock = ({
 );
 
 export const controlClass =
-  "h-11 w-full rounded-xl border border-[#E1E1E1] bg-white px-3 text-[13px] text-[#212121] outline-none transition focus:border-[#6E8EDA] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]";
+  "h-11 w-full rounded-xl border border-[#E5E7EB] bg-white px-3 text-[13px] text-[#121826] outline-none transition focus:border-[#FDB913] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]";
 
 export function FilterField({
   label,
@@ -259,7 +258,7 @@ export function FilterField({
 }) {
   return (
     <label className={cn("flex min-w-0 flex-col gap-1.5", className)}>
-      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B6B6B]">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#64748B]">
         {label}
       </span>
       {children}
@@ -267,43 +266,7 @@ export function FilterField({
   );
 }
 
-export function FilterBar({
-  action,
-  children,
-  clearHref,
-  activeCount = 0,
-}: {
-  action: string;
-  children: React.ReactNode;
-  clearHref?: string;
-  activeCount?: number;
-}) {
-  return (
-    <form
-      method="get"
-      action={action}
-      className="dashboard-card mb-5 flex flex-wrap items-end gap-3 p-4"
-    >
-      {children}
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="submit"
-          className="inline-flex min-h-11 items-center rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
-        >
-          Terapkan filter
-        </button>
-        {clearHref && activeCount > 0 && (
-          <Link
-            href={clearHref}
-            className="inline-flex min-h-11 items-center rounded-xl px-3 text-[12px] font-bold text-[#38529B] transition hover:bg-[#E9EEFC] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
-          >
-            Hapus filter ({activeCount})
-          </Link>
-        )}
-      </div>
-    </form>
-  );
-}
+export { FilterBar } from "@/components/filter-bar";
 
 export function Pagination({
   basePath,
@@ -334,20 +297,22 @@ export function Pagination({
       {page > 1 ? (
         <Link
           href={link(page - 1)}
-          className="inline-flex min-h-11 items-center rounded-xl border border-[#E1E1E1] bg-white px-4 text-[12px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+          scroll={false}
+          className="inline-flex min-h-11 items-center rounded-xl border border-[#E5E7EB] bg-white px-4 text-[12px] font-bold text-[#121826] hover:bg-[#F8F9FA] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
         >
           Sebelumnya
         </Link>
       ) : (
         <span />
       )}
-      <p className="text-[12px] text-[#6B6B6B] [font-variant-numeric:tabular-nums]">
+      <p className="text-[12px] text-[#64748B] [font-variant-numeric:tabular-nums]">
         Halaman {page} dari {totalPages}
       </p>
       {page < totalPages ? (
         <Link
           href={link(page + 1)}
-          className="inline-flex min-h-11 items-center rounded-xl border border-[#E1E1E1] bg-white px-4 text-[12px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+          scroll={false}
+          className="inline-flex min-h-11 items-center rounded-xl border border-[#E5E7EB] bg-white px-4 text-[12px] font-bold text-[#121826] hover:bg-[#F8F9FA] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
         >
           Berikutnya
         </Link>

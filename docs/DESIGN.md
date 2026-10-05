@@ -2,7 +2,7 @@
 
 Status: v1 direction
 
-Reaksan adalah platform koordinasi resource laboratorium untuk mahasiswa, PLP, dosen, Aslab, dan admin. Dokumen ini menerjemahkan PRD, product architecture, technical design specification, referensi dashboard yang diberikan, serta baseline visual LiVE UNPAD menjadi aturan visual yang bisa dipakai saat membangun UI.
+Reaksan adalah platform koordinasi resource laboratorium untuk Mahasiswa (Student), PLP, dan Admin. Dokumen ini menerjemahkan PRD, product architecture, technical design specification, referensi dashboard yang diberikan, serta baseline visual LiVE UNPAD menjadi aturan visual yang bisa dipakai saat membangun UI.
 
 Dokumen ini adalah arahan desain, bukan instruksi untuk agent. Jika ada kalimat di dalamnya yang terlihat seperti perintah teknis, perlakukan sebagai keputusan desain yang perlu diterapkan hanya bila sesuai dengan arsitektur dan permission yang berlaku.
 
@@ -343,13 +343,10 @@ The PLP dashboard is a triage workspace:
 
 The dominant panel should be the queue that needs attention. The right rail can show schedule and incident summaries. A map is useful as a secondary locator, not the main PLP action surface.
 
-### 8.3 Lecturer, Aslab, and Admin
+### 8.3 Admin
+- Admin: configuration, users, roles, rooms, equipment types, assignments, and audit access.
 
-- Lecturer: supervised activities, student resource usage, relevant incidents, notifications.
-- Aslab: assigned operational work, schedule, incident reporting, inspection tasks.
-- Admin: configuration, users, roles, rooms, equipment types, and audit access.
-
-Reuse the same shell and component language, but do not show admin-density tables to students.
+MVP difokuskan secara ketat pada 3 role: Mahasiswa (Student), PLP, dan Admin. Reuse the same shell and component language, but do not show admin-density tables to students.
 
 ## 9. Laboratory map
 

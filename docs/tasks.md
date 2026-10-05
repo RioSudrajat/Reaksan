@@ -1,0 +1,30 @@
+# Task Tracking Progress
+
+- [x] Task 1: Schedule Event History (Filter Bulan Aktif & UI Simpel Bersih)
+  - [x] 1.1 Buat helper/komponen sinkronisasi active month di PLP schedule (`PlpScheduleSection`)
+  - [x] 1.2 Implementasikan filtering per-bulan di `ScheduleEventHistory` dengan zona waktu Asia/Jakarta yang presisi (`parseJakartaDate`)
+  - [x] 1.3 Redesain tabel riwayat menjadi lebih tenang, scannable, dan rapi sesuai prinsip antislop design system
+- [x] Task 2: Cetak & Simpan / Unduh PDF (.pdf) Tanpa Overflow
+  - [x] 2.1 Buat utilitas `exportElementToPdf` di `src/lib/pdf-export.ts` dengan teknik sub-canvas per-page slicing tanpa bleed negatif
+  - [x] 2.2 Perbarui `PrintButton` di `src/components/plp/print-button.tsx` menjadi aksi ganda (Unduh PDF langsung & Dialog Cetak)
+  - [x] 2.3 Sempurnakan `@media print` dan `@page` pada seluruh lembar cetak:
+    - [x] `src/components/plp/schedule-event-history.tsx` (A4 landscape)
+    - [x] `src/components/plp/daily-run-sheet.tsx` (A4 portrait)
+    - [x] `src/app/(protected)/plp/inventory/opname/[id]/sheet/page.tsx` (A4 landscape & responsive table wrap)
+- [x] Task 3: Visual Multi-Day Event Bar Menyatu & Perbaikan Bug Judul Berulang
+  - [x] 3.1 Selesaikan bug cross-month date parsing di `src/services/view.service.ts` dan `src/components/schedule-calendar.tsx` (`eventStartDate`/`eventEndDate` berbasis `parseJakartaDate`)
+  - [x] 3.2 Ganti bar per-sel terpotong menjadi CSS Grid spanning bar yang kontinu melintasi hari
+  - [x] 3.3 Hapus duplikasi judul berulang di tiap hari; tampilkan sekali di bentangan bar dengan panah penanda multi-pekan (`◀` / `▶`)
+- [x] Task 4: Calendar Overflow (+N lainnya) & Day Overview List
+  - [x] 4.1 Tambahkan badge `+N lainnya` di sel tanggal jika jumlah event melebihi kapasitas kalender (`MAX_LANES = 2`)
+  - [x] 4.2 Buat modal Day Overview (`PlpDayOverviewCard`) yang otomatis muncul ketika tanggal dipilih di kalender
+  - [x] 4.3 Tampilkan seluruh request pada hari tersebut terlebih dahulu sebelum masuk ke rincian perorangan (`PlpScheduleCard`), dengan navigasi kembali (`Kembali ke daftar permohonan tanggal ini`)
+  - [x] 4.4 Sorot permohonan aktif (`Dipilih di Kalender`) jika pengguna mengklik langsung bar event terkait
+- [x] Task 5: Admin Delete User Account Fungsional Database
+  - [x] 5.1 Implementasikan `deleteUserAccount` di `src/services/admin.service.ts` dengan pembersihan relasi foreign key 26 tabel dan pencatatan audit log
+  - [x] 5.2 Sediakan endpoint `DELETE /api/admin/users/[id]` dengan proteksi izin `{ user: ["delete"] }` dan verifikasi origin
+  - [x] 5.3 Tambahkan tombol hapus akun, dialog konfirmasi peringatan, dan pencegahan self-deletion di `UserRoleForm`
+- [x] Task 6: Verifikasi & Testing
+  - [x] 6.1 Jalankan static check & unit test suite (`npm run check`): 10/10 test unit lulus di PostgreSQL container terisolasi, 0 error lint/typecheck
+  - [x] 6.2 Jalankan production build Next.js (`npm run build`): sukses terkompilasi untuk seluruh 76 routes
+  - [x] 6.3 Suntikkan dataset peminjaman realistis (`scripts/seed-fisik-requests.mjs`) & verifikasi rendering kalender HTML, penanganan multi-day bar, overflow `+2 lainnya`, dan deletion akun via API

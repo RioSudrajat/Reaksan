@@ -27,6 +27,7 @@ export type RequestEquipmentItem = {
   name: string;
   unitId: string;
   unitLabel: string;
+  classification?: "INSTRUMENT" | "TOOL";
   imageMediaId?: string | null;
 };
 
@@ -118,6 +119,7 @@ export type EquipmentView = {
   id: string;
   name: string;
   typeName: string;
+  classification: "INSTRUMENT" | "TOOL";
   roomId: string;
   room: string;
   usage: string;
@@ -336,12 +338,65 @@ export function eventDisplayState(event: ScheduleEvent): RequestStatus {
   return event.status;
 }
 
+export function parseJakartaDate(isoString: string): Date {
+  const d = new Date(isoString);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "Asia/Jakarta",
+  }).formatToParts(d);
+  const pick = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return new Date(pick("year"), pick("month") - 1, pick("day"));
+}
+
 export function eventsForRange(
   events: ScheduleEvent[],
   range: { start: number; end: number },
+  month?: { year: number; month: number },
 ) {
   const start = Math.min(range.start, range.end);
   const end = Math.max(range.start, range.end);
+
+  if (month) {
+    const rangeStart = new Date(month.year, month.month, start, 0, 0, 0, 0);
+    const rangeEnd = new Date(month.year, month.month, end, 23, 59, 59, 999);
+    return events
+      .filter((event) => {
+        let s: Date;
+        let e: Date;
+        if (event.startAt) {
+          try {
+            s = parseJakartaDate(event.startAt);
+          } catch {
+            s = new Date(month.year, month.month, Math.min(event.startDay, event.endDay));
+          }
+        } else {
+          s = new Date(month.year, month.month, Math.min(event.startDay, event.endDay));
+        }
+
+        if (event.endAt) {
+          try {
+            e = parseJakartaDate(event.endAt);
+          } catch {
+            e = new Date(month.year, month.month, Math.max(event.startDay, event.endDay));
+          }
+        } else {
+          e = new Date(month.year, month.month, Math.max(event.startDay, event.endDay));
+        }
+
+        const sMidnight = new Date(s.getFullYear(), s.getMonth(), s.getDate(), 0, 0, 0, 0);
+        const eMidnight = new Date(e.getFullYear(), e.getMonth(), e.getDate(), 23, 59, 59, 999);
+        return sMidnight <= rangeEnd && eMidnight >= rangeStart;
+      })
+      .sort((a, b) => {
+        const aTime = a.startAt ? new Date(a.startAt).getTime() : a.startDay;
+        const bTime = b.startAt ? new Date(b.startAt).getTime() : b.startDay;
+        return aTime - bTime;
+      });
+  }
+
   return events
     .filter((event) => {
       const eventStart = Math.min(event.startDay, event.endDay);
@@ -369,14 +424,14 @@ export function equipmentBreakdown(summary: {
   maintenanceUnits: number;
 }) {
   return [
-    `${summary.availableUnits} free`,
-    summary.reservedUnits > 0 ? `${summary.reservedUnits} reserved` : null,
-    summary.inUseUnits > 0 ? `${summary.inUseUnits} in use` : null,
+    `${summary.availableUnits} siap pakai`,
+    summary.reservedUnits > 0 ? `${summary.reservedUnits} direservasi` : null,
+    summary.inUseUnits > 0 ? `${summary.inUseUnits} digunakan` : null,
     summary.awaitingReturnUnits > 0
-      ? `${summary.awaitingReturnUnits} awaiting return`
+      ? `${summary.awaitingReturnUnits} menunggu kembali`
       : null,
     summary.maintenanceUnits > 0
-      ? `${summary.maintenanceUnits} maintenance`
+      ? `${summary.maintenanceUnits} perbaikan`
       : null,
   ]
     .filter(Boolean)
@@ -413,7 +468,7 @@ export const requestStatusLabels: Record<RequestStatus, string> = {
   COMPLETED: "Selesai",
   CANCELLED: "Dibatalkan",
   OVERDUE: "Lewat tenggat",
-  CONFIRMED: "Shared usage",
+  CONFIRMED: "Sesi Bersama",
 };
 
 // Calendar legend order. Shared usage is shown as confirmed extra usage.
@@ -442,7 +497,7 @@ export const displayLabels: Record<RequestStatus, string> = {
   COMPLETED: "Selesai",
   CANCELLED: "Dibatalkan",
   OVERDUE: "Lewat tenggat",
-  CONFIRMED: "Shared usage",
+  CONFIRMED: "Sesi Bersama",
 };
 
 export const displayDotClasses: Record<RequestStatus, string> = {

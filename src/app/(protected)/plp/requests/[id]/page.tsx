@@ -63,14 +63,20 @@ export default async function PlpRequestDetailPage({
   const timeline = await getRequestTimeline(id);
   const { request } = context;
   const canFulfill = ["APPROVED", "READY_FOR_PICKUP"].includes(request.status);
+  const instruments = context.equipment.filter(
+    (item) => item.classification === "INSTRUMENT",
+  );
+  const tools = context.equipment.filter(
+    (item) => item.classification !== "INSTRUMENT",
+  );
 
   return (
     <>
       <Link
         href="/plp/requests"
-        className="mb-4 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-[12px] font-bold text-[#38529B] hover:bg-[#E9EEFC] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+        className="mb-4 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-3 text-[12px] font-semibold text-[#121826] transition hover:bg-[#F8F9FA] hover:border-[#FDE68A] hover:text-[#8D6500] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
       >
-        <ArrowLeft className="size-4" aria-hidden="true" />
+        <ArrowLeft className="size-3.5" aria-hidden="true" />
         Semua request
       </Link>
 
@@ -82,7 +88,7 @@ export default async function PlpRequestDetailPage({
           canFulfill ? (
             <Link
               href="/plp/fulfillment/issue"
-              className="inline-flex min-h-11 items-center rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+              className="inline-flex min-h-11 items-center rounded-xl bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] hover:bg-[#E5A700] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] shadow-xs"
             >
               Buka issue queue
             </Link>
@@ -91,14 +97,14 @@ export default async function PlpRequestDetailPage({
       />
 
       {context.warnings.length > 0 && (
-        <div className="mb-5 rounded-2xl border border-[#F2D9A4] bg-[#FFF9EC] p-4">
-          <p className="flex items-center gap-2 text-[12px] font-bold text-[#705012]">
+        <div className="mb-5 rounded-2xl border border-[#FDE68A] bg-[#FEF7E6] p-4">
+          <p className="flex items-center gap-2 text-[12px] font-bold text-[#8D6500]">
             <AlertTriangle className="size-4" aria-hidden="true" />
             Peringatan sebelum keputusan
           </p>
           <ul className="mt-2 space-y-1.5">
             {context.warnings.map((warning, index) => (
-              <li key={index} className="text-[12px] leading-5 text-[#5D4A1B]">
+              <li key={index} className="text-[12px] leading-5 text-[#8D6500]/90">
                 {warning.message}
               </li>
             ))}
@@ -130,17 +136,17 @@ export default async function PlpRequestDetailPage({
           </Panel>
 
           <Panel
-            context={`${context.equipment.length} item`}
-            title="Equipment yang diminta"
+            context={`${instruments.length} unit`}
+            title="Instrumen Laboratorium"
           >
-            {context.equipment.length === 0 ? (
+            {instruments.length === 0 ? (
               <EmptyState
-                title="Tidak ada equipment"
-                description="Request ini hanya meminta material."
+                title="Tidak ada instrumen"
+                description="Permohonan ini tidak meminta instrumen bermesin/analitik."
               />
             ) : (
               <ul className="divide-y divide-[#EEEEEE]">
-                {context.equipment.map((item) => (
+                {instruments.map((item) => (
                   <li key={item.itemId} className="py-3 first:pt-0 last:pb-0">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-3">
@@ -151,9 +157,87 @@ export default async function PlpRequestDetailPage({
                           className="rounded-lg"
                         />
                         <div className="min-w-0">
-                          <p className="text-[13px] font-semibold text-[#212121]">
-                            {item.assetName} · {item.unitCode}
+                          <div className="flex items-center gap-2">
+                            <p className="text-[13px] font-semibold text-[#212121]">
+                              {item.assetName} · {item.unitCode}
+                            </p>
+                            <span className="rounded bg-[#FEF1CC] px-2 py-0.5 text-[9px] font-bold text-[#AE7C1D] border border-[#F9B129]/30">
+                              INSTRUMEN
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-[#6B6B6B]">
+                            {item.roomName} · {item.unitLabel}
                           </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={
+                            "rounded-full px-2.5 py-1 text-[11px] font-semibold " +
+                            (item.usageType === "BORROWABLE"
+                              ? "bg-[#E9EEFC] text-[#38529B]"
+                              : "bg-[#F1F0EC] text-[#5D5B53]")
+                          }
+                        >
+                          {item.usageType === "BORROWABLE"
+                            ? "Borrowable"
+                            : "Usage only"}
+                        </span>
+                        <span className="rounded-full bg-[#F5F5F5] px-2.5 py-1 text-[11px] font-semibold text-[#5D5B53]">
+                          {item.unitStatus} · {item.condition}
+                        </span>
+                      </div>
+                    </div>
+                    {item.conflicts.length > 0 && (
+                      <ul className="mt-2 space-y-1">
+                        {item.conflicts.map((conflict) => (
+                          <li
+                            key={conflict.requestId}
+                            className="text-[11px] text-[#9E3636]"
+                          >
+                            Bentrok dengan {conflict.requestCode} (
+                            {conflict.actorName}) ·{" "}
+                            {formatRange(conflict.startAt, conflict.endAt)}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+
+          <Panel
+            context={`${tools.length} unit`}
+            title="Alat Praktikum & Glassware"
+          >
+            {tools.length === 0 ? (
+              <EmptyState
+                title="Tidak ada alat praktikum"
+                description="Permohonan ini tidak meminta alat gelas atau perkakas penunjang."
+              />
+            ) : (
+              <ul className="divide-y divide-[#EEEEEE]">
+                {tools.map((item) => (
+                  <li key={item.itemId} className="py-3 first:pt-0 last:pb-0">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <CatalogImage
+                          mediaId={item.imageMediaId}
+                          alt={item.assetName}
+                          size={44}
+                          className="rounded-lg"
+                        />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-[13px] font-semibold text-[#212121]">
+                              {item.assetName} · {item.unitCode}
+                            </p>
+                            <span className="rounded bg-[#F5F5F5] px-2 py-0.5 text-[9px] font-bold text-[#6B6B6B] border border-[#E1E1E1]">
+                              ALAT
+                            </span>
+                          </div>
                           <p className="mt-0.5 text-[11px] text-[#6B6B6B]">
                             {item.roomName} · {item.unitLabel}
                           </p>
@@ -199,7 +283,7 @@ export default async function PlpRequestDetailPage({
 
           <Panel
             context={`${context.materials.length} item`}
-            title="Material dan stok"
+            title="Bahan Kimia & Reagen"
           >
             {context.materials.length === 0 ? (
               <EmptyState

@@ -87,7 +87,7 @@ export function UnitStatusAction({
             setNotes("Perbaikan/kalibrasi selesai, unit siap digunakan.");
             setOpen(true);
           }}
-          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-[#E5F5ED] px-2.5 py-1 text-[11px] font-bold text-[#03683A] transition hover:bg-[#D3EFE0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#03683A]"
+          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-[#F0FDF4] border border-[#BBF7D0] px-2.5 py-1 text-[11px] font-semibold text-[#16A34A] transition hover:bg-[#DCFCE7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16A34A]"
         >
           <CheckCircle2 className="size-3.5" aria-hidden="true" />
           Set Available
@@ -99,9 +99,9 @@ export function UnitStatusAction({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-[#E1E1E1] bg-white px-2.5 py-1 text-[11px] font-bold text-[#212121] transition hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#121826] transition hover:bg-[#FEF7E6] hover:border-[#FDE68A] hover:text-[#8D6500] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
       >
-        <Wrench className="size-3.5 text-[#6B6B6B]" aria-hidden="true" />
+        <Wrench className="size-3.5 text-[#64748B]" aria-hidden="true" />
         Ubah status
       </button>
     );
@@ -113,20 +113,20 @@ export function UnitStatusAction({
         role="dialog"
         aria-modal="true"
         aria-labelledby={`dialog-title-${unit.id}`}
-        className="w-full max-w-md rounded-2xl border border-[#E1E1E1] bg-white p-5 shadow-xl"
+        className="w-full max-w-md rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-xl"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-[#F1F1F1] pb-3">
+        <div className="flex items-start justify-between gap-3 border-b border-[#E5E7EB] pb-3">
           <div>
             <h3
               id={`dialog-title-${unit.id}`}
-              className="text-[15px] font-bold text-[#212121]"
+              className="text-[15px] font-bold text-[#121826]"
             >
               Ubah Status Unit {unit.code}
             </h3>
             {unit.label && (
-              <p className="mt-0.5 text-[11px] text-[#6B6B6B]">
+              <p className="mt-0.5 text-[11px] text-[#475569]">
                 {unit.label} · Status saat ini:{" "}
-                <span className="font-semibold text-[#212121]">
+                <span className="font-semibold text-[#121826]">
                   {unit.status}
                 </span>
               </p>
@@ -136,7 +136,7 @@ export function UnitStatusAction({
             type="button"
             onClick={() => setOpen(false)}
             disabled={pending}
-            className="rounded-lg p-1 text-[#929292] hover:bg-[#F5F5F5]"
+            className="rounded-lg p-1 text-[#64748B] hover:bg-[#FEF7E6] hover:text-[#121826] transition"
           >
             ✕
           </button>
@@ -195,7 +195,7 @@ export function UnitStatusAction({
           {error && (
             <p
               role="alert"
-              className="rounded-xl border border-[#F3C7C7] bg-[#FDE9E9] p-3 text-[12px] font-medium text-[#9E3636]"
+              className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] p-3 text-[12px] font-medium text-[#991B1B]"
             >
               {error}
             </p>
@@ -206,14 +206,14 @@ export function UnitStatusAction({
               type="button"
               onClick={() => setOpen(false)}
               disabled={pending}
-              className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-3 text-[12px] font-bold text-[#6B6B6B] hover:bg-[#F5F5F5]"
+              className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white px-3 text-[12px] font-semibold text-[#121826] hover:bg-[#FEF7E6] hover:border-[#FDE68A] hover:text-[#8D6500] transition"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] disabled:opacity-60"
+              className="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] shadow-xs transition hover:bg-[#EAA805] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] disabled:opacity-60"
             >
               {pending ? "Menyimpan..." : "Simpan Perubahan"}
             </button>

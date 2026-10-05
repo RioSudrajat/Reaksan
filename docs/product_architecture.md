@@ -555,8 +555,6 @@ MVP roles:
 ```text
 STUDENT
 PLP
-LECTURER
-ASLAB
 ADMIN
 
 ```
@@ -684,7 +682,6 @@ EquipmentConditionHistory
 ```text
 STUDENT_REPORT
 PLP_INSPECTION
-ASLAB_INSPECTION
 MAINTENANCE
 ADMIN
 
@@ -1053,7 +1050,7 @@ IncidentResolution
 
 # 41. Assignment
 
-Assignment digunakan untuk membuat struktur Aslab/PIC tetap fleksibel.
+Assignment digunakan untuk membuat struktur penugasan operasional PLP/PIC tetap fleksibel.
 
 ```text
 Assignment
@@ -1071,9 +1068,9 @@ Assignment
 Contoh:
 
 ```text
-scopeType = LABORATORY
-scopeId = LAB-03
-assignmentType = ASLAB
+scopeType = ROOM
+scopeId = lab-organik
+assignmentType = PLP
 
 ```
 
@@ -1619,26 +1616,26 @@ Legend:
 - **—** = No access
 
 
-| Module        | Student | PLP      | Lecturer | Aslab | Admin |
-| ------------- | ------- | -------- | -------- | ----- | ----- |
-| Lab           | V       | V        | V        | V     | C/U   |
-| Room          | V       | V/U      | V        | V     | C/U   |
-| Equipment     | V       | V/U      | V        | V     | C/U   |
-| Material      | V       | V/U      | V        | V     | C/U   |
-| Activity      | C/U     | V        | V        | V\*   | V     |
-| Request       | C/U/X   | V/A/U/X  | V        | V\*   | V/U   |
-| Reservation   | V       | V/U      | V        | V\*   | V/U   |
-| Shared Usage  | C/X     | V        | V        | V\*   | V     |
-| Issue         | —       | I        | —        | I\*   | I     |
-| Return        | R       | R/I      | —        | R\*   | R     |
-| Incident      | C       | C/U/A/X  | V        | C/U   | C/U   |
-| Notification  | V/X     | V/X      | V/X      | V/X   | V     |
-| Audit         | —       | V\*      | —        | V\*   | V     |
-| User          | Self    | Relevant | Self     | Self  | C/U   |
-| Configuration | —       | Limited  | —        | —     | C/U   |
+| Module        | Student | PLP      | Admin |
+| ------------- | ------- | -------- | ----- |
+| Lab           | V       | V        | C/U   |
+| Room          | V       | V/U      | C/U   |
+| Equipment     | V       | V/U      | C/U   |
+| Material      | V       | V/U      | C/U   |
+| Activity      | C/U     | V        | V     |
+| Request       | C/U/X   | V/A/U/X  | V/U   |
+| Reservation   | V       | V/U      | V/U   |
+| Shared Usage  | C/X     | V        | V     |
+| Issue         | —       | I        | I     |
+| Return        | R       | R/I      | R     |
+| Incident      | C       | C/U/A/X  | C/U   |
+| Notification  | V/X     | V/X      | V     |
+| Audit         | —       | V\*      | V     |
+| User          | Self    | Relevant | C/U   |
+| Configuration | —       | Limited  | C/U   |
 
 
-`*` = scoped access berdasarkan assignment atau relationship.
+`*` = scoped access berdasarkan penugasan lab/ruangan.
 
 ---
 
@@ -1662,23 +1659,12 @@ RESOURCE SCOPE
 
 ```
 
-Contoh:
-
-Aslab dapat melihat incident hanya jika:
+Contoh PLP:
 
 ```text
-Aslab
+PLP
 AND
-Assignment covers relevant laboratory/activity/resource
-
-```
-
-Contoh lecturer:
-
-```text
-Lecturer
-AND
-studentId belongs to supervised student
+Room in assigned scope
 
 ```
 
@@ -1768,35 +1754,10 @@ request.studentId === currentUser.id
 
 ---
 
-# 68. LECTURER PAGE ARCHITECTURE
+# 68. ROLE PAGE SCOPE NOTE
 
-```text
-/lecturer
-│
-├── dashboard
-├── students
-│   └── :id
-├── activities
-│   └── :id
-├── resource-usage
-├── incidents
-└── notifications
-
-```
-
----
-
-# 69. ASLAB PAGE ARCHITECTURE
-
-```text
-/aslab
-│
-├── dashboard
-├── assignments
-├── schedule
-├── activities
-├── resource-usage
-└── incidents
+> [!NOTE]
+> Halaman khusus untuk Dosen (`/lecturer/*`) dan Aslab (`/aslab/*`) telah dikeluarkan dari perencanaan MVP. Sistem berfokus penuh pada 3 role: Student (`/student/*`), PLP (`/plp/*`), dan Admin (`/admin/*`).
 
 ```
 
@@ -1988,7 +1949,7 @@ REPORT INCIDENT
       ↓
 INCIDENT_REPORTED
       ↓
-PLP / ASLAB ASSESSMENT
+PLP ASSESSMENT
       ↓
 Finding
       ↓
@@ -2580,18 +2541,6 @@ Tidak boleh:
 
 - modify user authentication;
 - modify academic supervisor relationship unless authorized.
-
-Lecturer:
-
-Tidak boleh:
-
-- approve request;
-- modify stock;
-- issue equipment.
-
-Aslab:
-
-Tidak boleh otomatis memiliki seluruh PLP permissions.
 
 Admin:
 

@@ -57,6 +57,7 @@ export type EquipmentItemDto = {
   unitLabel: string;
   assetCode: string;
   assetName: string;
+  classification: "INSTRUMENT" | "TOOL";
   usageType: "BORROWABLE" | "USAGE_ONLY";
   purpose?: string;
   imageMediaId: string | null;
@@ -313,7 +314,6 @@ async function resolveMaterials(
         `${row.name} has no dispensing rule yet.`,
       );
     const minimum = Number(row.minimum);
-    const increment = Number(row.increment);
     const maximum = Number(row.maximum);
     if (item.quantity < minimum)
       throw new ApiError(
@@ -326,13 +326,6 @@ async function resolveMaterials(
         422,
         "ABOVE_MAXIMUM",
         `${row.name} maximum is ${maximum} ${unit}.`,
-      );
-    const steps = (item.quantity - minimum) / increment;
-    if (Math.abs(steps - Math.round(steps)) > 1e-6)
-      throw new ApiError(
-        422,
-        "INVALID_INCREMENT",
-        `${row.name} must follow the ${increment} ${unit} dispensing step.`,
       );
     if (item.quantity > totals.available + 1e-6)
       throw new ApiError(
@@ -360,6 +353,7 @@ export type RequestLoadFilters = {
   search?: string;
   from?: Date;
   to?: Date;
+  orderBy?: "statusPriority" | "startAt" | "createdAt";
   limit?: number;
   offset?: number;
 };
@@ -370,8 +364,14 @@ function requestConditions(options: RequestLoadFilters) {
     conditions.push(eq(resourceRequest.id, options.requestId));
   if (options.studentId)
     conditions.push(eq(resourceRequest.studentId, options.studentId));
-  if (options.statuses?.length)
-    conditions.push(inArray(resourceRequest.status, options.statuses));
+  if (options.statuses?.length) {
+    const effectiveStatuses =
+      options.statuses.includes("PENDING_PLP") &&
+      !options.statuses.includes("SUBMITTED")
+        ? [...options.statuses, "SUBMITTED" as const]
+        : options.statuses;
+    conditions.push(inArray(resourceRequest.status, effectiveStatuses));
+  }
   if (options.roomCode) conditions.push(eq(room.code, options.roomCode));
   if (options.roomCodes !== undefined)
     conditions.push(
@@ -430,7 +430,31 @@ export async function loadRequestDtos(
     .innerJoin(user, eq(user.id, resourceRequest.studentId))
     .innerJoin(activity, eq(activity.id, resourceRequest.activityId))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(resourceRequest.startAt))
+    .orderBy(
+      ...(options.orderBy === "statusPriority"
+        ? [
+            sql`CASE ${resourceRequest.status}
+              WHEN 'PENDING_PLP' THEN 1
+              WHEN 'SUBMITTED' THEN 1
+              WHEN 'REQUEST_REVISION' THEN 2
+              WHEN 'APPROVED' THEN 3
+              WHEN 'READY_FOR_PICKUP' THEN 4
+              WHEN 'ACTIVE' THEN 5
+              WHEN 'OVERDUE' THEN 6
+              WHEN 'RETURNED' THEN 7
+              WHEN 'COMPLETED' THEN 8
+              WHEN 'REJECTED' THEN 9
+              WHEN 'CANCELLED' THEN 10
+              WHEN 'EXPIRED' THEN 11
+              WHEN 'DRAFT' THEN 12
+              ELSE 99
+            END ASC`,
+            desc(resourceRequest.startAt),
+          ]
+        : options.orderBy === "createdAt"
+          ? [desc(resourceRequest.createdAt)]
+          : [desc(resourceRequest.startAt)]),
+    )
     .limit(options.limit ?? 200)
     .offset(options.offset ?? 0);
   if (requestRows.length === 0) return [];
@@ -445,6 +469,7 @@ export async function loadRequestDtos(
       unitLabel: equipmentUnit.label,
       assetCode: equipmentAsset.assetCode,
       assetName: equipmentType.name,
+      classification: equipmentType.classification,
       usageType: equipmentType.usageType,
       assetImageMediaId: equipmentAsset.imageMediaId,
       typeImageMediaId: equipmentType.imageMediaId,
@@ -528,6 +553,7 @@ export async function loadRequestDtos(
         unitLabel: item.unitLabel,
         assetCode: item.assetCode,
         assetName: item.assetName,
+        classification: item.classification,
         usageType: item.usageType,
         purpose: item.purpose ?? undefined,
         imageMediaId: item.assetImageMediaId ?? item.typeImageMediaId ?? null,
@@ -664,6 +690,7 @@ export type RequestReviewContext = {
     unitLabel: string;
     assetCode: string;
     assetName: string;
+    classification: "INSTRUMENT" | "TOOL";
     usageType: "BORROWABLE" | "USAGE_ONLY";
     unitStatus: string;
     condition: string;
@@ -716,6 +743,7 @@ export async function getRequestReviewContext(
       unitCondition: equipmentUnit.condition,
       assetCode: equipmentAsset.assetCode,
       assetName: equipmentType.name,
+      classification: equipmentType.classification,
       assetCondition: equipmentAsset.condition,
       usageType: equipmentType.usageType,
       assetImageMediaId: equipmentAsset.imageMediaId,
@@ -854,6 +882,7 @@ export async function getRequestReviewContext(
       unitLabel: row.unitLabel,
       assetCode: row.assetCode,
       assetName: row.assetName,
+      classification: row.classification,
       usageType: row.usageType,
       unitStatus: row.unitStatus,
       condition: row.unitCondition ?? row.assetCondition,

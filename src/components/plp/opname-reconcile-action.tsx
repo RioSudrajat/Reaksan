@@ -63,7 +63,7 @@ export function OpnameReconcileAction({
             setError(null);
             setOpen(true);
           }}
-          className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+          className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] shadow-xs transition hover:bg-[#EAA805] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
         >
           <RefreshCw className="size-4" aria-hidden="true" />
           Rekonsiliasi Stok Otomatis ({batchesWithDifference} batch)
@@ -73,7 +73,7 @@ export function OpnameReconcileAction({
       {success && (
         <p
           role="status"
-          className="mt-3 rounded-xl border border-[#BFE3CE] bg-[#E5F5ED] px-4 py-3 text-[12px] font-medium text-[#03683A]"
+          className="mt-3 rounded-xl border border-[#BBF7D0] bg-[#F0FDF4] px-4 py-3 text-[12px] font-medium text-[#16A34A]"
         >
           {success}
         </p>
@@ -86,43 +86,43 @@ export function OpnameReconcileAction({
           aria-modal="true"
           aria-labelledby="reconcile-dialog-title"
         >
-          <div className="relative w-full max-w-md rounded-2xl border border-[#EEEEEE] bg-white p-6 shadow-2xl">
+          <div className="relative w-full max-w-md rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3
                   id="reconcile-dialog-title"
-                  className="text-[15px] font-bold text-[#212121]"
+                  className="text-[15px] font-bold text-[#121826]"
                 >
                   Konfirmasi Rekonsiliasi Otomatis
                 </h3>
-                <p className="mt-0.5 text-[12px] text-[#6B6B6B]">
+                <p className="mt-0.5 text-[12px] text-[#64748B]">
                   Perbarui stok fisik di sistem sesuai hasil hitungan opname.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-lg p-1.5 text-[#929292] hover:bg-[#F5F5F5] hover:text-[#212121]"
+                className="rounded-lg p-1.5 text-[#64748B] hover:bg-[#F8F9FA] hover:text-[#121826]"
                 aria-label="Tutup"
               >
                 <X className="size-5" />
               </button>
             </div>
 
-            <div className="mt-4 rounded-xl border border-[#F2D9A4] bg-[#FFFDF7] p-3.5 text-[12px] text-[#5D4A1B]">
+            <div className="mt-4 rounded-xl border border-[#FDE68A] bg-[#FEF7E6] p-3.5 text-[12px] text-[#8D6500]">
               <p className="font-semibold">Ringkasan penyesuaian:</p>
-              <ul className="mt-1.5 list-inside list-disc space-y-1 text-[#6B6B6B]">
+              <ul className="mt-1.5 list-inside list-disc space-y-1 text-[#64748B]">
                 <li>
-                  <strong className="text-[#212121]">{batchesWithDifference}</strong> batch akan disesuaikan kuantitas fisiknya.
+                  <strong className="text-[#121826]">{batchesWithDifference}</strong> batch akan disesuaikan kuantitas fisiknya.
                 </li>
                 <li>
-                  Total selisih positif: <strong className="text-[#03683A]">+{positiveTotal.toFixed(3)}</strong>
+                  Total selisih positif: <strong className="text-[#16A34A]">+{positiveTotal.toFixed(3)}</strong>
                 </li>
                 <li>
-                  Total selisih negatif: <strong className="text-[#9E3636]">{negativeTotal.toFixed(3)}</strong>
+                  Total selisih negatif: <strong className="text-[#DC2626]">{negativeTotal.toFixed(3)}</strong>
                 </li>
               </ul>
-              <p className="mt-2 text-[11px] text-[#929292]">
+              <p className="mt-2 text-[11px] text-[#64748B]">
                 Transaksi mutasi stok bertipe <code>ADJUST</code> akan dicatat secara otomatis untuk audit trail.
               </p>
             </div>
@@ -130,7 +130,7 @@ export function OpnameReconcileAction({
             {error && (
               <p
                 role="alert"
-                className="mt-3 rounded-xl border border-[#F3C7C7] bg-[#FDE9E9] px-3.5 py-2.5 text-[12px] font-medium text-[#9E3636]"
+                className="mt-3 rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-3.5 py-2.5 text-[12px] font-medium text-[#DC2626]"
               >
                 {error}
               </p>
@@ -138,7 +138,7 @@ export function OpnameReconcileAction({
 
             <form onSubmit={handleReconcile} className="mt-4 space-y-3.5">
               <div>
-                <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B6B6B]">
+                <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#64748B]">
                   Alasan / Catatan Penyesuaian (Opsional)
                 </label>
                 <input
@@ -155,14 +155,14 @@ export function OpnameReconcileAction({
                   type="button"
                   onClick={() => setOpen(false)}
                   disabled={pending}
-                  className="inline-flex min-h-11 items-center rounded-xl border border-[#E1E1E1] bg-white px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F5F5F5] disabled:opacity-60"
+                  className="inline-flex min-h-10 items-center rounded-lg border border-[#E5E7EB] bg-white px-4 text-[12px] font-semibold text-[#121826] transition hover:bg-[#F8F9FA] disabled:opacity-60"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={pending}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] disabled:opacity-60"
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] shadow-xs transition hover:bg-[#EAA805] disabled:opacity-60"
                 >
                   <CheckCheck className="size-4" aria-hidden="true" />
                   {pending ? "Menerapkan..." : "Terapkan Sekarang"}

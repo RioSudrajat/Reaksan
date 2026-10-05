@@ -169,6 +169,7 @@ export type MaterialAggregateRow = {
   rule_unit: string | null;
   physical: string;
   reserved: string;
+  issued: string;
   // Raw SQL rows can arrive as a Date or an ISO string depending on the driver.
   nearest_expiry: Date | string | null;
 };
@@ -197,6 +198,7 @@ export async function listMaterialRows(
       MIN(rule.unit) AS rule_unit,
       COALESCE(SUM(b.quantity) FILTER (WHERE b.active), 0) AS physical,
       COALESCE(SUM(COALESCE(t.reserved, 0)) FILTER (WHERE b.active), 0) AS reserved,
+      COALESCE(SUM(COALESCE(t.issued, 0)) FILTER (WHERE b.active), 0) AS issued,
       MIN(b.expiry_date) FILTER (WHERE b.active AND b.expiry_date IS NOT NULL) AS nearest_expiry
     FROM material m
     LEFT JOIN material_batch b ON b.material_id = m.id
@@ -207,7 +209,11 @@ export async function listMaterialRows(
           WHEN type = 'RESERVE' THEN quantity
           WHEN type IN ('RELEASE', 'ISSUE') THEN -quantity
           ELSE 0
-        END) AS reserved
+        END) AS reserved,
+        SUM(CASE
+          WHEN type = 'ISSUE' THEN quantity
+          ELSE 0
+        END) AS issued
       FROM stock_transaction
       GROUP BY material_batch_id
     ) t ON t.material_batch_id = b.id
@@ -226,7 +232,15 @@ export async function listMaterialRows(
 export function materialStockSummary(row: MaterialAggregateRow) {
   const physical = Number(row.physical);
   const reserved = Math.max(0, Number(row.reserved));
-  return { physical, reserved, available: Math.max(0, physical - reserved) };
+  const issued = Math.max(0, Number(row.issued ?? 0));
+  const totalCapacity = physical + issued;
+  return {
+    physical,
+    reserved,
+    issued,
+    totalCapacity,
+    available: Math.max(0, physical - reserved),
+  };
 }
 
 export function dispensingOptions(
@@ -242,14 +256,25 @@ export function dispensingOptions(
   const minimum = Number(row.minimum_quantity);
   const increment = Number(row.dispensing_increment);
   const maximum = Number(row.maximum_quantity);
-  if (increment <= 0) return [];
+  if (increment <= 0 || available <= 0) return [];
   const ceiling = Math.min(maximum, available);
-  const options: number[] = [];
-  for (let value = minimum; value <= ceiling + 1e-9; value += increment) {
-    options.push(Math.round(value * 1000) / 1000);
-    if (options.length > 60) break;
+  if (ceiling < minimum) return [];
+
+  const candidateChips = [minimum, 20, 25, 50, 80, 100, 150, 200, 250, 500, 1000];
+  const set = new Set<number>();
+
+  for (const val of candidateChips) {
+    if (val >= minimum && val <= ceiling) {
+      set.add(Math.round(val * 1000) / 1000);
+    }
   }
-  return options;
+
+  for (let value = minimum; value <= ceiling + 1e-9; value += increment) {
+    set.add(Math.round(value * 1000) / 1000);
+    if (set.size >= 12) break;
+  }
+
+  return Array.from(set).sort((a, b) => a - b);
 }
 
 export function dispensingRuleLabel(row: MaterialAggregateRow) {
@@ -343,6 +368,7 @@ type AssetRow = {
   assetCondition: (typeof equipmentAsset.$inferSelect)["condition"];
   notes: string | null;
   typeName: string;
+  classification: (typeof equipmentType.$inferSelect)["classification"];
   usageType: (typeof equipmentType.$inferSelect)["usageType"];
   assetImageMediaId: string | null;
   typeImageMediaId: string | null;
@@ -365,6 +391,7 @@ export async function listAssetRows(
       assetCondition: equipmentAsset.condition,
       notes: equipmentAsset.notes,
       typeName: equipmentType.name,
+      classification: equipmentType.classification,
       usageType: equipmentType.usageType,
       assetImageMediaId: equipmentAsset.imageMediaId,
       typeImageMediaId: equipmentType.imageMediaId,
@@ -461,6 +488,7 @@ function toEquipmentViews(
       id: asset.assetCode,
       name: asset.assetName,
       typeName: asset.typeName,
+      classification: asset.classification,
       roomId: asset.roomCode,
       room: asset.roomName,
       usage: asset.usageType === "BORROWABLE" ? "Borrowable" : "Usage only",

@@ -19,6 +19,7 @@ Use the relevant skill below. Clients without skill discovery should open its fi
 | First app prompt or setup problem                      | `.agents/skills/starter-setup/SKILL.md`  |
 | Start, inspect, stop, or troubleshoot the dev database | `.agents/skills/dev-database/SKILL.md`   |
 | Build a feature, change the UI, or add data            | `.agents/skills/build-feature/SKILL.md`  |
+| Frontend UI/UX craft & design review                   | `.agents/skills/impeccable/SKILL.md`     |
 | Create a dashboard/chatbot/other derivative            | `.agents/skills/create-variant/SKILL.md` |
 
 ## Development database
@@ -86,3 +87,15 @@ For UI, copy, people, mobile layout, or code comments work, read `docs/DESIGN.md
 - Code comments: `.agents/skills/antislop-code/SKILL.md`
 Usage mode chosen by the user: DURING (apply the rules while working, finish with the Delivery Gate).
 <!-- antislop:end -->
+
+<!-- impeccable:start -->
+## impeccable
+For frontend UI/UX craft, architectural shaping, heuristic evaluation, polishing, hardening, and anti-pattern scanning, consult `.agents/skills/impeccable/SKILL.md` and read `reference/craft-floor.md` before UI edits:
+- Planning / Architecture: `shape [feature]` (`reference/shape.md`)
+- Quality & A11y Audit: `audit [target]` (`reference/audit.md`)
+- Heuristic Review: `critique [target]` (`reference/critique.md`)
+- Polish & Consistency: `polish [target]` (`reference/polish.md`)
+- Resilience & States: `harden [target]` (`reference/harden.md`)
+- Anti-pattern scan: `.\.agents\skills\impeccable\scripts\impeccable.cmd detect <file-or-dir>`
+<!-- impeccable:end -->
+

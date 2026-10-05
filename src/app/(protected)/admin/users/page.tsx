@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { UserRoleForm } from "@/components/admin/user-role-form";
+import { UserCreateDialog } from "@/components/admin/user-create-dialog";
 import {
   EmptyState,
   PageHeader,
@@ -10,10 +11,10 @@ import {
 import { auth } from "@/lib/auth";
 import { requirePermission } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Users" };
+export const metadata: Metadata = { title: "Manajemen Pengguna · Admin Reaksan" };
 
 export default async function AdminUsersPage() {
-  await requirePermission({ configuration: ["manage-any"] });
+  const { user: currentUser } = await requirePermission({ configuration: ["manage-any"] });
   const result = await auth.api.listUsers({
     headers: await headers(),
     query: { limit: 100, sortBy: "createdAt", sortDirection: "desc" },
@@ -23,16 +24,22 @@ export default async function AdminUsersPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Akses"
-        title="Users"
-        description="Lihat akun dan ubah role-nya. Perubahan role langsung berlaku pada request berikutnya dan tercatat di audit."
+        eyebrow="Akses & Keamanan"
+        title="Manajemen Pengguna"
+        description="Kelola akun pengguna, daftarkan akun baru, atur peranan (Mahasiswa, PLP, Admin), atau hapus akun. Pendaftaran akun dikelola secara terpusat oleh Admin Laboratorium."
       />
-      <Panel context={`${users.length} akun`} title="Daftar akun" padded={false}>
+      <Panel
+        context={`${users.length} akun`}
+        title="Daftar Akun Pengguna"
+        action={<UserCreateDialog />}
+        padded={false}
+      >
         {users.length === 0 ? (
           <div className="p-5">
             <EmptyState
               title="Belum ada akun"
-              description="Akun dibuat lewat halaman sign-up."
+              description="Belum ada akun pengguna terdaftar. Klik tombol Tambah Pengguna di atas untuk mendaftarkan akun baru."
+              action={<UserCreateDialog />}
             />
           </div>
         ) : (
@@ -58,6 +65,7 @@ export default async function AdminUsersPage() {
                   userId={account.id}
                   email={account.email}
                   currentRole={account.role ?? "user"}
+                  isSelf={account.id === currentUser.id}
                 />
               </li>
             ))}

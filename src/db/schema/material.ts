@@ -48,6 +48,8 @@ export const materialBatch = pgTable(
       .notNull()
       .references(() => room.id),
     lotNumber: text("lot_number"),
+    storageLocation: text("storage_location"),
+    qrCode: text("qr_code").unique(),
     quantity: numeric("quantity", { precision: 14, scale: 3 }).notNull(),
     expiryDate: timestamp("expiry_date", { withTimezone: true }),
     receivedDate: timestamp("received_date", { withTimezone: true })
@@ -70,6 +72,8 @@ export const materialBatch = pgTable(
       table.materialId,
       table.expiryDate,
     ),
+    index("material_batch_storage_location_idx").on(table.storageLocation),
+    index("material_batch_qr_code_idx").on(table.qrCode),
   ],
 );
 

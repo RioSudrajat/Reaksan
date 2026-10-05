@@ -92,14 +92,14 @@ export function RequestReviewPanel({
             }}
             aria-pressed={action === option}
             className={
-              "inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-[12px] font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA] " +
+              "inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-[12px] font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] " +
               (action === option
                 ? option === "reject"
-                  ? "bg-[#F45959] text-white"
+                  ? "bg-[#DC2626] text-white shadow-xs"
                   : option === "revision"
-                    ? "bg-[#F7B742] text-[#212121]"
-                    : "bg-[#F9B129] text-[#212121]"
-                : "border border-[#E1E1E1] bg-white text-[#212121] hover:bg-[#F5F5F5]")
+                    ? "bg-[#FEF7E6] border border-[#FDE68A] text-[#8D6500] shadow-xs"
+                    : "bg-[#FDB913] text-[#121826] shadow-xs"
+                : "border border-[#E5E7EB] bg-white text-[#121826] hover:bg-[#F8F9FA]")
             }
           >
             {option === "approve" ? (
@@ -115,10 +115,10 @@ export function RequestReviewPanel({
       </div>
 
       {action && (
-        <div className="rounded-xl border border-[#E1E1E1] bg-[#FAFAFA] p-4">
-          <p className="text-[12px] text-[#6B6B6B]">{actionCopy[action].hint}</p>
+        <div className="rounded-xl border border-[#E5E7EB] bg-[#F8F9FA] p-4">
+          <p className="text-[12px] text-[#64748B]">{actionCopy[action].hint}</p>
           <label className="mt-3 block">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B6B6B]">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#64748B]">
               {action === "approve" ? "Catatan (opsional)" : "Alasan"}
             </span>
             <textarea
@@ -126,7 +126,7 @@ export function RequestReviewPanel({
               onChange={(event) => setNote(event.target.value)}
               rows={3}
               maxLength={2000}
-              className="mt-1.5 w-full rounded-xl border border-[#E1E1E1] bg-white px-3 py-2 text-[13px] text-[#212121] outline-none focus:border-[#6E8EDA] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+              className="mt-1.5 w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-[13px] text-[#121826] outline-none transition focus:border-[#FDB913] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
               placeholder={
                 action === "approve"
                   ? "Contoh: slot aman, stok cukup."
@@ -138,7 +138,7 @@ export function RequestReviewPanel({
             type="button"
             onClick={submit}
             disabled={pending}
-            className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA] disabled:opacity-60"
+            className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] transition hover:bg-[#E5A700] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] shadow-xs disabled:opacity-60"
           >
             {pending ? "Memproses..." : `Konfirmasi: ${actionCopy[action].label}`}
           </button>
@@ -148,7 +148,7 @@ export function RequestReviewPanel({
       {error && (
         <p
           role="alert"
-          className="rounded-xl border border-[#F3C7C7] bg-[#FDE9E9] px-4 py-3 text-[12px] font-medium text-[#9E3636]"
+          className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-[12px] font-medium text-[#991B1B]"
         >
           {error}
         </p>
@@ -156,7 +156,7 @@ export function RequestReviewPanel({
       {success && (
         <p
           role="status"
-          className="rounded-xl border border-[#BFE3CE] bg-[#E5F5ED] px-4 py-3 text-[12px] font-medium text-[#03683A]"
+          className="rounded-xl border border-[#BBF7D0] bg-[#F0FDF4] px-4 py-3 text-[12px] font-medium text-[#166534]"
         >
           {success}
         </p>

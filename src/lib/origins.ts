@@ -11,10 +11,12 @@ export function trustedOrigins(): string[] {
   const origins = new Set<string>([base.origin, ...env.BETTER_AUTH_TRUSTED_ORIGINS]);
   if (process.env.NODE_ENV !== "production") {
     const port = base.port ? `:${base.port}` : "";
-    if (base.hostname === "localhost")
-      origins.add(`${base.protocol}//127.0.0.1${port}`);
-    if (base.hostname === "127.0.0.1")
-      origins.add(`${base.protocol}//localhost${port}`);
+    origins.add(`${base.protocol}//127.0.0.1${port}`);
+    origins.add(`${base.protocol}//localhost${port}`);
+    origins.add("http://localhost:3000");
+    origins.add("http://127.0.0.1:3000");
+    origins.add("http://localhost:3001");
+    origins.add("http://127.0.0.1:3001");
   }
   return [...origins];
 }

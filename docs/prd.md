@@ -2,9 +2,9 @@
 
 ## Product Requirement Definition — v1.0
 
-**Product Type:** Laboratory Resource Management &amp; Coordination Platform  
+**Product Type:** Laboratory Resource Management & Coordination Platform  
 **MVP Focus:** Chemistry Laboratory — TA / Research Students  
-**Primary Users:** Student, PLP, Lecturer, Aslab, Admin  
+**Primary Users:** Student, PLP, Admin  
 **Primary Objective:** Improve visibility, coordination, verification, fulfillment, and accountability of laboratory resources.
 
 ---
@@ -13,7 +13,7 @@
 
 ## 1.1 Product Definition
 
-**Reaksan** adalah platform manajemen sumber daya laboratorium yang menghubungkan mahasiswa peneliti/TA, PLP, dosen pembimbing, Aslab, dan administrator dalam satu sistem.
+**Reaksan** adalah platform manajemen sumber daya laboratorium yang menghubungkan mahasiswa peneliti/TA, PLP, dan administrator dalam satu sistem.
 
 Reaksan bukan sekadar sistem inventaris.
 
@@ -140,7 +140,7 @@ Setiap penggunaan equipment dapat ditelusuri berdasarkan:
 - activity;
 - reservation;
 - supervisor;
-- Aslab/PIC;
+- PIC;
 - PLP;
 - incident;
 - condition history.
@@ -249,63 +249,34 @@ PLP merupakan pihak utama dalam:
 
 ---
 
-## 6.3 Lecturer — Academic Supervisor
+## 6.3 Admin
 
-Dosen:
-
-- menjadi supervisor penelitian;
-- melihat aktivitas mahasiswa yang dibimbing;
-- melihat penggunaan resource;
-- melihat incident yang relevan.
-
-Dosen **tidak melakukan approval request**.
+Admin mengelola konfigurasi, master data laboratorium, penugasan ruangan, dan manajemen pengguna sistem.
 
 ---
 
-## 6.4 Aslab — Operational Support
-
-Aslab memiliki akses berdasarkan assignment.
-
-Aslab dapat:
-
-- melihat aktivitas yang ditugaskan;
-- melihat schedule;
-- melihat resource usage;
-- melaporkan incident;
-- membantu operational monitoring.
-
-Reaksan tidak mengasumsikan struktur organisasi Aslab tertentu.
-
----
-
-## 6.5 Admin
-
-Admin mengelola konfigurasi dan master data sistem.
-
----
-
-# 7. Role &amp; Permission Matrix
+# 7. Role & Permission Matrix (MVP 3-Role Scope)
 
 
-| Capability                  | Student | PLP      | Lecturer | Aslab    | Admin |
-| --------------------------- | -------: | --------: | --------: | --------: | -----: |
-| Login                       | ✓       | ✓        | ✓        | ✓        | ✓     |
-| View Lab Map                | ✓       | ✓        | ✓        | ✓        | ✓     |
-| View Inventory              | ✓       | ✓        | ✓        | ✓        | ✓     |
-| View Equipment Availability | ✓       | ✓        | ✓        | ✓        | ✓     |
-| View Usage Plan             | ✓       | ✓        | ✓        | ✓        | ✓     |
-| Create Activity             | ✓       | —        | —        | —        | ✓     |
-| Create Request              | ✓       | —        | —        | —        | ✓     |
-| Approve Request             | —       | ✓        | —        | —        | ✓     |
-| Issue Equipment             | —       | ✓        | —        | Assigned | ✓     |
-| Issue Material              | —       | ✓        | —        | Assigned | ✓     |
-| Return Equipment            | ✓       | ✓        | —        | Assigned | ✓     |
-| Condition Inspection        | —       | ✓        | —        | ✓        | ✓     |
-| Report Incident             | ✓       | ✓        | —        | ✓        | ✓     |
-| Manage Inventory            | —       | ✓        | —        | Limited  | ✓     |
-| Manage Users                | —       | —        | —        | —        | ✓     |
-| Manage Configuration        | —       | —        | —        | —        | ✓     |
-| View Audit Log              | —       | Relevant | Relevant | Relevant | ✓     |
+| Capability                  | Student | PLP      | Admin |
+| --------------------------- | -------: | --------: | -----: |
+| Login                       | ✓       | ✓        | ✓     |
+| View Lab Map                | ✓       | ✓        | ✓     |
+| View Inventory              | ✓       | ✓        | ✓     |
+| View Equipment Availability | ✓       | ✓        | ✓     |
+| View Usage Plan             | ✓       | ✓        | ✓     |
+| Create Activity             | ✓       | —        | ✓     |
+| Create Request              | ✓       | —        | ✓     |
+| Approve Request             | —       | ✓        | ✓     |
+| Issue Equipment             | —       | ✓        | ✓     |
+| Issue Material              | —       | ✓        | ✓     |
+| Return Equipment            | ✓       | ✓        | ✓     |
+| Condition Inspection        | —       | ✓        | ✓     |
+| Report Incident             | ✓       | ✓        | ✓     |
+| Manage Inventory            | —       | ✓        | ✓     |
+| Manage Users                | —       | —        | ✓     |
+| Manage Configuration        | —       | —        | ✓     |
+| View Audit Log              | —       | Relevant | ✓     |
 
 
 Permissions should eventually be implemented using **RBAC + scoped permissions**, not only hardcoded role checks.
@@ -1109,7 +1080,7 @@ Incident dapat dilaporkan oleh:
 
 - Student;
 - PLP;
-- Aslab.
+- Admin.
 
 Student dapat melakukan self-report.
 
@@ -1170,7 +1141,7 @@ Incident minimum memiliki:
 - primary user;
 - shared user;
 - supervisor;
-- Aslab/PIC jika ada;
+- PIC jika ada;
 - PLP;
 - timestamp;
 - description;
@@ -1201,7 +1172,7 @@ Shared User
    ↓
 Supervisor
    ↓
-Aslab / PIC
+PIC Lapangan
    ↓
 PLP
    ↓
@@ -1423,54 +1394,10 @@ COMPLETED
 
 ---
 
-# 43. Lecturer Flow
+# 43. Role Flow Scope Note
 
-```text
-LOGIN
-  ↓
-SUPERVISED STUDENTS
-  ↓
-SELECT STUDENT
-  ↓
-VIEW ACTIVITY
-  ↓
-VIEW RESOURCE USAGE
-  ↓
-VIEW INCIDENT
-
-```
-
-Tidak ada:
-
-```text
-Approve Request
-
-```
-
-dalam MVP.
-
----
-
-# 44. Aslab Flow
-
-Access berdasarkan assignment:
-
-```text
-LOGIN
- ↓
-MY ASSIGNMENTS
- ↓
-LAB / ACTIVITY
- ↓
-SCHEDULE
- ↓
-RESOURCE USAGE
- ↓
-REPORT INCIDENT
-
-```
-
-Aslab tidak otomatis memiliki seluruh permission PLP.
+> [!NOTE]
+> Alur khusus untuk Dosen Pembimbing dan Asisten Laboratorium (Aslab) telah dikeluarkan dari perencanaan MVP. Sistem MVP saat ini berfokus secara eksklusif pada 3 role inti: **Mahasiswa (Student)**, **PLP (Operator Lab)**, dan **Admin**.
 
 ---
 
@@ -1522,11 +1449,6 @@ Important events:
 - return;
 - incident.
 
-### Lecturer
-
-- relevant student activity;
-- relevant incident.
-
 Email/WhatsApp notification dapat menjadi future scope.
 
 ---
@@ -1561,36 +1483,6 @@ Equipment In Use
 Returns Today
 Low Stock
 Open Incidents
-
-```
-
----
-
-## Lecturer Dashboard
-
-Prioritas:
-
-```text
-Supervised Students
-Active Research
-Upcoming Activities
-Resource Usage
-Incidents
-
-```
-
----
-
-## Aslab Dashboard
-
-Prioritas:
-
-```text
-Assignments
-Today's Schedule
-Active Activities
-Resource Usage
-Incidents
 
 ```
 
@@ -1878,7 +1770,7 @@ Student and PLP condition reports must remain independently auditable.
 
 ## BR-15
 
-Lecturer does not approve resource requests.
+Approval is strictly performed by PLP.
 
 ## BR-16
 
@@ -2040,33 +1932,10 @@ Dashboard
 
 ---
 
-# 58. Lecturer Information Architecture
+# 58. Information Architecture Scope Note
 
-```text
-Dashboard
-│
-├── Students
-├── Activities
-├── Resource Usage
-├── Incidents
-└── Notifications
-
-```
-
----
-
-# 59. Aslab Information Architecture
-
-```text
-Dashboard
-│
-├── Assignments
-├── Schedule
-├── Activities
-├── Resource Usage
-└── Incidents
-
-```
+> [!NOTE]
+> Arsitektur informasi untuk Dosen dan Aslab dikeluarkan dari MVP karena sistem difokuskan pada 3 role: Student, PLP, dan Admin.
 
 ---
 
@@ -2133,20 +2002,6 @@ Dashboard
 - batch;
 - incident management;
 - schedule.
-
-### Lecturer
-
-- supervised students;
-- activity visibility;
-- resource usage;
-- incident visibility.
-
-### Aslab
-
-- assignments;
-- activity visibility;
-- schedule;
-- incident reporting.
 
 ### Admin
 
@@ -2408,18 +2263,6 @@ The MVP should answer five fundamental questions:
 
 → Request + reservation + inventory + fulfillment.
 
-### For Lecturer
-
-**"Mahasiswa bimbingan saya sedang menggunakan resource apa untuk penelitiannya?"**
-
-→ Activity + resource usage visibility.
-
-### For Aslab
-
-**"Aktivitas/resource apa yang berada dalam assignment saya?"**
-
-→ Assignment-based operational visibility.
-
 ### For Admin
 
 **"Bagaimana seluruh resource, user, assignment, dan aktivitas sistem dikelola?"**
@@ -2440,8 +2283,6 @@ PLP tetap menjadi operational authority.
 
 Mahasiswa menjadi lebih mandiri dalam merencanakan penelitian.
 
-Dosen memperoleh visibility terhadap aktivitas mahasiswa tanpa menjadi bottleneck approval.
-
-Aslab memperoleh context sesuai assignment.
+Admin memperoleh kontrol penuh atas data master dan tata kelola akun.
 
 Dan setiap penggunaan resource memiliki jejak yang dapat ditelusuri.

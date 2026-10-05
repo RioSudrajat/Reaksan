@@ -87,15 +87,15 @@ test("app_role stores editable permission maps per role", async () => {
   try {
     const permissions = { requests: ["read-any"], inventory: ["read-any"] };
     await db.query(
-      `INSERT INTO app_role (name, permissions) VALUES ('lecturer', $1)
+      `INSERT INTO app_role (name, permissions) VALUES ('plp_custom', $1)
        ON CONFLICT (name) DO UPDATE SET permissions = EXCLUDED.permissions`,
       [permissions],
     );
     const stored = await db.query(
-      "SELECT permissions FROM app_role WHERE name = 'lecturer'",
+      "SELECT permissions FROM app_role WHERE name = 'plp_custom'",
     );
     assert.deepEqual(stored.rows[0].permissions, permissions);
-    await db.query("DELETE FROM app_role WHERE name = 'lecturer'");
+    await db.query("DELETE FROM app_role WHERE name = 'plp_custom'");
   } finally {
     await db.end();
   }

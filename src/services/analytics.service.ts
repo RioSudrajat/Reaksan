@@ -1,7 +1,7 @@
 import "server-only";
-import { and, asc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, ne, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { materialBatch, room, equipmentAsset } from "@/db/schema";
+import { materialBatch, room, equipmentAsset, equipmentUnit } from "@/db/schema";
 import {
   listMaterialRows,
   type MaterialAggregateRow,
@@ -13,23 +13,25 @@ import { getAppSettings } from "@/services/settings.service";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const JAKARTA = "Asia/Jakarta";
 
+import type { ChartTone } from "@/components/charts";
+
 export type TrendGroup = {
   key: string;
   label: string;
-  tone: "yellow" | "blue" | "green" | "rose" | "amber" | "neutral";
+  tone: ChartTone;
 };
 
 const STATUS_GROUPS: { group: TrendGroup; statuses: string[] }[] = [
   {
-    group: { key: "pending", label: "Menunggu review", tone: "blue" },
+    group: { key: "pending", label: "Menunggu review", tone: "yellow" },
     statuses: ["SUBMITTED", "PENDING_PLP", "REQUEST_REVISION"],
   },
   {
-    group: { key: "approved", label: "Disetujui", tone: "yellow" },
+    group: { key: "approved", label: "Disetujui / siap", tone: "yellow-light" },
     statuses: ["APPROVED", "READY_FOR_PICKUP"],
   },
   {
-    group: { key: "active", label: "Berjalan / overdue", tone: "green" },
+    group: { key: "active", label: "Berjalan / aktif", tone: "dark" },
     statuses: ["ACTIVE", "OVERDUE"],
   },
   {
@@ -37,7 +39,7 @@ const STATUS_GROUPS: { group: TrendGroup; statuses: string[] }[] = [
     statuses: ["COMPLETED", "RETURNED"],
   },
   {
-    group: { key: "cancelled", label: "Ditolak / batal", tone: "rose" },
+    group: { key: "cancelled", label: "Ditolak / batal", tone: "muted" },
     statuses: ["REJECTED", "CANCELLED", "EXPIRED", "DRAFT"],
   },
 ];
@@ -67,9 +69,18 @@ function jakartaMidnight(date: Date) {
   );
 }
 
+function jakartaDayOfWeek(date: Date) {
+  const dayName = new Intl.DateTimeFormat("en-US", {
+    timeZone: JAKARTA,
+    weekday: "short",
+  }).format(date);
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  return days.indexOf(dayName);
+}
+
 function startOfJakartaWeek(date: Date) {
   const midnight = jakartaMidnight(date);
-  const weekday = midnight.getUTCDay();
+  const weekday = jakartaDayOfWeek(midnight);
   const offset = (weekday + 6) % 7;
   return new Date(midnight.getTime() - offset * DAY_MS);
 }
@@ -83,6 +94,24 @@ function shortDayLabel(date: Date) {
   }).format(date);
 }
 
+function weekLabel(start: Date, end: Date) {
+  const startDay = start.getDate();
+  const endDay = end.getDate();
+  const startMonth = new Intl.DateTimeFormat("id-ID", {
+    timeZone: JAKARTA,
+    month: "short",
+  }).format(start);
+  const endMonth = new Intl.DateTimeFormat("id-ID", {
+    timeZone: JAKARTA,
+    month: "short",
+  }).format(end);
+
+  if (start.getMonth() === end.getMonth()) {
+    return `${startDay}–${endDay} ${startMonth}`;
+  }
+  return `${startDay} ${startMonth} – ${endDay} ${endMonth}`;
+}
+
 function dayKey(date: Date) {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: JAKARTA,
@@ -92,27 +121,50 @@ function dayKey(date: Date) {
   }).format(date);
 }
 
-export type RequestTrendRange = 7 | 30 | 90;
+export type RequestTrendRange = 7 | 30 | 90 | "month";
+
+function roomScopeSql(column: SQL, roomCodes?: string[] | null) {
+  if (roomCodes === undefined || roomCodes === null) return sql`true`;
+  if (roomCodes.length === 0) return sql`false`;
+  return sql`${column} IN ${roomCodes}`;
+}
 
 export async function getRequestTrend(options: {
   days: RequestTrendRange;
   roomCode?: string;
+  roomCodes?: string[] | null;
 }) {
   const to = new Date();
-  const from = new Date(jakartaMidnight(to).getTime() - (options.days - 1) * DAY_MS);
+  const endOfToday = new Date(jakartaMidnight(to).getTime() + DAY_MS - 1);
+  let from: Date;
+  if (options.days === "month") {
+    const { year, month } = jakartaDateParts(to);
+    from = new Date(
+      `${year}-${String(month).padStart(2, "0")}-01T00:00:00+07:00`,
+    );
+  } else {
+    from = new Date(jakartaMidnight(to).getTime() - (options.days - 1) * DAY_MS);
+  }
+  const scopedCodes =
+    options.roomCodes !== undefined
+      ? options.roomCodes
+      : options.roomCode
+        ? [options.roomCode]
+        : null;
   const result = await db.execute<{
     day: string;
     status: string;
     total: number;
   }>(sql`
     SELECT
-      to_char(date_trunc('day', COALESCE(submitted_at, created_at) AT TIME ZONE ${JAKARTA}), 'YYYY-MM-DD') AS day,
-      status::text AS status,
+      to_char(date_trunc('day', COALESCE(rr.submitted_at, rr.created_at) AT TIME ZONE ${JAKARTA}), 'YYYY-MM-DD') AS day,
+      rr.status::text AS status,
       COUNT(*)::int AS total
-    FROM resource_request
-    WHERE COALESCE(submitted_at, created_at) >= ${from}
-      AND COALESCE(submitted_at, created_at) <= ${to}
-      AND (${options.roomCode ?? null}::text IS NULL OR room_id = (SELECT id FROM room WHERE code = ${options.roomCode ?? null}))
+    FROM resource_request rr
+    JOIN room r ON r.id = rr.room_id
+    WHERE COALESCE(rr.submitted_at, rr.created_at) >= ${from}
+      AND COALESCE(rr.submitted_at, rr.created_at) <= ${endOfToday}
+      AND ${roomScopeSql(sql`r.code`, scopedCodes)}
     GROUP BY 1, 2
   `);
 
@@ -125,24 +177,32 @@ export async function getRequestTrend(options: {
     daily.set(row.day, bucket);
   }
 
-  const bucketStarts: Date[] = [];
+  const bucketStarts: { start: Date; isDaily: boolean }[] = [];
   if (options.days === 7) {
     for (let index = 0; index < 7; index += 1) {
-      bucketStarts.push(new Date(from.getTime() + index * DAY_MS));
+      bucketStarts.push({
+        start: new Date(from.getTime() + index * DAY_MS),
+        isDaily: true,
+      });
+    }
+  } else if (options.days === "month") {
+    let cursor = from;
+    while (cursor.getTime() <= to.getTime()) {
+      bucketStarts.push({ start: cursor, isDaily: true });
+      cursor = new Date(cursor.getTime() + DAY_MS);
     }
   } else {
     let cursor = startOfJakartaWeek(from);
     while (cursor.getTime() <= to.getTime()) {
-      bucketStarts.push(cursor);
+      bucketStarts.push({ start: cursor, isDaily: false });
       cursor = new Date(cursor.getTime() + 7 * DAY_MS);
     }
   }
 
-  const buckets = bucketStarts.map((start, index) => {
-    const end =
-      options.days === 7
-        ? new Date(start.getTime() + DAY_MS - 1)
-        : new Date(start.getTime() + 7 * DAY_MS - 1);
+  const buckets = bucketStarts.map(({ start, isDaily }, index) => {
+    const end = isDaily
+      ? new Date(start.getTime() + DAY_MS - 1)
+      : new Date(start.getTime() + 7 * DAY_MS - 1);
     const totals: Record<string, number> = {};
     for (
       let cursor = start;
@@ -160,14 +220,10 @@ export async function getRequestTrend(options: {
     const rangeTo = new Date(Math.min(end.getTime(), to.getTime()));
     return {
       key: dayKey(start),
-      label:
-        options.days === 7
-          ? shortDayLabel(start)
-          : `${new Intl.DateTimeFormat("id-ID", { timeZone: JAKARTA, day: "numeric", month: "short" }).format(start)}`,
-      sublabel:
-        options.days === 7
-          ? undefined
-          : `s/d ${new Intl.DateTimeFormat("id-ID", { timeZone: JAKARTA, day: "numeric", month: "short" }).format(rangeTo)}`,
+      label: isDaily ? shortDayLabel(start) : weekLabel(start, rangeTo),
+      sublabel: isDaily
+        ? undefined
+        : `s/d ${new Intl.DateTimeFormat("id-ID", { timeZone: JAKARTA, day: "numeric", month: "short" }).format(rangeTo)}`,
       href: `/plp/requests?from=${dayKey(rangeFrom)}&to=${dayKey(rangeTo)}`,
       segments: STATUS_GROUPS.map(({ group }) => ({
         key: group.key,
@@ -179,17 +235,17 @@ export async function getRequestTrend(options: {
     };
   });
 
+  const rangeLabel =
+    options.days === "month"
+      ? `1 – ${new Intl.DateTimeFormat("id-ID", { timeZone: JAKARTA, day: "numeric", month: "short", year: "numeric" }).format(to)} (Bulan ini)`
+      : `${new Intl.DateTimeFormat("id-ID", { timeZone: JAKARTA, day: "numeric", month: "short" }).format(from)} – ${new Intl.DateTimeFormat("id-ID", { timeZone: JAKARTA, day: "numeric", month: "short", year: "numeric" }).format(to)} (${options.days} hari)`;
+
   return {
     range: {
       from,
       to,
       days: options.days,
-      label:
-        options.days === 7
-          ? "7 hari terakhir, per hari"
-          : options.days === 30
-            ? "30 hari terakhir, per minggu"
-            : "90 hari terakhir, per minggu",
+      label: rangeLabel,
     },
     groups: STATUS_GROUPS.map(({ group }) => group),
     buckets,
@@ -201,19 +257,23 @@ export async function getRequestTrend(options: {
   };
 }
 
-export async function getMaterialRiskByRoom() {
+export async function getMaterialRiskByRoom(roomCodes?: string[] | null) {
   const [settings, materialRows, roomRows] = await Promise.all([
     getAppSettings(),
     listMaterialRows(db),
     listRooms(),
   ]);
+  const scopedRoomRows =
+    roomCodes !== undefined && roomCodes !== null
+      ? roomRows.filter((r) => roomCodes.includes(r.code))
+      : roomRows;
   const materialIds = materialRows.map((row) => row.id);
   const batches = materialIds.length
     ? await listBatchStock(db, materialIds)
     : [];
   const materialById = new Map(materialRows.map((row) => [row.id, row]));
-  const roomById = new Map(roomRows.map((row) => [row.id, row]));
-  const roomByCode = new Map(roomRows.map((row) => [row.code, row]));
+  const roomById = new Map(scopedRoomRows.map((row) => [row.id, row]));
+  const roomByCode = new Map(scopedRoomRows.map((row) => [row.code, row]));
 
   const riskByRoom = new Map<
     string,
@@ -283,20 +343,35 @@ async function listRooms() {
   return listRoomRows(db);
 }
 
-export async function getEquipmentRoomDistribution() {
+export async function getEquipmentRoomDistribution(
+  roomCodes?: string[] | null,
+) {
+  const conditions = [
+    eq(equipmentUnit.active, true),
+    eq(equipmentAsset.active, true),
+  ];
+  if (roomCodes !== undefined && roomCodes !== null) {
+    if (roomCodes.length === 0) {
+      conditions.push(sql`false`);
+    } else {
+      conditions.push(inArray(room.code, roomCodes));
+    }
+  }
+
   const rows = await db
     .select({
       roomCode: room.code,
       roomName: room.name,
       total: sql<number>`COUNT(*)::int`,
-      available: sql<number>`COUNT(*) FILTER (WHERE ${equipmentAsset.status} = 'AVAILABLE')::int`,
-      reserved: sql<number>`COUNT(*) FILTER (WHERE ${equipmentAsset.status} IN ('RESERVED', 'IN_USE'))::int`,
-      attention: sql<number>`COUNT(*) FILTER (WHERE ${equipmentAsset.status} IN ('MAINTENANCE', 'DAMAGED', 'UNDER_INSPECTION'))::int`,
-      retired: sql<number>`COUNT(*) FILTER (WHERE ${equipmentAsset.status} = 'RETIRED')::int`,
+      available: sql<number>`COUNT(*) FILTER (WHERE ${equipmentUnit.status} = 'AVAILABLE')::int`,
+      reserved: sql<number>`COUNT(*) FILTER (WHERE ${equipmentUnit.status} IN ('RESERVED', 'IN_USE'))::int`,
+      attention: sql<number>`COUNT(*) FILTER (WHERE ${equipmentUnit.status} IN ('MAINTENANCE', 'DAMAGED', 'UNDER_INSPECTION'))::int`,
+      retired: sql<number>`COUNT(*) FILTER (WHERE ${equipmentUnit.status} = 'RETIRED')::int`,
     })
-    .from(equipmentAsset)
+    .from(equipmentUnit)
+    .innerJoin(equipmentAsset, eq(equipmentAsset.id, equipmentUnit.equipmentAssetId))
     .innerJoin(room, eq(room.id, equipmentAsset.roomId))
-    .where(eq(equipmentAsset.active, true))
+    .where(and(...conditions))
     .groupBy(room.id)
     .orderBy(asc(room.name));
 
@@ -321,14 +396,30 @@ export async function getEquipmentRoomDistribution() {
   };
 }
 
-export async function getExpiryTrend(weeks = 8) {
+export async function getExpiryTrend(
+  weeks = 8,
+  roomCodes?: string[] | null,
+) {
+  const conditions = [
+    eq(materialBatch.active, true),
+    ne(materialBatch.quantity, "0"),
+  ];
+  if (roomCodes !== undefined && roomCodes !== null) {
+    if (roomCodes.length === 0) {
+      conditions.push(sql`false`);
+    } else {
+      conditions.push(inArray(room.code, roomCodes));
+    }
+  }
+
   const rows = await db
     .select({
       batchId: materialBatch.id,
       expiryDate: materialBatch.expiryDate,
     })
     .from(materialBatch)
-    .where(and(eq(materialBatch.active, true), ne(materialBatch.quantity, "0")))
+    .innerJoin(room, eq(room.id, materialBatch.roomId))
+    .where(and(...conditions))
     .orderBy(asc(materialBatch.expiryDate));
 
   const now = new Date();
@@ -462,4 +553,161 @@ export async function getInventoryHealth(days = 30) {
   }
 
   return { lowStock, expired, expiring };
+}
+
+export type TopUsageItem = {
+  id: string;
+  name: string;
+  category?: string | null;
+  code?: string | null;
+  totalRequests: number;
+  totalDaysBorrowed: number;
+  totalQuantity?: number;
+  unit?: string;
+};
+
+export type TopUsageData = {
+  days: number;
+  instruments: TopUsageItem[];
+  tools: TopUsageItem[];
+  materials: TopUsageItem[];
+};
+
+export async function getTopUsage(options: {
+  days?: number;
+  roomCodes?: string[] | null;
+  roomCode?: string;
+}): Promise<TopUsageData> {
+  const days = options.days && options.days > 0 ? options.days : 30;
+  const to = new Date();
+  const from = new Date(jakartaMidnight(to).getTime() - (days - 1) * DAY_MS);
+  const scopedCodes = options.roomCode
+    ? options.roomCodes
+      ? options.roomCodes.filter((c) => c === options.roomCode)
+      : [options.roomCode]
+    : options.roomCodes;
+
+  const [instrumentRows, toolRows, materialRows] = await Promise.all([
+    db.execute<{
+      id: string;
+      classification: string;
+      name: string;
+      category: string | null;
+      totalRequests: number;
+      totalDaysBorrowed: number;
+    }>(sql`
+      SELECT 
+        et.id::text as "id",
+        et.classification::text as "classification",
+        et.name as "name",
+        et.category as "category",
+        COUNT(DISTINCT rr.id)::int as "totalRequests",
+        COALESCE(SUM(GREATEST(1, CEIL(EXTRACT(EPOCH FROM (COALESCE(eri.end_at, rr.end_at) - COALESCE(eri.start_at, rr.start_at))) / 86400))), 0)::int as "totalDaysBorrowed"
+      FROM equipment_request_item eri
+      JOIN resource_request rr ON rr.id = eri.request_id
+      JOIN equipment_asset ea ON ea.id = eri.equipment_asset_id
+      JOIN equipment_type et ON et.id = ea.equipment_type_id
+      JOIN room r ON r.id = rr.room_id
+        WHERE et.classification = 'INSTRUMENT'
+        AND rr.status NOT IN ('CANCELLED', 'REJECTED', 'DRAFT')
+        AND COALESCE(rr.submitted_at, rr.created_at) >= ${from}
+        AND COALESCE(rr.submitted_at, rr.created_at) <= ${to}
+        AND ${roomScopeSql(sql`r.code`, scopedCodes)}
+      GROUP BY et.id, et.classification, et.name, et.category
+      ORDER BY "totalRequests" DESC, "totalDaysBorrowed" DESC
+      LIMIT 10
+    `),
+    db.execute<{
+      id: string;
+      classification: string;
+      name: string;
+      category: string | null;
+      totalRequests: number;
+      totalDaysBorrowed: number;
+    }>(sql`
+      SELECT 
+        et.id::text as "id",
+        et.classification::text as "classification",
+        et.name as "name",
+        et.category as "category",
+        COUNT(DISTINCT rr.id)::int as "totalRequests",
+        COALESCE(SUM(GREATEST(1, CEIL(EXTRACT(EPOCH FROM (COALESCE(eri.end_at, rr.end_at) - COALESCE(eri.start_at, rr.start_at))) / 86400))), 0)::int as "totalDaysBorrowed"
+      FROM equipment_request_item eri
+      JOIN resource_request rr ON rr.id = eri.request_id
+      JOIN equipment_asset ea ON ea.id = eri.equipment_asset_id
+      JOIN equipment_type et ON et.id = ea.equipment_type_id
+      JOIN room r ON r.id = rr.room_id
+      WHERE et.classification = 'TOOL'
+        AND rr.status NOT IN ('CANCELLED', 'REJECTED', 'DRAFT')
+        AND COALESCE(rr.submitted_at, rr.created_at) >= ${from}
+        AND COALESCE(rr.submitted_at, rr.created_at) <= ${to}
+        AND ${roomScopeSql(sql`r.code`, scopedCodes)}
+      GROUP BY et.id, et.classification, et.name, et.category
+      ORDER BY "totalRequests" DESC, "totalDaysBorrowed" DESC
+      LIMIT 10
+    `),
+    db.execute<{
+      id: string;
+      name: string;
+      code: string;
+      category: string | null;
+      unit: string;
+      totalRequests: number;
+      totalQuantity: string;
+    }>(sql`
+      SELECT 
+        m.id::text as "id",
+        m.name as "name",
+        m.code as "code",
+        m.category as "category",
+        m.base_unit as "unit",
+        COUNT(DISTINCT rr.id)::int as "totalRequests",
+        COALESCE(SUM(mri.requested_quantity), 0)::text as "totalQuantity"
+      FROM material_request_item mri
+      JOIN resource_request rr ON rr.id = mri.request_id
+      JOIN material m ON m.id = mri.material_id
+      JOIN room r ON r.id = rr.room_id
+      WHERE rr.status NOT IN ('CANCELLED', 'REJECTED', 'DRAFT')
+        AND COALESCE(rr.submitted_at, rr.created_at) >= ${from}
+        AND COALESCE(rr.submitted_at, rr.created_at) <= ${to}
+        AND ${roomScopeSql(sql`r.code`, scopedCodes)}
+      GROUP BY m.id, m.name, m.code, m.category, m.base_unit
+      ORDER BY "totalRequests" DESC
+      LIMIT 10
+    `),
+  ]);
+
+  const instruments: TopUsageItem[] = instrumentRows.rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    totalRequests: Number(row.totalRequests),
+    totalDaysBorrowed: Number(row.totalDaysBorrowed),
+  }));
+
+  const tools: TopUsageItem[] = toolRows.rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    totalRequests: Number(row.totalRequests),
+    totalDaysBorrowed: Number(row.totalDaysBorrowed),
+  }));
+
+  const materials: TopUsageItem[] = materialRows.rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    code: row.code,
+    category: row.category,
+    unit: row.unit,
+    totalRequests: Number(row.totalRequests),
+    totalDaysBorrowed: 0,
+    totalQuantity: Number(row.totalQuantity),
+  }));
+
+  return {
+    days,
+    instruments,
+    tools,
+    materials,
+  };
 }

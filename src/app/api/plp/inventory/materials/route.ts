@@ -1,7 +1,10 @@
-import { withApiPermission } from "@/lib/api";
+import { readJson, withApiPermission } from "@/lib/api";
 import { scopeForSession } from "@/services/access-scope.service";
-import { listPlpMaterials } from "@/services/plp.service";
-import { inventoryQuerySchema } from "@/validators/plp";
+import { createPlpMaterial, listPlpMaterials } from "@/services/plp.service";
+import {
+  inventoryQuerySchema,
+  plpMaterialCreateInputSchema,
+} from "@/validators/plp";
 
 export const runtime = "nodejs";
 
@@ -24,6 +27,23 @@ export function GET(request: Request) {
           offset: query.offset,
         }),
       );
+    },
+  );
+}
+
+export function POST(request: Request) {
+  return withApiPermission(
+    request,
+    { materials: ["manage-any"] },
+    async (session) => {
+      const input = plpMaterialCreateInputSchema.parse(await readJson(request));
+      const { scope } = await scopeForSession(session);
+      const created = await createPlpMaterial(
+        session.user.id,
+        scope,
+        input,
+      );
+      return Response.json({ data: created }, { status: 201 });
     },
   );
 }

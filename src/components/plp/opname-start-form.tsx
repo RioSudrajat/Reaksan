@@ -41,7 +41,7 @@ export function OpnameStartForm({
     <form onSubmit={start} className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B6B6B]">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#64748B]">
             Room
           </span>
           <select
@@ -58,7 +58,7 @@ export function OpnameStartForm({
           </select>
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B6B6B]">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#64748B]">
             Catatan (opsional)
           </span>
           <input
@@ -74,7 +74,7 @@ export function OpnameStartForm({
       {error && (
         <p
           role="alert"
-          className="rounded-xl border border-[#F3C7C7] bg-[#FDE9E9] px-4 py-3 text-[12px] font-medium text-[#9E3636]"
+          className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-[12px] font-medium text-[#DC2626]"
         >
           {error}
         </p>
@@ -82,7 +82,7 @@ export function OpnameStartForm({
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex min-h-11 items-center rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA] disabled:opacity-60"
+        className="inline-flex min-h-10 items-center rounded-lg bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] shadow-xs transition hover:bg-[#EAA805] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] disabled:opacity-60"
       >
         {pending ? "Menyiapkan sesi..." : "Mulai sesi hitung"}
       </button>

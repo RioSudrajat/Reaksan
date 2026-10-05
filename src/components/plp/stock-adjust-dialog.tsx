@@ -77,7 +77,7 @@ export function StockAdjustDialog({
           setError(null);
           setOpen(true);
         }}
-        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-[#E1E1E1] bg-white px-2.5 py-1 text-[11px] font-bold text-[#212121] transition hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#38529B]"
+        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#121826] transition hover:bg-[#FEF7E6] hover:border-[#FDE68A] hover:text-[#8D6500] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
       >
         <SlidersHorizontal className="size-3.5" aria-hidden="true" />
         Sesuaikan Stok
@@ -90,20 +90,20 @@ export function StockAdjustDialog({
           aria-labelledby="stock-adjust-title"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs"
         >
-          <div className="w-full max-w-md rounded-2xl border border-[#EEEEEE] bg-white p-6 shadow-xl">
+          <div className="w-full max-w-md rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-xl">
             <div className="flex items-center justify-between pb-3">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#929292]">
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#64748B]">
                   {lotNumber ?? "Batch tanpa lot"} · {roomName}
                 </p>
-                <h3 id="stock-adjust-title" className="text-[16px] font-bold text-[#212121]">
+                <h3 id="stock-adjust-title" className="text-[16px] font-bold text-[#121826]">
                   Penyesuaian Stok Batch
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-lg p-1.5 text-[#929292] hover:bg-[#F5F5F5] hover:text-[#212121]"
+                className="rounded-lg p-1.5 text-[#64748B] hover:bg-[#F8F9FA] hover:text-[#121826]"
               >
                 <X className="size-5" aria-hidden="true" />
                 <span className="sr-only">Tutup</span>
@@ -111,22 +111,22 @@ export function StockAdjustDialog({
             </div>
 
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-              <div className="rounded-xl bg-[#F5F5F5] p-3 text-[12px]">
+              <div className="rounded-xl border border-[#E5E7EB] bg-[#F8F9FA] p-3 text-[12px]">
                 <div className="flex justify-between">
-                  <span className="text-[#6B6B6B]">Stok Fisik Saat Ini</span>
-                  <span className="font-bold text-[#212121]">
+                  <span className="text-[#64748B]">Stok Fisik Saat Ini</span>
+                  <span className="font-bold text-[#121826]">
                     {currentQuantity} {unit}
                   </span>
                 </div>
                 {parsedAmount > 0 && (
-                  <div className="mt-2 flex justify-between border-t border-[#E5E5E5] pt-2">
-                    <span className="text-[#6B6B6B]">Perkiraan Setelah Koreksi</span>
+                  <div className="mt-2 flex justify-between border-t border-[#E5E7EB] pt-2">
+                    <span className="text-[#64748B]">Perkiraan Setelah Koreksi</span>
                     <span
                       className={
                         "font-bold " +
                         (mode === "decrease"
-                          ? "text-[#9E3636]"
-                          : "text-[#03683A]")
+                          ? "text-[#DC2626]"
+                          : "text-[#16A34A]")
                       }
                     >
                       {projectedQuantity} {unit} ({deltaQuantity > 0 ? `+${deltaQuantity}` : deltaQuantity})
@@ -136,7 +136,7 @@ export function StockAdjustDialog({
               </div>
 
               <div>
-                <span className="block text-[11px] font-semibold text-[#6B6B6B]">
+                <span className="block text-[11px] font-semibold text-[#64748B]">
                   Arah Penyesuaian
                 </span>
                 <div className="mt-1 grid grid-cols-2 gap-2">
@@ -149,8 +149,8 @@ export function StockAdjustDialog({
                     className={
                       "inline-flex min-h-10 items-center justify-center rounded-xl border text-[12px] font-bold transition " +
                       (mode === "decrease"
-                        ? "border-[#9E3636] bg-[#FDE9E9] text-[#9E3636]"
-                        : "border-[#E1E1E1] bg-white text-[#6B6B6B] hover:bg-[#F5F5F5]")
+                        ? "border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]"
+                        : "border-[#E5E7EB] bg-white text-[#64748B] hover:bg-[#F8F9FA]")
                     }
                   >
                     Kurangi Stok (-)
@@ -164,8 +164,8 @@ export function StockAdjustDialog({
                     className={
                       "inline-flex min-h-10 items-center justify-center rounded-xl border text-[12px] font-bold transition " +
                       (mode === "increase"
-                        ? "border-[#03683A] bg-[#E5F5ED] text-[#03683A]"
-                        : "border-[#E1E1E1] bg-white text-[#6B6B6B] hover:bg-[#F5F5F5]")
+                        ? "border-[#BBF7D0] bg-[#F0FDF4] text-[#16A34A]"
+                        : "border-[#E5E7EB] bg-white text-[#64748B] hover:bg-[#F8F9FA]")
                     }
                   >
                     Tambah Stok (+)
@@ -177,7 +177,7 @@ export function StockAdjustDialog({
                 <div>
                   <label
                     htmlFor="adjust-amount"
-                    className="block text-[11px] font-semibold text-[#6B6B6B]"
+                    className="block text-[11px] font-semibold text-[#64748B]"
                   >
                     Jumlah ({unit})
                   </label>
@@ -197,7 +197,7 @@ export function StockAdjustDialog({
                 <div>
                   <label
                     htmlFor="adjust-type"
-                    className="block text-[11px] font-semibold text-[#6B6B6B]"
+                    className="block text-[11px] font-semibold text-[#64748B]"
                   >
                     Kategori Ledger
                   </label>
@@ -216,7 +216,7 @@ export function StockAdjustDialog({
               <div>
                 <label
                   htmlFor="adjust-reason"
-                  className="block text-[11px] font-semibold text-[#6B6B6B]"
+                  className="block text-[11px] font-semibold text-[#64748B]"
                 >
                   Alasan Penyesuaian (Wajib)
                 </label>
@@ -235,7 +235,7 @@ export function StockAdjustDialog({
               {error && (
                 <p
                   role="alert"
-                  className="rounded-xl bg-[#FDE9E9] p-3 text-[12px] text-[#9E3636]"
+                  className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] p-3 text-[12px] font-medium text-[#DC2626]"
                 >
                   {error}
                 </p>
@@ -246,14 +246,14 @@ export function StockAdjustDialog({
                   type="button"
                   onClick={() => setOpen(false)}
                   disabled={pending}
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-4 text-[12px] font-bold text-[#212121] hover:bg-[#F5F5F5]"
+                  className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#E5E7EB] bg-white px-4 text-[12px] font-semibold text-[#121826] transition hover:bg-[#F8F9FA]"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={pending}
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#38529B] px-5 text-[12px] font-bold text-white hover:bg-[#2C417C] disabled:opacity-70"
+                  className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#FDB913] px-5 text-[12px] font-bold text-[#121826] shadow-xs transition hover:bg-[#EAA805] disabled:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
                 >
                   {pending ? "Menyimpan..." : "Simpan Penyesuaian"}
                 </button>

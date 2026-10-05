@@ -21,6 +21,7 @@ import {
   Clock3,
   FlaskConical,
   GraduationCap,
+  Microscope,
   Search,
   Trash2,
   UsersRound,
@@ -43,6 +44,7 @@ import {
   formatRangeLabel,
   isOwnEvent,
   monthName,
+  parseJakartaDate,
   requestStatusLabels,
   splitEventTime,
   type RequestEquipmentItem,
@@ -88,7 +90,7 @@ export type ScheduleCardContext = {
   label: string;
   month: { year: number; month: number };
   events: ScheduleEvent[];
-  source: "range" | "event";
+  source: "range" | "event" | "more";
   eventId?: string;
   selectionId: number;
   close: () => void;
@@ -159,7 +161,15 @@ type WeekBar = {
   openEnd: boolean;
 };
 
-function eventStartDate(event: ScheduleEvent, view: Date) {
+function eventStartDate(event: ScheduleEvent, view: Date): Date {
+  if (event.startAt) {
+    try {
+      const d = parseJakartaDate(event.startAt);
+      if (!isNaN(d.getTime())) return d;
+    } catch {
+      // fallback
+    }
+  }
   return new Date(
     view.getFullYear(),
     view.getMonth(),
@@ -167,7 +177,15 @@ function eventStartDate(event: ScheduleEvent, view: Date) {
   );
 }
 
-function eventEndDate(event: ScheduleEvent, view: Date) {
+function eventEndDate(event: ScheduleEvent, view: Date): Date {
+  if (event.endAt) {
+    try {
+      const d = parseJakartaDate(event.endAt);
+      if (!isNaN(d.getTime())) return d;
+    } catch {
+      // fallback
+    }
+  }
   return new Date(
     view.getFullYear(),
     view.getMonth(),
@@ -229,6 +247,7 @@ function CalendarGrid({
   onCellPointerEnter,
   onCellKeyDown,
   renderCell,
+  renderWeekOverlay,
   rootRef,
 }: {
   view: Date;
@@ -252,6 +271,10 @@ function CalendarGrid({
     inMonth: boolean;
     row: number;
     col: number;
+  }) => ReactNode;
+  renderWeekOverlay?: (context: {
+    row: number;
+    week: Date[];
   }) => ReactNode;
   rootRef: RefObject<HTMLDivElement | null>;
 }) {
@@ -285,64 +308,69 @@ function CalendarGrid({
           aria-label={`${monthName(view.getMonth())} ${view.getFullYear()}`}
         >
           {weeks.map((week, row) => (
-            <div key={dateKey(week[0])} className="grid grid-cols-7" role="row">
-              {week.map((date, col) => {
-                const inMonth = date.getMonth() === view.getMonth();
-                const inRange =
-                  Boolean(rangeStart && rangeEnd) &&
-                  date >= (rangeStart as Date) &&
-                  date <= (rangeEnd as Date);
-                const isToday = todayKey === date.toDateString();
-                const isEdge =
-                  Boolean(rangeStart && rangeEnd) &&
-                  (sameDay(date, rangeStart as Date) ||
-                    sameDay(date, rangeEnd as Date));
-                return (
-                  <div
-                    key={dateKey(date)}
-                    role="gridcell"
-                    tabIndex={inMonth ? 0 : -1}
-                    data-schedule-date={dateKey(date)}
-                    aria-selected={inRange}
-                    aria-label={`${date.getDate()} ${monthName(date.getMonth())} ${date.getFullYear()}`}
-                    onPointerDown={(event) =>
-                      onCellPointerDown(
-                        event,
-                        date,
-                        event.currentTarget,
-                        inMonth,
-                      )
-                    }
-                    onPointerEnter={() => onCellPointerEnter?.(date, inMonth)}
-                    onKeyDown={(event) =>
-                      onCellKeyDown?.(event, date, event.currentTarget, inMonth)
-                    }
-                    className={cn(
-                      "relative select-none border-b border-r border-[#E1E1E1] p-1.5 pb-1 last:border-r-0 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#6E8EDA]",
-                      "min-h-[104px] sm:min-h-[124px]",
-                      inMonth ? "bg-white" : "bg-[#FBFBFA]",
-                      inRange && "bg-[#E9EEFC]",
-                    )}
-                  >
-                    <div className="flex h-7 items-center justify-between gap-1">
-                      <span
-                        className={cn(
-                          "flex size-7 items-center justify-center rounded-full text-[12px] font-semibold tabular-nums",
-                          inMonth ? "text-[#212121]" : "text-[#B7B7B7]",
-                          isToday &&
-                            inMonth &&
-                            !isEdge &&
-                            "bg-[#DCE6FA] font-bold text-[#274077]",
-                          isEdge && inRange && "bg-[#38529B] text-white",
-                        )}
-                      >
-                        {date.getDate()}
-                      </span>
+            <div key={dateKey(week[0])} className="relative border-b border-[#E1E1E1]" role="row">
+              <div className="grid grid-cols-7 divide-x divide-[#E1E1E1]">
+                {week.map((date, col) => {
+                  const inMonth = date.getMonth() === view.getMonth();
+                  const inRange =
+                    Boolean(rangeStart && rangeEnd) &&
+                    date >= (rangeStart as Date) &&
+                    date <= (rangeEnd as Date);
+                  const isToday = todayKey === date.toDateString();
+                  const isEdge =
+                    Boolean(rangeStart && rangeEnd) &&
+                    (sameDay(date, rangeStart as Date) ||
+                      sameDay(date, rangeEnd as Date));
+                  return (
+                    <div
+                      key={dateKey(date)}
+                      role="gridcell"
+                      tabIndex={inMonth ? 0 : -1}
+                      data-schedule-date={dateKey(date)}
+                      aria-selected={inRange}
+                      aria-label={`${date.getDate()} ${monthName(date.getMonth())} ${date.getFullYear()}`}
+                      onPointerDown={(event) =>
+                        onCellPointerDown(
+                          event,
+                          date,
+                          event.currentTarget,
+                          inMonth,
+                        )
+                      }
+                      onPointerEnter={() => onCellPointerEnter?.(date, inMonth)}
+                      onKeyDown={(event) =>
+                        onCellKeyDown?.(event, date, event.currentTarget, inMonth)
+                      }
+                      className={cn(
+                        "relative select-none p-1.5 pb-2 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#6E8EDA]",
+                        "min-h-[142px] sm:min-h-[156px] flex flex-col justify-between",
+                        inMonth ? "bg-white hover:bg-[#FAFAF8]" : "bg-[#FBFBFA]",
+                        inRange && "bg-[#E9EEFC]",
+                      )}
+                    >
+                      <div className="flex h-7 items-center justify-between gap-1 pointer-events-none">
+                        <span
+                          className={cn(
+                            "flex size-7 items-center justify-center rounded-full text-[12px] font-semibold tabular-nums",
+                            inMonth ? "text-[#212121]" : "text-[#B7B7B7]",
+                            isToday &&
+                              inMonth &&
+                              !isEdge &&
+                              "bg-[#F9B129] font-bold text-[#212121]",
+                            isEdge && inRange && "bg-[#38529B] text-white",
+                          )}
+                        >
+                          {date.getDate()}
+                        </span>
+                      </div>
+                      <div className="mt-auto">
+                        {renderCell?.({ date, inMonth, row, col })}
+                      </div>
                     </div>
-                    {renderCell?.({ date, inMonth, row, col })}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+              {renderWeekOverlay?.({ row, week })}
             </div>
           ))}
         </div>
@@ -361,6 +389,7 @@ export function ScheduleCalendar({
   className,
   ariaLabel = "Monthly schedule",
   selectable = true,
+  onMonthChange,
 }: {
   events: ScheduleEvent[];
   eventsMonth: { year: number; month: number };
@@ -371,9 +400,34 @@ export function ScheduleCalendar({
   className?: string;
   ariaLabel?: string;
   selectable?: boolean;
+  onMonthChange?: (month: { year: number; month: number }) => void;
 }) {
-  const [view, setView] = useState(
-    () => new Date(eventsMonth.year, eventsMonth.month, 1),
+  const [viewState, setViewState] = useState<{
+    propYear: number;
+    propMonth: number;
+    currentView: Date;
+  }>({
+    propYear: eventsMonth.year,
+    propMonth: eventsMonth.month,
+    currentView: new Date(eventsMonth.year, eventsMonth.month, 1),
+  });
+
+  const view = useMemo(() => {
+    return viewState.propYear === eventsMonth.year &&
+      viewState.propMonth === eventsMonth.month
+      ? viewState.currentView
+      : new Date(eventsMonth.year, eventsMonth.month, 1);
+  }, [viewState, eventsMonth.year, eventsMonth.month]);
+
+  const setView = useCallback(
+    (nextDate: Date) => {
+      setViewState({
+        propYear: eventsMonth.year,
+        propMonth: eventsMonth.month,
+        currentView: nextDate,
+      });
+    },
+    [eventsMonth.year, eventsMonth.month],
   );
   const [selection, setSelection] = useState<{
     start: Date;
@@ -381,9 +435,10 @@ export function ScheduleCalendar({
   } | null>(null);
   const [card, setCard] = useState<{
     range: DayRange;
-    source: "range" | "event";
+    source: "range" | "event" | "more";
     eventId?: string;
     selectionId: number;
+    month?: { year: number; month: number };
   } | null>(null);
   const [cardPosition, setCardPosition] = useState<{
     left: number;
@@ -410,25 +465,35 @@ export function ScheduleCalendar({
     active: boolean;
   } | null>(null);
 
-  // Events carry their real start date, so the grid can show the matching month
-  // even while the user navigates months beyond the initially rendered one.
-  const eventMonths = useMemo(() => {
-    const formatter = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Jakarta",
-      year: "numeric",
-      month: "2-digit",
+  // Events that overlap with the currently displayed month calendar grid
+  const visibleEvents = useMemo(() => {
+    const weeks = buildWeeks(view);
+    const gridStart = weeks[0][0];
+    const lastCell = weeks[weeks.length - 1][6];
+    const gridEnd = new Date(
+      lastCell.getFullYear(),
+      lastCell.getMonth(),
+      lastCell.getDate(),
+      23,
+      59,
+      59,
+      999,
+    );
+    return events.filter((event) => {
+      const s = eventStartDate(event, view);
+      const e = eventEndDate(event, view);
+      const eEnd = new Date(
+        e.getFullYear(),
+        e.getMonth(),
+        e.getDate(),
+        23,
+        59,
+        59,
+        999,
+      );
+      return s <= gridEnd && eEnd >= gridStart;
     });
-    const map = new Map<string, string>();
-    for (const event of events) {
-      map.set(event.id, formatter.format(new Date(event.startAt)));
-    }
-    return map;
-  }, [events]);
-  const viewKey = `${view.getFullYear()}-${String(view.getMonth() + 1).padStart(2, "0")}`;
-  const visibleEvents = useMemo(
-    () => events.filter((event) => eventMonths.get(event.id) === viewKey),
-    [events, eventMonths, viewKey],
-  );
+  }, [events, view]);
 
   const weekLayouts = useMemo(
     () =>
@@ -465,8 +530,9 @@ export function ScheduleCalendar({
     (
       range: DayRange,
       anchor: HTMLElement,
-      source: "range" | "event",
+      source: "range" | "event" | "more",
       eventId?: string,
+      month?: { year: number; month: number },
     ) => {
       selectionCounterRef.current += 1;
       anchorElRef.current = anchor;
@@ -476,6 +542,7 @@ export function ScheduleCalendar({
         source,
         eventId,
         selectionId: selectionCounterRef.current,
+        month,
       });
     },
     [positionCard],
@@ -602,7 +669,7 @@ export function ScheduleCalendar({
         setSelectedEventId(null);
       }
     },
-    [closeCard, selectable],
+    [closeCard, selectable, setView],
   );
 
   const handleCellPointerEnter = useCallback((date: Date, inMonth: boolean) => {
@@ -651,26 +718,49 @@ export function ScheduleCalendar({
         setView(new Date(next.getFullYear(), next.getMonth(), 1));
       }
     },
-    [openCard, selectable],
+    [openCard, selectable, setView],
   );
 
   const handleBarSelect = useCallback(
     (event: ScheduleEvent, el: HTMLElement) => {
-      const start = Math.min(event.startDay, event.endDay);
-      const end = Math.max(event.startDay, event.endDay);
+      const s = eventStartDate(event, view);
+      const e = eventEndDate(event, view);
+      const sMidnight = atMidnight(s);
+      const eMidnight = atMidnight(e);
       setSelection({
-        start: new Date(view.getFullYear(), view.getMonth(), start),
-        end: new Date(view.getFullYear(), view.getMonth(), end),
+        start: sMidnight,
+        end: eMidnight,
       });
       setSelectedEventId(event.id);
-      openCard({ start, end }, el, "event", event.id);
+      openCard(
+        { start: s.getDate(), end: e.getDate() },
+        el,
+        "event",
+        event.id,
+        { year: s.getFullYear(), month: s.getMonth() },
+      );
     },
     [openCard, view],
   );
 
-  const cardEvents = card
-    ? eventsForRange(visibleEvents, card.range)
-    : [];
+  const targetMonth = card?.month ?? {
+    year: view.getFullYear(),
+    month: view.getMonth(),
+  };
+
+  const cardEvents = useMemo(() => {
+    if (!card) return [];
+    const matched = eventsForRange(visibleEvents, card.range, targetMonth);
+    if (card.source === "event" && card.eventId) {
+      if (!matched.some((e) => e.id === card.eventId)) {
+        const found = visibleEvents.find((e) => e.id === card.eventId);
+        if (found) {
+          return [found, ...matched];
+        }
+      }
+    }
+    return matched;
+  }, [card, visibleEvents, targetMonth]);
 
   return (
     <div
@@ -694,7 +784,9 @@ export function ScheduleCalendar({
             type="button"
             onClick={() => {
               const target = todayKey ? new Date(todayKey) : new Date();
-              setView(new Date(target.getFullYear(), target.getMonth(), 1));
+              const nextMonth = { year: target.getFullYear(), month: target.getMonth() };
+              setView(new Date(nextMonth.year, nextMonth.month, 1));
+              onMonthChange?.(nextMonth);
               closeCard();
             }}
             className="flex h-10 items-center rounded-lg border border-[#E1E1E1] px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
@@ -704,7 +796,9 @@ export function ScheduleCalendar({
           <button
             type="button"
             onClick={() => {
-              setView(new Date(view.getFullYear(), view.getMonth() - 1, 1));
+              const nextDate = new Date(view.getFullYear(), view.getMonth() - 1, 1);
+              setView(nextDate);
+              onMonthChange?.({ year: nextDate.getFullYear(), month: nextDate.getMonth() });
               closeCard();
             }}
             className="flex size-10 items-center justify-center rounded-lg border border-[#E1E1E1] text-[#6B6B6B] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
@@ -715,7 +809,9 @@ export function ScheduleCalendar({
           <button
             type="button"
             onClick={() => {
-              setView(new Date(view.getFullYear(), view.getMonth() + 1, 1));
+              const nextDate = new Date(view.getFullYear(), view.getMonth() + 1, 1);
+              setView(nextDate);
+              onMonthChange?.({ year: nextDate.getFullYear(), month: nextDate.getMonth() });
               closeCard();
             }}
             className="flex size-10 items-center justify-center rounded-lg border border-[#E1E1E1] text-[#6B6B6B] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
@@ -746,112 +842,109 @@ export function ScheduleCalendar({
         onCellPointerDown={handleCellPointerDown}
         onCellPointerEnter={handleCellPointerEnter}
         onCellKeyDown={handleCellKeyDown}
-        renderCell={({ date, inMonth, row }) => {
-          if (!inMonth) return null;
+        renderWeekOverlay={({ row }) => {
           const layout = weekLayouts[row];
           if (!layout) return null;
-          const col = Math.round(
-            (date.getTime() - layout.week[0].getTime()) / 86400000,
-          );
-          const laneBars: Array<WeekBar | null> = Array.from(
-            { length: Math.min(layout.laneCount, MAX_LANES) },
-            (_, lane) =>
-              layout.bars.find(
-                (bar) =>
-                  bar.lane === lane &&
-                  bar.startCol <= col &&
-                  bar.endCol >= col,
-              ) ?? null,
-          );
-          const dayBars = layout.bars.filter(
-            (bar) => bar.startCol <= col && bar.endCol >= col,
-          );
-          const hiddenCount = Math.max(0, dayBars.length - MAX_LANES);
+          const visibleBars = layout.bars.filter((b) => b.lane < MAX_LANES);
+          if (visibleBars.length === 0) return null;
+
           return (
-            <div className="-mx-1.5 mt-1 space-y-[3px]">
-              {laneBars.map((bar, lane) => {
-                if (!bar) {
-                  return (
-                    <span
-                      key={`empty-${lane}`}
-                      className="block h-[22px] sm:h-[18px]"
-                      aria-hidden="true"
-                    />
-                  );
-                }
-                const startsHere = bar.startCol === col;
-                const endsHere = bar.endCol === col;
-                const roundLeft = startsHere && !bar.openStart;
-                const roundRight = endsHere && !bar.openEnd;
+            <div
+              className="pointer-events-none absolute inset-x-0 top-[34px] grid grid-cols-7 gap-y-[3px]"
+              style={{
+                gridTemplateRows: `repeat(${MAX_LANES}, 22px)`,
+              }}
+            >
+              {visibleBars.map((bar) => {
+                const colStart = bar.startCol + 1;
+                const colEnd = bar.endCol + 2;
+                const lane = bar.lane + 1;
+                const roundLeft = !bar.openStart;
+                const roundRight = !bar.openEnd;
+
                 return (
                   <button
                     type="button"
                     data-schedule-bar="true"
-                    key={`${bar.event.id}-${dateKey(date)}`}
+                    key={`${bar.event.id}-${row}-${bar.startCol}`}
                     onPointerDown={(event) => event.stopPropagation()}
                     onClick={(event) => {
                       event.stopPropagation();
                       handleBarSelect(bar.event, event.currentTarget);
                     }}
+                    style={{
+                      gridColumn: `${colStart} / ${colEnd}`,
+                      gridRow: `${lane} / ${lane + 1}`,
+                    }}
                     className={cn(
-                      "block h-[22px] w-full truncate border px-1.5 text-left text-[9.5px] font-semibold leading-[20px] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#212121] sm:h-[18px] sm:leading-[16px]",
+                      "pointer-events-auto z-10 flex h-[22px] sm:h-[20px] items-center overflow-hidden border px-2 text-left text-[9.5px] font-semibold transition cursor-pointer shadow-2xs",
                       displayBarClasses[eventDisplayState(bar.event)],
-                      roundLeft && "rounded-l-[4px]",
-                      roundRight && "rounded-r-[4px]",
-                      !roundLeft && "border-l-0",
-                      !roundRight && "border-r-0",
+                      roundLeft ? "rounded-l-md ml-1" : "rounded-l-none ml-0 border-l-0 pl-1",
+                      roundRight ? "rounded-r-md mr-1" : "rounded-r-none mr-0 border-r-0 pr-1",
                       selectedEventId === bar.event.id &&
-                        "ring-2 ring-[#212121] ring-offset-1",
+                        "ring-2 ring-[#212121] ring-offset-1 z-20",
                     )}
-                    aria-label={`${bar.event.title}, ${eventDisplayState(bar.event)}, ${bar.event.time}`}
+                    title={`${bar.event.title}, ${eventDisplayState(bar.event)}, ${bar.event.time}`}
                   >
-                    <span className="hidden items-center gap-1 sm:inline-flex">
-                      {startsHere || bar.openStart ? (
-                        <>
-                          <ResourceThumb
-                            mediaId={bar.event.imageMediaId}
-                            alt=""
-                            size={12}
-                            className="rounded-[3px] border-0"
-                          />
-                          <span className="truncate">{bar.event.title}</span>
-                        </>
-                      ) : (
-                        "\u00A0"
-                      )}
-                    </span>
+                    {bar.openStart && (
+                      <span className="mr-1 text-[8.5px] text-[#AE7C1D] shrink-0 font-bold" aria-hidden="true">
+                        ◀
+                      </span>
+                    )}
+                    <ResourceThumb
+                      mediaId={bar.event.imageMediaId}
+                      alt=""
+                      size={12}
+                      className="mr-1 shrink-0 rounded-[2px]"
+                    />
+                    <span className="truncate">{bar.event.title}</span>
+                    {bar.openEnd && (
+                      <span className="ml-auto pl-1 text-[8.5px] text-[#AE7C1D] shrink-0 font-bold" aria-hidden="true">
+                        ▶
+                      </span>
+                    )}
                   </button>
                 );
               })}
-              {hiddenCount > 0 &&
-                (selectable ? (
-                  <button
-                    type="button"
-                    onPointerDown={(event) => event.stopPropagation()}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      const day = date.getDate();
-                      setSelection({
-                        start: atMidnight(date),
-                        end: atMidnight(date),
-                      });
-                      setSelectedEventId(null);
-                      openCard(
-                        { start: day, end: day },
-                        event.currentTarget,
-                        "range",
-                      );
-                    }}
-                    className="block w-full text-left text-[9.5px] font-bold text-[#38529B] hover:underline"
-                  >
-                    +{hiddenCount} more
-                  </button>
-                ) : (
-                  <span className="block w-full text-left text-[9.5px] font-bold text-[#6B6B6B]">
-                    +{hiddenCount} more
-                  </span>
-                ))}
             </div>
+          );
+        }}
+        renderCell={({ date, inMonth, row, col }) => {
+          if (!inMonth) return null;
+          const layout = weekLayouts[row];
+          if (!layout) return null;
+          const dayBars = layout.bars.filter(
+            (bar) => bar.startCol <= col && bar.endCol >= col,
+          );
+          const hiddenBars = dayBars.filter((bar) => bar.lane >= MAX_LANES);
+          const hiddenCount = hiddenBars.length;
+          if (hiddenCount <= 0) return null;
+
+          return (
+            <button
+              type="button"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                const day = date.getDate();
+                setSelection({
+                  start: atMidnight(date),
+                  end: atMidnight(date),
+                });
+                setSelectedEventId(null);
+                openCard(
+                  { start: day, end: day },
+                  event.currentTarget,
+                  "more",
+                  undefined,
+                  { year: date.getFullYear(), month: date.getMonth() },
+                );
+              }}
+              className="inline-flex items-center gap-1 rounded bg-[#FEF1CC] px-1.5 py-0.5 text-[9.5px] font-bold text-[#AE7C1D] hover:bg-[#F9B129] hover:text-[#212121] transition cursor-pointer"
+              title={`Lihat seluruh ${dayBars.length} jadwal pada hari ini`}
+            >
+              +{hiddenCount} lainnya
+            </button>
           );
         }}
       />
@@ -902,11 +995,8 @@ export function ScheduleCalendar({
           <div className="max-h-[min(70vh,540px)] overflow-y-auto pr-6">
             {renderCard({
               range: card.range,
-              label: formatRangeLabel(card.range, {
-                year: view.getFullYear(),
-                month: view.getMonth(),
-              }),
-              month: { year: view.getFullYear(), month: view.getMonth() },
+              label: formatRangeLabel(card.range, targetMonth),
+              month: targetMonth,
               events: cardEvents,
               source: card.source,
               eventId: card.eventId,
@@ -1014,44 +1104,75 @@ export function ScheduleEventCard({
       </div>
       <dl className="mt-3 space-y-2 border-t border-[#F1F1F1] pt-3 text-[11px]">
         <div className="flex gap-3">
-          <dt className="w-16 shrink-0 font-semibold text-[#929292]">User</dt>
+          <dt className="w-16 shrink-0 font-semibold text-[#929292]">Pemohon</dt>
           <dd className="min-w-0 flex-1 text-[#212121]">{event.actor}</dd>
         </div>
         {roomName && (
           <div className="flex gap-3">
-            <dt className="w-16 shrink-0 font-semibold text-[#929292]">Room</dt>
+            <dt className="w-16 shrink-0 font-semibold text-[#929292]">Ruangan</dt>
             <dd className="min-w-0 flex-1 text-[#212121]">{roomName}</dd>
           </div>
         )}
-        {event.equipment && event.equipment.length > 0 ? (
+        {event.equipment && event.equipment.filter((e) => e.classification === "INSTRUMENT").length > 0 && (
           <div className="flex gap-3">
-            <dt className="w-16 shrink-0 font-semibold text-[#929292]">
-              Equipment
+            <dt className="w-16 shrink-0 font-semibold text-[#AE7C1D]">
+              Instrumen
             </dt>
             <dd className="min-w-0 flex-1 space-y-1 text-[#212121]">
-              {event.equipment.map((item) => (
-                <span key={item.unitId} className="flex items-start gap-2">
-                  <ResourceThumb
-                    mediaId={item.imageMediaId}
-                    alt={item.name}
-                    size={22}
-                    className="mt-0.5"
-                  />
-                  <span className="min-w-0">
-                    {item.name}
-                    <span className="text-[#929292]">
-                      {" "}
-                      · {item.unitLabel} · {item.unitId}
+              {event.equipment
+                .filter((item) => item.classification === "INSTRUMENT")
+                .map((item) => (
+                  <span key={item.unitId} className="flex items-start gap-2">
+                    <ResourceThumb
+                      mediaId={item.imageMediaId}
+                      alt={item.name}
+                      size={22}
+                      className="mt-0.5"
+                    />
+                    <span className="min-w-0">
+                      <span className="font-medium text-[#212121]">{item.name}</span>
+                      <span className="text-[#929292]">
+                        {" "}
+                        · {item.unitLabel} · {item.unitId}
+                      </span>
                     </span>
                   </span>
-                </span>
-              ))}
+                ))}
             </dd>
           </div>
-        ) : event.resourceId ? (
+        )}
+        {event.equipment && event.equipment.filter((e) => e.classification !== "INSTRUMENT").length > 0 && (
+          <div className="flex gap-3">
+            <dt className="w-16 shrink-0 font-semibold text-[#6B6B6B]">
+              Alat
+            </dt>
+            <dd className="min-w-0 flex-1 space-y-1 text-[#212121]">
+              {event.equipment
+                .filter((item) => item.classification !== "INSTRUMENT")
+                .map((item) => (
+                  <span key={item.unitId} className="flex items-start gap-2">
+                    <ResourceThumb
+                      mediaId={item.imageMediaId}
+                      alt={item.name}
+                      size={22}
+                      className="mt-0.5"
+                    />
+                    <span className="min-w-0">
+                      <span className="font-medium text-[#212121]">{item.name}</span>
+                      <span className="text-[#929292]">
+                        {" "}
+                        · {item.unitLabel} · {item.unitId}
+                      </span>
+                    </span>
+                  </span>
+                ))}
+            </dd>
+          </div>
+        )}
+        {(!event.equipment || event.equipment.length === 0) && event.resourceId ? (
           <div className="flex gap-3">
             <dt className="w-16 shrink-0 font-semibold text-[#929292]">
-              Resource
+              Sumber Daya
             </dt>
             <dd className="min-w-0 flex-1 text-[#212121]">
               {event.resourceId}
@@ -1062,7 +1183,7 @@ export function ScheduleEventCard({
         {event.materials && event.materials.length > 0 && (
           <div className="flex gap-3">
             <dt className="w-16 shrink-0 font-semibold text-[#929292]">
-              Materials
+              Bahan Kimia
             </dt>
             <dd className="min-w-0 flex-1 space-y-1 text-[#212121]">
               {event.materials.map((item) => (
@@ -1084,7 +1205,7 @@ export function ScheduleEventCard({
         {event.supervisor && (
           <div className="flex gap-3">
             <dt className="w-16 shrink-0 font-semibold text-[#929292]">
-              Supervisor
+              Pembimbing
             </dt>
             <dd className="min-w-0 flex-1 text-[#212121]">{event.supervisor}</dd>
           </div>
@@ -1092,24 +1213,24 @@ export function ScheduleEventCard({
         {event.fieldPic && (
           <div className="flex gap-3">
             <dt className="w-16 shrink-0 font-semibold text-[#929292]">
-              Field PIC
+              PIC Lapangan
             </dt>
             <dd className="min-w-0 flex-1 text-[#212121]">{event.fieldPic}</dd>
           </div>
         )}
         {event.mode && (
           <div className="flex gap-3">
-            <dt className="w-16 shrink-0 font-semibold text-[#929292]">Type</dt>
+            <dt className="w-16 shrink-0 font-semibold text-[#929292]">Tipe</dt>
             <dd className="min-w-0 flex-1 text-[#212121]">
               {event.mode === "shared"
-                ? "Shared use request"
-                : "Borrow request"}
+                ? "Pengajuan Sesi Bersama"
+                : "Peminjaman Mandiri"}
             </dd>
           </div>
         )}
         <div className="flex gap-3">
           <dt className="w-16 shrink-0 font-semibold text-[#929292]">
-            Purpose
+            Keperluan
           </dt>
           <dd className="min-w-0 flex-1 leading-5 text-[#212121]">
             {event.purpose}
@@ -1118,7 +1239,7 @@ export function ScheduleEventCard({
         {event.issuedAt && (
           <div className="flex gap-3">
             <dt className="w-16 shrink-0 font-semibold text-[#929292]">
-              Issued
+              Diserahkan
             </dt>
             <dd className="min-w-0 flex-1 text-[#212121]">
               {new Date(event.issuedAt).toLocaleString("id-ID", {
@@ -1131,7 +1252,7 @@ export function ScheduleEventCard({
         {event.returnedAt && (
           <div className="flex gap-3">
             <dt className="w-16 shrink-0 font-semibold text-[#929292]">
-              Returned
+              Dikembalikan
             </dt>
             <dd className="min-w-0 flex-1 text-[#212121]">
               {new Date(event.returnedAt).toLocaleString("id-ID", {
@@ -1351,27 +1472,40 @@ function PickerShell({
 
 function EquipmentPickerModal({
   roomId,
+  targetClassification,
   selected,
   onChange,
   onClose,
 }: {
   roomId: string;
+  targetClassification?: "INSTRUMENT" | "TOOL";
   selected: RequestEquipmentItem[];
   onChange: (items: RequestEquipmentItem[]) => void;
   onClose: () => void;
 }) {
   const catalog = useLabCatalog();
   const [query, setQuery] = useState("");
+  const [classificationFilter, setClassificationFilter] = useState<"ALL" | "INSTRUMENT" | "TOOL">(targetClassification ?? "ALL");
+  const effectiveFilter = targetClassification ?? classificationFilter;
   const [unitChoice, setUnitChoice] = useState<Record<string, string>>({});
   const list = catalog.equipment.filter(
     (asset) =>
       asset.roomId === roomId &&
+      (effectiveFilter === "ALL" || asset.classification === effectiveFilter) &&
       `${asset.name} ${asset.id} ${asset.room}`
         .toLowerCase()
         .includes(query.toLowerCase()),
   );
   const catalogRoom = catalog.rooms.find((room) => room.id === roomId);
   const addedUnitIds = selected.map((item) => item.unitId);
+  const activeSelected = targetClassification
+    ? selected.filter(
+        (item) =>
+          item.classification === targetClassification ||
+          catalog.equipment.find((a) => a.id === item.id)?.classification ===
+            targetClassification,
+      )
+    : selected;
 
   const addUnit = (assetId: string) => {
     const asset = catalog.equipment.find((item) => item.id === assetId);
@@ -1392,6 +1526,7 @@ function EquipmentPickerModal({
         name: asset.name,
         unitId: chosen.id,
         unitLabel: chosen.label,
+        classification: asset.classification,
         imageMediaId: asset.imageMediaId,
       },
     ]);
@@ -1403,22 +1538,36 @@ function EquipmentPickerModal({
     onChange(selected.filter((item) => item.unitId !== unitId));
   };
 
+  const modalTitle =
+    targetClassification === "INSTRUMENT"
+      ? "Pilih Instrumen Laboratorium"
+      : targetClassification === "TOOL"
+        ? "Pilih Alat Praktikum & Glassware"
+        : "Choose equipment";
+
+  const modalDesc =
+    targetClassification === "INSTRUMENT"
+      ? `Hanya instrumen laboratorium yang terdata di ${catalogRoom?.name ?? roomId} yang ditampilkan. Unit yang sedang digunakan atau maintenance tidak dapat dipilih.`
+      : targetClassification === "TOOL"
+        ? `Hanya alat dan glassware yang terdata di ${catalogRoom?.name ?? roomId} yang ditampilkan. Unit yang sedang digunakan atau maintenance tidak dapat dipilih.`
+        : `Only equipment tracked in ${catalogRoom?.name ?? roomId} is listed. Units that are in use or under maintenance cannot be selected, and a unit can only be added once.`;
+
   return (
     <PickerShell
-      title="Choose equipment"
-      description={`Only equipment tracked in ${catalogRoom?.name ?? roomId} is listed. Units that are in use or under maintenance cannot be selected, and a unit can only be added once.`}
+      title={modalTitle}
+      description={modalDesc}
       onClose={onClose}
       footer={
         <>
           <span className="text-[11px] font-semibold text-[#6B6B6B]">
-            {selected.length} unit{selected.length === 1 ? "" : "s"} selected
+            {activeSelected.length} unit{activeSelected.length === 1 ? "" : "s"} selected
           </span>
           <button
             type="button"
             onClick={onClose}
             className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F9B129] px-4 text-[11px] font-bold text-[#212121] hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
           >
-            Done
+            Selesai
           </button>
         </>
       }
@@ -1432,14 +1581,59 @@ function EquipmentPickerModal({
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search equipment"
+          placeholder={
+            targetClassification === "INSTRUMENT"
+              ? "Cari instrumen laboratorium..."
+              : targetClassification === "TOOL"
+                ? "Cari alat praktikum atau glassware..."
+                : "Search equipment"
+          }
           className="h-11 w-full rounded-xl border border-[#E1E1E1] pl-9 pr-3 text-[12px] outline-none placeholder:text-[#929292] focus:border-[#6E8EDA] focus:ring-2 focus:ring-[#6E8EDA]/20"
         />
       </label>
+      {!targetClassification && (
+        <div className="mt-2.5 flex items-center gap-1.5 overflow-x-auto pb-1">
+          <button
+            type="button"
+            onClick={() => setClassificationFilter("ALL")}
+            className={cn(
+              "rounded-lg px-2.5 py-1 text-[11px] font-semibold transition",
+              classificationFilter === "ALL"
+                ? "bg-[#212121] text-white"
+                : "bg-[#F5F5F5] text-[#6B6B6B] hover:bg-[#EAEAEA]",
+            )}
+          >
+            Semua
+          </button>
+          <button
+            type="button"
+            onClick={() => setClassificationFilter("INSTRUMENT")}
+            className={cn(
+              "rounded-lg px-2.5 py-1 text-[11px] font-semibold transition",
+              classificationFilter === "INSTRUMENT"
+                ? "bg-[#F9B129] text-[#212121]"
+                : "bg-[#FEF1CC] text-[#AE7C1D] hover:bg-[#F9B129]/30",
+            )}
+          >
+            Instrumen Laboratorium
+          </button>
+          <button
+            type="button"
+            onClick={() => setClassificationFilter("TOOL")}
+            className={cn(
+              "rounded-lg px-2.5 py-1 text-[11px] font-semibold transition",
+              classificationFilter === "TOOL"
+                ? "bg-[#212121] text-white"
+                : "bg-[#F5F5F5] text-[#6B6B6B] hover:bg-[#EAEAEA]",
+            )}
+          >
+            Alat Praktikum & Glassware
+          </button>
+        </div>
+      )}
       {list.length === 0 && (
         <p className="mt-4 rounded-xl bg-[#FAFAF8] p-4 text-center text-[11px] leading-5 text-[#6B6B6B]">
-          No equipment is tracked in this room yet. Switch the room in the form
-          to see other equipment.
+          Tidak ada instrumen yang cocok dengan filter di ruangan ini.
         </p>
       )}
       <ul className="mt-3 space-y-2">
@@ -1478,6 +1672,16 @@ function EquipmentPickerModal({
                     <strong className="text-[13px] text-[#212121]">
                       {asset.name}
                     </strong>
+                    <span
+                      className={cn(
+                        "rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                        asset.classification === "INSTRUMENT"
+                          ? "bg-[#FEF1CC] text-[#AE7C1D] border border-[#F9B129]/30"
+                          : "bg-[#F5F5F5] text-[#6B6B6B] border border-[#E1E1E1]",
+                      )}
+                    >
+                      {asset.classification === "INSTRUMENT" ? "Instrumen" : "Alat"}
+                    </span>
                     <StatusBadge tone={asset.tone}>{asset.status}</StatusBadge>
                   </div>
                   <p className="mt-1 text-[11px] text-[#6B6B6B]">
@@ -1496,10 +1700,10 @@ function EquipmentPickerModal({
                           <button
                             type="button"
                             onClick={() => removeUnit(item.unitId)}
-                            aria-label={`Remove ${item.unitId}`}
+                            aria-label={`Hapus ${item.unitId}`}
                             className="inline-flex min-h-8 items-center rounded-md px-2 font-bold text-[#9E3636] hover:bg-[#FDE9E9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
                           >
-                            Remove
+                            Hapus
                           </button>
                         </li>
                       ))}
@@ -1507,7 +1711,7 @@ function EquipmentPickerModal({
                   )}
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <label className="sr-only" htmlFor={`unit-${asset.id}`}>
-                      Unit for {asset.name}
+                      Unit untuk {asset.name}
                     </label>
                     <select
                       id={`unit-${asset.id}`}
@@ -1534,7 +1738,7 @@ function EquipmentPickerModal({
                             {unavailable
                               ? ` (${unit.status}${unit.holder ? ` · ${unit.holder}` : ""})`
                               : added
-                                ? " (added)"
+                                ? " (sudah dipilih)"
                                 : ""}
                           </option>
                         );
@@ -1546,7 +1750,7 @@ function EquipmentPickerModal({
                       disabled={disabled}
                       className="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#212121] px-3 text-[11px] font-bold text-white hover:bg-[#3A3A3A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA] disabled:cursor-not-allowed disabled:bg-[#E1E1E1] disabled:text-[#929292]"
                     >
-                      {disabled ? "No free unit" : "Add unit"}
+                      {disabled ? "Unit habis" : "Tambah unit"}
                     </button>
                   </div>
                 </div>
@@ -1602,20 +1806,20 @@ function MaterialPickerModal({
 
   return (
     <PickerShell
-      title="Choose materials"
-      description={`Only materials stored in ${catalog.rooms.find((room) => room.id === roomId)?.name ?? roomId} are listed. Amounts follow the configured dispensing steps, and out-of-stock materials cannot be selected.`}
+      title="Pilih Bahan Kimia"
+      description={`Hanya bahan yang tersimpan di ${catalog.rooms.find((room) => room.id === roomId)?.name ?? roomId} yang ditampilkan. Takaran mengikuti aturan laboratorium dan bahan yang habis tidak dapat dipilih.`}
       onClose={onClose}
       footer={
         <>
           <span className="text-[11px] font-semibold text-[#6B6B6B]">
-            {selected.length} selected
+            {selected.length} bahan dipilih
           </span>
           <button
             type="button"
             onClick={onClose}
             className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F9B129] px-4 text-[11px] font-bold text-[#212121] hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
           >
-            Done
+            Selesai
           </button>
         </>
       }
@@ -1623,11 +1827,10 @@ function MaterialPickerModal({
       {roomMaterials.length === 0 ? (
         <div className="rounded-xl bg-[#FAFAF8] p-5 text-center">
           <p className="text-[12px] font-semibold text-[#212121]">
-            No material is stored in this lab
+            Belum ada stok bahan di lab ini
           </p>
           <p className="mt-1 text-[11px] leading-5 text-[#6B6B6B]">
-            Each lab keeps its own stock. Pick equipment from this lab, or ask
-            the lab admin to restock the materials this activity needs.
+            Setiap laboratorium menyimpan stok bahan tersendiri. Pilih peralatan dari lab ini atau koordinasikan dengan petugas PLP.
           </p>
         </div>
       ) : (
@@ -1703,31 +1906,58 @@ function MaterialPickerModal({
                             : "Select this card to add it"}
                       </span>
                       {selectedItem && (
-                        <span className="pointer-events-auto flex items-center gap-2">
-                          <label
-                            className="text-[10px] font-bold uppercase text-[#929292]"
-                            htmlFor={`pick-material-qty-${material.id}`}
-                          >
-                            Amount
-                          </label>
-                          <select
-                            id={`pick-material-qty-${material.id}`}
-                            value={selectedItem.quantity}
-                            onChange={(event) =>
-                              setQuantity(
-                                material.id,
-                                Number(event.target.value),
-                              )
-                            }
-                            className="h-10 rounded-xl border border-[#E1E1E1] bg-white px-2 text-[12px] tabular-nums"
-                          >
-                            {material.options.map((value) => (
-                              <option key={value} value={value}>
-                                {value} {material.unit}
-                              </option>
-                            ))}
-                          </select>
-                        </span>
+                        <div className="pointer-events-auto mt-2 flex flex-col gap-2">
+                          {material.options.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="text-[10px] font-semibold text-[#6B6B6B]">
+                                Preset:
+                              </span>
+                              {material.options.slice(0, 6).map((value) => (
+                                <button
+                                  key={value}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setQuantity(material.id, value);
+                                  }}
+                                  className={cn(
+                                    "rounded-lg px-2 py-0.5 text-[11px] font-semibold transition",
+                                    selectedItem.quantity === value
+                                      ? "bg-[#38529B] text-white shadow-xs"
+                                      : "bg-[#F1F1F1] text-[#212121] hover:bg-[#E5E5E5]",
+                                  )}
+                                >
+                                  {value}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <label
+                              className="text-[10px] font-bold uppercase text-[#929292]"
+                              htmlFor={`pick-material-qty-${material.id}`}
+                            >
+                              Takaran
+                            </label>
+                            <div className="relative inline-flex items-center">
+                              <input
+                                id={`pick-material-qty-${material.id}`}
+                                type="number"
+                                min={0}
+                                step="any"
+                                value={selectedItem.quantity || ""}
+                                onChange={(event) => {
+                                  const val = parseFloat(event.target.value);
+                                  setQuantity(material.id, isNaN(val) ? 0 : val);
+                                }}
+                                className="h-9 w-28 rounded-xl border border-[#E1E1E1] bg-white px-2.5 pr-8 text-[12px] font-semibold tabular-nums focus:border-[#38529B] focus:outline-none"
+                              />
+                              <span className="pointer-events-none absolute right-2.5 text-[11px] font-semibold text-[#6B6B6B]">
+                                {material.unit}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1792,13 +2022,36 @@ export function ScheduleRequestForm({
   const [purpose, setPurpose] = useState(defaults?.purpose ?? "");
   const [supervisor, setSupervisor] = useState(defaults?.supervisor ?? "");
   const [fieldPic, setFieldPic] = useState(defaults?.fieldPic ?? "");
-  const [picker, setPicker] = useState<"equipment" | "materials" | null>(null);
+  const [picker, setPicker] = useState<"instrument" | "tool" | "materials" | null>(null);
   const [sent, setSent] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const equipmentTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const instrumentTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const toolTriggerRef = useRef<HTMLButtonElement | null>(null);
   const materialTriggerRef = useRef<HTMLButtonElement | null>(null);
   const editing = Boolean(editingId);
+
+  const instruments = useMemo(
+    () =>
+      equipment.filter(
+        (item) =>
+          item.classification === "INSTRUMENT" ||
+          catalog.equipment.find((asset) => asset.id === item.id)
+            ?.classification === "INSTRUMENT",
+      ),
+    [equipment, catalog.equipment],
+  );
+
+  const tools = useMemo(
+    () =>
+      equipment.filter(
+        (item) =>
+          item.classification === "TOOL" ||
+          catalog.equipment.find((asset) => asset.id === item.id)
+            ?.classification !== "INSTRUMENT",
+      ),
+    [equipment, catalog.equipment],
+  );
 
   const setMaterialQuantity = (id: string, quantity: number) => {
     setMaterials((current) =>
@@ -1898,19 +2151,19 @@ export function ScheduleRequestForm({
           </p>
         )}
         <div className="mt-4 space-y-4">
-          <FormRow icon={CalendarDays} label="Dates">
+          <FormRow icon={CalendarDays} label="Tanggal">
             <p className="text-[13px] font-semibold text-[#212121]">{label}</p>
             <p className="mt-1 text-[10px] leading-4 text-[#929292]">
-              Block other dates on the calendar to change this range.
+              Pilih rentang tanggal lain pada kalender untuk mengubah waktu.
             </p>
           </FormRow>
-          <FormRow icon={Clock3} label="Time">
+          <FormRow icon={Clock3} label="Waktu">
             <div className="flex items-center gap-2">
               <input
                 type="time"
                 value={startTime}
                 onChange={(event) => setStartTime(event.target.value)}
-                aria-label="Start time"
+                aria-label="Waktu mulai"
                 className={cn(fieldClass, "w-[108px] tabular-nums")}
               />
               <span className="text-[12px] text-[#6B6B6B]">–</span>
@@ -1918,12 +2171,12 @@ export function ScheduleRequestForm({
                 type="time"
                 value={endTime}
                 onChange={(event) => setEndTime(event.target.value)}
-                aria-label="End time"
+                aria-label="Waktu selesai"
                 className={cn(fieldClass, "w-[108px] tabular-nums")}
               />
             </div>
           </FormRow>
-          <FormRow icon={FlaskConical} label="Room">
+          <FormRow icon={FlaskConical} label="Ruangan">
             <select
               value={roomId}
               onChange={(event) => {
@@ -1945,7 +2198,7 @@ export function ScheduleRequestForm({
                   ),
                 );
               }}
-              aria-label="Room"
+              aria-label="Ruangan"
               className={fieldClass}
             >
               {catalog.rooms.map((room) => (
@@ -1955,47 +2208,47 @@ export function ScheduleRequestForm({
               ))}
             </select>
             <p className="mt-1 text-[10px] leading-4 text-[#929292]">
-              Equipment and material lists follow this room.
+              Daftar instrumen dan bahan kimia mengikuti ruangan terpilih.
             </p>
           </FormRow>
-          <FormRow icon={GraduationCap} label="Supervisor">
+          <FormRow icon={GraduationCap} label="Dosen Pembimbing">
             <input
               value={supervisor}
               onChange={(event) => setSupervisor(event.target.value)}
-              aria-label="Supervisor"
+              aria-label="Dosen Pembimbing"
               placeholder="Nama dosen pembimbing"
               className={fieldClass}
             />
             <p className="mt-0.5 text-[10px] text-[#929292]">
-              Tercatat pada request dan terlihat oleh PLP
+              Tercatat pada pengajuan dan diverifikasi oleh PLP
             </p>
           </FormRow>
-          <FormRow icon={UsersRound} label="Field PIC">
+          <FormRow icon={UsersRound} label="PIC Lapangan">
             <input
               value={fieldPic}
               onChange={(event) => setFieldPic(event.target.value)}
-              aria-label="Field PIC"
-              placeholder="Aslab atau PLP pendamping"
+              aria-label="PIC Lapangan"
+              placeholder="PIC lapangan atau PLP pendamping"
               className={fieldClass}
             />
           </FormRow>
-          <FormRow icon={Wrench} label="Equipment">
+          <FormRow icon={Microscope} label="Instrumen Laboratorium">
             <button
-              ref={equipmentTriggerRef}
+              ref={instrumentTriggerRef}
               type="button"
-              onClick={() => setPicker("equipment")}
+              onClick={() => setPicker("instrument")}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#E1E1E1] bg-white px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
             >
-              Choose equipment
-              {equipment.length > 0 && (
-                <span className="rounded-full bg-[#E9EEFC] px-2 py-0.5 text-[10px] font-bold text-[#38529B]">
-                  {equipment.length}
+              Pilih instrumen
+              {instruments.length > 0 && (
+                <span className="rounded-full bg-[#FEF1CC] px-2 py-0.5 text-[10px] font-bold text-[#AE7C1D]">
+                  {instruments.length}
                 </span>
               )}
             </button>
-            {equipment.length > 0 && (
+            {instruments.length > 0 && (
               <ul className="mt-2 space-y-1.5">
-                {equipment.map((item) => (
+                {instruments.map((item) => (
                   <li
                     key={item.unitId}
                     className="flex items-center gap-2 rounded-xl border border-[#EEEEEE] bg-[#FAFAF8] px-2.5 py-2"
@@ -2022,7 +2275,7 @@ export function ScheduleRequestForm({
                           ),
                         )
                       }
-                      aria-label={`Remove ${item.unitId}`}
+                      aria-label={`Hapus ${item.unitId}`}
                       className="flex size-10 items-center justify-center rounded-xl text-[#6B6B6B] hover:bg-[#EEEEEE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
                     >
                       <Trash2 className="size-4" aria-hidden="true" />
@@ -2032,14 +2285,67 @@ export function ScheduleRequestForm({
               </ul>
             )}
           </FormRow>
-          <FormRow icon={AlignLeft} label="Materials">
+          <FormRow icon={Wrench} label="Alat Praktikum & Glassware">
+            <button
+              ref={toolTriggerRef}
+              type="button"
+              onClick={() => setPicker("tool")}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#E1E1E1] bg-white px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+            >
+              Pilih alat
+              {tools.length > 0 && (
+                <span className="rounded-full bg-[#E9EEFC] px-2 py-0.5 text-[10px] font-bold text-[#38529B]">
+                  {tools.length}
+                </span>
+              )}
+            </button>
+            {tools.length > 0 && (
+              <ul className="mt-2 space-y-1.5">
+                {tools.map((item) => (
+                  <li
+                    key={item.unitId}
+                    className="flex items-center gap-2 rounded-xl border border-[#EEEEEE] bg-[#FAFAF8] px-2.5 py-2"
+                  >
+                    <ResourceThumb
+                      mediaId={item.imageMediaId}
+                      alt={item.name}
+                      size={28}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <strong className="block truncate text-[11px] text-[#212121]">
+                        {item.name}
+                      </strong>
+                      <span className="block text-[10px] text-[#929292]">
+                        {item.unitLabel} · {item.unitId}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEquipment((current) =>
+                          current.filter(
+                            (entry) => entry.unitId !== item.unitId,
+                          ),
+                        )
+                      }
+                      aria-label={`Hapus ${item.unitId}`}
+                      className="flex size-10 items-center justify-center rounded-xl text-[#6B6B6B] hover:bg-[#EEEEEE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+                    >
+                      <Trash2 className="size-4" aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </FormRow>
+          <FormRow icon={AlignLeft} label="Bahan Kimia">
             <button
               ref={materialTriggerRef}
               type="button"
               onClick={() => setPicker("materials")}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#E1E1E1] bg-white px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
             >
-              Choose materials
+              Pilih bahan
               {materials.length > 0 && (
                 <span className="rounded-full bg-[#E9EEFC] px-2 py-0.5 text-[10px] font-bold text-[#38529B]">
                   {materials.length}
@@ -2070,26 +2376,50 @@ export function ScheduleRequestForm({
                           {item.id} · {option?.available ?? ""}
                         </span>
                       </span>
-                      <label
-                        className="text-[10px] font-bold uppercase text-[#929292]"
-                        htmlFor={`material-qty-${item.id}`}
-                      >
-                        Amount
-                      </label>
-                      <select
-                        id={`material-qty-${item.id}`}
-                        value={item.quantity}
-                        onChange={(event) =>
-                          setMaterialQuantity(item.id, Number(event.target.value))
-                        }
-                        className="h-10 rounded-xl border border-[#E1E1E1] bg-white px-2 text-[12px] tabular-nums"
-                      >
-                        {(option?.options ?? [item.quantity]).map((value) => (
-                          <option key={value} value={value}>
-                            {value} {item.unit}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex flex-col gap-1 items-end">
+                        {option && option.options.length > 0 && (
+                          <div className="flex flex-wrap items-center justify-end gap-1">
+                            {option.options.slice(0, 5).map((value) => (
+                              <button
+                                key={value}
+                                type="button"
+                                onClick={() => setMaterialQuantity(item.id, value)}
+                                className={cn(
+                                  "rounded-md px-1.5 py-0.5 text-[10px] font-semibold transition",
+                                  item.quantity === value
+                                    ? "bg-[#38529B] text-white"
+                                    : "bg-[#EFEFEF] text-[#555] hover:bg-[#E0E0E0]",
+                                )}
+                              >
+                                {value}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <div className="relative inline-flex items-center">
+                          <label
+                            className="sr-only"
+                            htmlFor={`material-qty-${item.id}`}
+                          >
+                            Jumlah {item.name}
+                          </label>
+                          <input
+                            id={`material-qty-${item.id}`}
+                            type="number"
+                            min={0}
+                            step="any"
+                            value={item.quantity || ""}
+                            onChange={(event) => {
+                              const val = parseFloat(event.target.value);
+                              setMaterialQuantity(item.id, isNaN(val) ? 0 : val);
+                            }}
+                            className="h-8 w-24 rounded-lg border border-[#E1E1E1] bg-white px-2 pr-7 text-[12px] font-semibold tabular-nums focus:border-[#38529B] focus:outline-none"
+                          />
+                          <span className="pointer-events-none absolute right-2 text-[10px] font-bold text-[#6B6B6B]">
+                            {item.unit}
+                          </span>
+                        </div>
+                      </div>
                       <button
                         type="button"
                         onClick={() =>
@@ -2097,7 +2427,7 @@ export function ScheduleRequestForm({
                             current.filter((entry) => entry.id !== item.id),
                           )
                         }
-                        aria-label={`Remove ${item.name}`}
+                        aria-label={`Hapus ${item.name}`}
                         className="flex size-10 items-center justify-center rounded-xl text-[#6B6B6B] hover:bg-[#EEEEEE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
                       >
                         <Trash2 className="size-4" aria-hidden="true" />
@@ -2108,13 +2438,13 @@ export function ScheduleRequestForm({
               </ul>
             )}
           </FormRow>
-          <FormRow icon={AlignLeft} label="Purpose">
+          <FormRow icon={AlignLeft} label="Keperluan / Catatan Riset">
             <textarea
               value={purpose}
               onChange={(event) => setPurpose(event.target.value)}
               rows={2}
-              placeholder="Temperature, sequence, or coordination notes"
-              aria-label="Purpose"
+              placeholder="Tuliskan tujuan penelitian, parameter alat, atau kebutuhan koordinasi khusus..."
+              aria-label="Keperluan"
               className="w-full rounded-xl border border-[#E1E1E1] p-2.5 text-[12px] leading-5 text-[#212121] outline-none placeholder:text-[#B7B7B7] focus:border-[#6E8EDA] focus:ring-2 focus:ring-[#6E8EDA]/20"
             />
           </FormRow>
@@ -2125,7 +2455,7 @@ export function ScheduleRequestForm({
             onClick={onCancel}
             className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-4 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
           >
-            Cancel
+            Batal
           </button>
           <button
             type="submit"
@@ -2136,18 +2466,31 @@ export function ScheduleRequestForm({
               ? "Memproses..."
               : editing
                 ? "Simpan & kirim ulang"
-                : "Send request"}
+                : "Kirim Pengajuan"}
           </button>
         </div>
       </form>
-      {picker === "equipment" && (
+      {picker === "instrument" && (
         <EquipmentPickerModal
           roomId={roomId}
+          targetClassification="INSTRUMENT"
           selected={equipment}
           onChange={setEquipment}
           onClose={() => {
             setPicker(null);
-            equipmentTriggerRef.current?.focus();
+            instrumentTriggerRef.current?.focus();
+          }}
+        />
+      )}
+      {picker === "tool" && (
+        <EquipmentPickerModal
+          roomId={roomId}
+          targetClassification="TOOL"
+          selected={equipment}
+          onChange={setEquipment}
+          onClose={() => {
+            setPicker(null);
+            toolTriggerRef.current?.focus();
           }}
         />
       )}
@@ -2216,7 +2559,7 @@ export function SharedUsageForm({
           onClick={onCancel}
           className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5]"
         >
-          Close
+          Tutup
         </button>
       </div>
     );
@@ -2248,13 +2591,13 @@ export function SharedUsageForm({
       }}
     >
       <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#929292]">
-        Shared usage request
+        Pengajuan Sesi Bersama
       </p>
       <h4 className="mt-1 text-[15px] font-bold text-[#212121]">
         {event.equipment?.[0]?.name ?? event.resourceId} · {event.resourceUnit}
       </h4>
       <p className="mt-1 text-[11px] text-[#6B6B6B]">
-        Reservation {event.actor} · {event.roomName}
+        Reservasi {event.actor} · {event.roomName}
       </p>
       {error && (
         <p
@@ -2290,17 +2633,17 @@ export function SharedUsageForm({
           />
         </label>
         <p className="text-[10px] leading-4 text-[#929292]">
-          Interval harus berada di dalam reservation utama (
+          Interval harus berada di dalam waktu reservasi utama (
           {toLocalInputValue(event.startAt).replace("T", " ")} –{" "}
           {toLocalInputValue(event.endAt).replace("T", " ")} WIB).
         </p>
         <label className="block text-[11px] font-semibold text-[#212121]">
-          Purpose
+          Tujuan Penggunaan
           <textarea
             value={purpose}
             onChange={(input) => setPurpose(input.target.value)}
             rows={2}
-            placeholder="Bagian mana yang akan kamu kerjakan"
+            placeholder="Bagian mana atau instrumen apa yang ingin kamu gunakan bersama"
             className="mt-1 w-full rounded-xl border border-[#E1E1E1] p-2.5 text-[12px] outline-none focus:border-[#6E8EDA] focus:ring-2 focus:ring-[#6E8EDA]/20"
           />
         </label>
@@ -2311,14 +2654,14 @@ export function SharedUsageForm({
           onClick={onCancel}
           className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-4 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5]"
         >
-          Cancel
+          Batal
         </button>
         <button
           type="submit"
           disabled={pending}
           className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#212121] px-4 text-[11px] font-bold text-white hover:bg-[#3A3A3A] disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {pending ? "Memproses..." : "Kirim permintaan"}
+          {pending ? "Memproses..." : "Kirim Permintaan"}
         </button>
       </div>
     </form>
@@ -2402,8 +2745,8 @@ export function ScheduleEventPopover({
                 className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F9B129] px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
               >
                 {event.status === "REQUEST_REVISION"
-                  ? "Edit & resubmit"
-                  : "Edit request"}
+                  ? "Edit & Ajukan Ulang"
+                  : "Edit Pengajuan"}
               </button>
             )}
             {canShare && (
@@ -2412,7 +2755,7 @@ export function ScheduleEventPopover({
                 onClick={() => setMode("shared")}
                 className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#212121] px-3 text-[11px] font-bold text-white hover:bg-[#3A3A3A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
               >
-                Request shared use
+                Ajukan Sesi Bersama
               </button>
             )}
             {cancellable && event.requestId && (
@@ -2443,8 +2786,8 @@ export function ScheduleEventPopover({
                 {pending
                   ? "Memproses..."
                   : confirmCancel
-                    ? "Konfirmasi batalkan"
-                    : "Batalkan request"}
+                    ? "Konfirmasi Batalkan"
+                    : "Batalkan Pengajuan"}
               </button>
             )}
             {event.resourceId && (
@@ -2452,7 +2795,7 @@ export function ScheduleEventPopover({
                 href={`/student/laboratory/equipment/${event.resourceId}`}
                 className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
               >
-                View equipment
+                Lihat Detail Instrumen
               </Link>
             )}
             {extraActions}

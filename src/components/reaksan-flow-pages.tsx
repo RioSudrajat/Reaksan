@@ -17,13 +17,21 @@ import {
   ScheduleCalendar,
   ScheduleEventPopover,
   ScheduleRequestForm,
+  type RequestFormDefaults,
+  type ScheduleCardContext,
 } from "@/components/schedule-calendar";
 import { EquipmentGlyph } from "@/components/equipment-glyph";
 import { CatalogImage } from "@/components/catalog-image";
 import { CalendarRefresh } from "@/components/calendar-refresh";
 import { LabCatalogProvider } from "@/components/lab-catalog-context";
 import { apiRequest, errorMessage } from "@/components/student-api";
-import { formatRangeLabel } from "@/components/schedule-data";
+import {
+  displayBadgeClasses,
+  displayDotClasses,
+  eventDisplayState,
+  formatRangeLabel,
+  requestStatusLabels,
+} from "@/components/schedule-data";
 import type {
   IncidentView,
   LabCatalog,
@@ -32,6 +40,12 @@ import type {
   SharedUsagePageView,
 } from "@/components/schedule-data";
 import { SectionTitle, Sidebar, StatusBadge } from "@/components/reaksan-dashboard";
+
+const incidentStatusLabel: Record<string, string> = {
+  REPORTED: "Dilaporkan",
+  INVESTIGATING: "Dalam Pemeriksaan",
+  RESOLVED: "Selesai",
+};
 
 export type ReaksanFlowKind =
   | "room-detail"
@@ -91,50 +105,20 @@ function FlowHeader({
 }
 
 function FlowShell({
-  title,
-  eyebrow,
-  userName,
-  activeKey,
   catalog,
   children,
 }: {
-  title: string;
-  eyebrow: string;
-  userName: string;
-  activeKey: string;
+  title?: string;
+  eyebrow?: string;
+  userName?: string;
+  activeKey?: string;
   catalog: LabCatalog;
   children: React.ReactNode;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
   return (
     <LabCatalogProvider value={catalog}>
-      <div className="dashboard-shell min-h-screen">
-        <Sidebar
-          collapsed={collapsed}
-          mobileOpen={mobileOpen}
-          onToggle={() => setCollapsed((value) => !value)}
-          onClose={() => setMobileOpen(false)}
-          userName={userName}
-          activeKey={activeKey}
-        />
-        <div
-          className={cn(
-            "min-h-screen transition-[padding] duration-200 lg:pl-[256px]",
-            collapsed && "lg:pl-[80px]",
-          )}
-        >
-          <FlowHeader
-            title={title}
-            eyebrow={eyebrow}
-            userName={userName}
-            onOpenMenu={() => setMobileOpen(true)}
-          />
-          <main className="mx-auto max-w-[1680px] px-4 pb-10 pt-6 sm:px-6 lg:px-8">
-            {children}
-          </main>
-        </div>
+      <div className="space-y-6">
+        {children}
       </div>
     </LabCatalogProvider>
   );
@@ -144,10 +128,165 @@ function BackLink({ href = "/student" }: { href?: string }) {
   return (
     <Link
       href={href}
-      className="mb-5 inline-flex min-h-11 items-center gap-2 rounded-xl text-[12px] font-bold text-[#6B6B6B] hover:text-[#212121] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+      className="mb-5 inline-flex min-h-11 items-center gap-2 rounded-xl text-[12px] font-bold text-[#64748B] hover:text-[#1E293B] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F9B129] transition"
     >
-      <ArrowLeft className="size-4" aria-hidden="true" /> Back
+      <ArrowLeft className="size-4" aria-hidden="true" /> Kembali
     </Link>
+  );
+}
+
+function StudentDayOverviewCard({
+  context,
+  defaults,
+  onCancel,
+}: {
+  context: ScheduleCardContext;
+  defaults?: RequestFormDefaults;
+  onCancel: () => void;
+}) {
+  const [activeEvent, setActiveEvent] = useState<ScheduleEvent | null>(null);
+  const [mode, setMode] = useState<"list" | "add">("list");
+
+  if (activeEvent) {
+    return (
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => setActiveEvent(null)}
+          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#38529B] hover:text-[#283C72] transition cursor-pointer"
+        >
+          <ArrowLeft className="size-3.5" aria-hidden="true" />
+          <span>Kembali ke daftar jadwal</span>
+        </button>
+        <ScheduleEventPopover
+          key={activeEvent.id}
+          event={activeEvent}
+          rangeLabel={formatRangeLabel(
+            { start: activeEvent.startDay, end: activeEvent.endDay },
+            context.month,
+          )}
+          month={context.month}
+        />
+      </div>
+    );
+  }
+
+  if (mode === "add") {
+    return (
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => setMode("list")}
+          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#38529B] hover:text-[#283C72] transition cursor-pointer"
+        >
+          <ArrowLeft className="size-3.5" aria-hidden="true" />
+          <span>Kembali ke daftar jadwal</span>
+        </button>
+        <ScheduleRequestForm
+          key={`${context.range.start}-${context.range.end}-${context.selectionId}`}
+          range={context.range}
+          label={context.label}
+          month={context.month}
+          defaults={defaults}
+          onCancel={onCancel}
+        />
+      </div>
+    );
+  }
+
+  const events = context.events;
+
+  return (
+    <article className="space-y-3">
+      <div className="border-b border-[#EEEEEE] pb-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#929292]">
+            Daftar Request & Jadwal
+          </p>
+          <span className="rounded-full bg-[#FEF1CC] px-2 py-0.5 text-[10px] font-bold text-[#AE7C1D]">
+            {events.length} Terjadwal
+          </span>
+        </div>
+        <h4 className="mt-1 text-[15px] font-bold text-[#212121]">
+          {context.label}
+        </h4>
+        <p className="text-[11px] text-[#6B6B6B]">
+          Semua kegiatan dan peminjaman yang berlangsung pada tanggal ini.
+        </p>
+      </div>
+
+      {events.length === 0 ? (
+        <div className="rounded-xl bg-[#FAFAF8] p-4 text-center">
+          <p className="text-[12px] font-semibold text-[#212121]">
+            Tidak ada kegiatan di tanggal ini
+          </p>
+          <p className="mt-1 text-[11px] text-[#6B6B6B]">
+            Slot waktu kosong dan siap dipinjam.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+          {events.map((evt) => {
+            const display = eventDisplayState(evt);
+            return (
+              <div
+                key={evt.id}
+                className="rounded-xl border border-[#EEEEEE] bg-[#FAFAF8] p-2.5 hover:border-[#D8D8D8] transition"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={cn("size-2 rounded-full", displayDotClasses[display])}
+                        aria-hidden="true"
+                      />
+                      <span
+                        className={cn(
+                          "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
+                          displayBadgeClasses[display],
+                        )}
+                      >
+                        {requestStatusLabels[display]}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[12px] font-bold text-[#212121] leading-tight">
+                      {evt.title}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-[#6B6B6B]">
+                      {evt.time} · {evt.actor}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveEvent(evt)}
+                    className="shrink-0 rounded-lg bg-white border border-[#E1E1E1] px-2.5 py-1 text-[10px] font-bold text-[#212121] hover:bg-[#F5F5F5] transition cursor-pointer"
+                  >
+                    Detail
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="border-t border-[#EEEEEE] pt-3 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => setMode("add")}
+          className="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#F9B129] px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F7B742] transition cursor-pointer"
+        >
+          + Buat Request di Tanggal Ini
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="inline-flex min-h-9 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-3 text-[11px] font-semibold text-[#6B6B6B] hover:bg-[#F5F5F5] transition cursor-pointer"
+        >
+          Tutup
+        </button>
+      </div>
+    </article>
   );
 }
 
@@ -226,63 +365,62 @@ export function RoomDetailPage({
       <BackLink href="/student" />
       <section className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-[13px] font-medium text-[#6B6B6B]">
-            Laboratorium Kimia · ringkasan lab
+          <p className="text-[13px] font-medium text-[#64748B]">
+            Laboratorium Kimia FMIPA Unpad
           </p>
-          <h2 className="mt-1 text-[26px] font-bold tracking-[-0.04em] text-[#212121] sm:text-[32px]">
+          <h2 className="mt-1 text-[24px] font-extrabold tracking-tight text-[#1E293B] sm:text-[30px]">
             {room.name}
           </h2>
-          <p className="mt-2 max-w-[620px] text-[13px] leading-5 text-[#6B6B6B]">
-            {room.description} See what is available, what is in use, and when
-            this room can support your activity.
+          <p className="mt-2 max-w-[620px] text-[13px] leading-5 text-[#64748B]">
+            {room.description} Informasi unit instrumen yang tersedia, sedang digunakan, serta agenda kegiatan lab.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <a
             href="#schedule"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] hover:bg-[#F7B742]"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#1E293B] hover:bg-[#F7B742] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F9B129]"
           >
-            View schedule <ChevronRight className="size-4" aria-hidden="true" />
+            Lihat Jadwal <ChevronRight className="size-4" aria-hidden="true" />
           </a>
           <Link
             href="/student/calendar"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-4 text-[12px] font-bold text-[#212121]"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E2E8F0] bg-white px-4 text-[12px] font-bold text-[#1E293B] hover:bg-[#F8FAFC] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F9B129]"
           >
-            My calendar
+            Kalender Saya
           </Link>
         </div>
       </section>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         {[
           [
-            "Total units",
+            "Total Unit",
             room.equipment,
             "#E9EEFC",
-            `${room.typeCount} tracked types`,
+            `${room.typeCount} jenis terdaftar`,
           ],
-          ["Available", room.available, "#E5F5ED", "Ready to request"],
-          ["Reserved", room.reserved, "#E9EEFC", "Approved, not started"],
-          ["In use", room.inUse, "#FEF1CC", "Running right now"],
+          ["Tersedia", room.available, "#E5F5ED", "Siap diajukan"],
+          ["Direservasi", room.reserved, "#E9EEFC", "Telah disetujui PLP"],
+          ["Digunakan", room.inUse, "#FEF1CC", "Sedang berjalan"],
           [
-            "Awaiting return",
+            "Menunggu Kembali",
             room.awaitingReturn,
             "#FDE9E9",
-            "Schedule done, unit not returned",
+            "Selesai, belum kembali",
           ],
-          ["Maintenance", room.maintenance, "#FDE9E9", "Not selectable"],
+          ["Perbaikan", room.maintenance, "#FDE9E9", "Tidak dapat dipilih"],
         ].map(([label, value, background, hint]) => (
           <div
             className="dashboard-card p-5"
             key={label}
             style={{ backgroundColor: background as string }}
           >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#6B6B6B]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#64748B]">
               {label}
             </p>
-            <p className="mt-3 text-2xl font-bold tabular-nums text-[#212121]">
+            <p className="mt-3 text-2xl font-bold tabular-nums text-[#1E293B]">
               {value}
             </p>
-            <p className="mt-1 text-[10px] text-[#6B6B6B]">{hint}</p>
+            <p className="mt-1 text-[10px] text-[#64748B]">{hint}</p>
           </div>
         ))}
       </div>
@@ -292,11 +430,11 @@ export function RoomDetailPage({
           <div className="flex items-center gap-2 text-[#9E3636]">
             <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
             <h4 className="text-[13px] font-bold">
-              {roomMaintenanceUnits.length} unit sedang dalam maintenance / pemeriksaan
+              {roomMaintenanceUnits.length} unit dalam perbaikan / pemeriksaan teknis
             </h4>
           </div>
-          <p className="mt-1 text-[11px] text-[#6B6B6B]">
-            Unit berikut tidak dapat dipilih untuk reservasi sampai proses perbaikan atau kalibrasi diselesaikan oleh PLP.
+          <p className="mt-1 text-[11px] text-[#64748B]">
+            Unit berikut sedang dalam penanganan teknisi atau kalibrasi berkala dan tidak dapat dipilih untuk reservasi sampai diselesaikan oleh PLP.
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {roomMaintenanceUnits.map((u) => (
@@ -306,18 +444,18 @@ export function RoomDetailPage({
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-1">
-                    <p className="truncate text-[12px] font-bold text-[#212121]">
+                    <p className="truncate text-[12px] font-bold text-[#1E293B]">
                       {u.label}
                     </p>
                     <span className="rounded-md bg-[#FDE9E9] px-1.5 py-0.5 text-[10px] font-semibold text-[#9E3636]">
-                      {u.condition ? u.condition.replace(/_/g, " ") : "Maintenance"}
+                      {u.condition ? u.condition.replace(/_/g, " ") : "Perbaikan"}
                     </span>
                   </div>
-                  <p className="mt-0.5 truncate text-[11px] text-[#6B6B6B]">
+                  <p className="mt-0.5 truncate text-[11px] text-[#64748B]">
                     {u.assetName}
                   </p>
                   {u.notes && (
-                    <p className="mt-1.5 rounded-lg bg-[#FAF9F6] px-2 py-1 text-[10px] text-[#6B6B6B] italic">
+                    <p className="mt-1.5 rounded-lg bg-[#FAF9F6] px-2 py-1 text-[10px] text-[#64748B] italic">
                       &quot;{u.notes}&quot;
                     </p>
                   )}
@@ -331,16 +469,14 @@ export function RoomDetailPage({
       <section id="schedule" className="mt-4 dashboard-card p-5 sm:p-6">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#929292]">
-              Room schedule
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
+              Agenda Ruangan
             </p>
-            <h3 className="mt-1 text-[20px] font-bold tracking-[-0.03em]">
-              Reserved, running, and completed blocks
+            <h3 className="mt-1 text-[20px] font-bold tracking-tight text-[#1E293B]">
+              Jadwal Reservasi & Penggunaan Terkonfirmasi
             </h3>
-            <p className="mt-2 max-w-[680px] text-[12px] leading-5 text-[#6B6B6B]">
-              Approved reservations only. Requests you send wait in My calendar
-              until PLP approves them, so this agenda never shows pending ones.
-              Drag across free dates to send a request for this room.
+            <p className="mt-2 max-w-[680px] text-[12px] leading-5 text-[#64748B]">
+              Hanya menampilkan reservasi yang telah disetujui PLP. Pengajuan baru dapat dibuat dengan memilih tanggal pada kalender di bawah.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -351,16 +487,16 @@ export function RoomDetailPage({
                   setSelectedAssetId(null);
                   setSelectedUnitId(null);
                 }}
-                className="min-h-10 rounded-xl border border-[#E1E1E1] bg-white px-3 text-[11px] font-bold text-[#6B6B6B] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+                className="min-h-10 rounded-xl border border-[#E2E8F0] bg-white px-3 text-[11px] font-bold text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#1E293B] transition cursor-pointer"
               >
-                Show all equipment
+                Tampilkan Semua Instrumen
               </button>
             )}
             <Link
               href="/student/calendar"
-              className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+              className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#E2E8F0] bg-white px-3 text-[11px] font-bold text-[#1E293B] hover:bg-[#F8FAFC] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F9B129]"
             >
-              My calendar
+              Kalender Saya
             </Link>
           </div>
         </div>
@@ -368,14 +504,14 @@ export function RoomDetailPage({
           <ScheduleCalendar
             events={filteredEvents}
             eventsMonth={month}
-            ariaLabel={`${room.shortName} schedule`}
-            emptyLabel="No blocks match this equipment filter. Show all equipment or pick another unit."
+            ariaLabel={`Agenda ${room.shortName}`}
+            emptyLabel="Tidak ada jadwal yang sesuai dengan filter instrumen ini. Tampilkan semua instrumen atau pilih unit lain."
             toolbar={<CalendarRefresh />}
             renderCard={(context) => {
               if (context.source === "event") {
-                const event = context.events.find(
-                  (item) => item.id === context.eventId,
-                );
+                const event =
+                  context.events.find((item) => item.id === context.eventId) ??
+                  filteredEvents.find((item) => item.id === context.eventId);
                 if (!event) return null;
                 return (
                   <ScheduleEventPopover
@@ -392,27 +528,42 @@ export function RoomDetailPage({
               const availableUnit = selectedUnitId
                 ? selectedAsset?.units.find((u) => u.id === selectedUnitId)
                 : selectedAsset?.units.find((unit) => unit.status === "Available");
+
+              const formDefaults = {
+                roomCode: room.id,
+                equipment:
+                  selectedAsset && availableUnit
+                    ? [
+                        {
+                          id: selectedAsset.id,
+                          name: selectedAsset.name,
+                          unitId: availableUnit.id,
+                          unitLabel: availableUnit.label,
+                          classification: selectedAsset.classification,
+                          imageMediaId: selectedAsset.imageMediaId,
+                        },
+                      ]
+                    : [],
+              };
+
+              if (context.source === "more") {
+                return (
+                  <StudentDayOverviewCard
+                    key={`${context.range.start}-${context.range.end}-${context.selectionId}`}
+                    context={context}
+                    defaults={formDefaults}
+                    onCancel={context.close}
+                  />
+                );
+              }
+
               return (
                 <ScheduleRequestForm
                   key={`${context.range.start}-${context.range.end}-${context.selectionId}`}
                   range={context.range}
                   label={context.label}
                   month={context.month}
-                  defaults={{
-                    roomCode: room.id,
-                    equipment:
-                      selectedAsset && availableUnit
-                        ? [
-                            {
-                              id: selectedAsset.id,
-                              name: selectedAsset.name,
-                              unitId: availableUnit.id,
-                              unitLabel: availableUnit.label,
-                              imageMediaId: selectedAsset.imageMediaId,
-                            },
-                          ]
-                        : [],
-                  }}
+                  defaults={formDefaults}
                   onCancel={context.close}
                 />
               );
@@ -424,19 +575,13 @@ export function RoomDetailPage({
       <section id="equipment" className="mt-4 dashboard-card p-5 sm:p-6">
         <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#929292]">
-              Equipment in this room
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
+              Instrumen & Alat di Ruangan Ini
             </p>
-            <h3 className="mt-1 text-[20px] font-bold tracking-[-0.03em]">
-              Select a stock unit to filter the agenda
+            <h3 className="mt-1 text-[20px] font-bold tracking-tight text-[#1E293B]">
+              Pilih unit untuk menyaring agenda kalender
             </h3>
           </div>
-          <Link
-            href={`/student/equipment?room=${room.id}`}
-            className="text-[11px] font-bold text-[#38529B]"
-          >
-            View all equipment
-          </Link>
         </div>
         <div className="mt-5 space-y-3">
           {roomAssets.length ? (
@@ -476,25 +621,27 @@ export function RoomDetailPage({
                     <button
                       type="button"
                       onClick={() => chooseAsset(asset.id)}
-                      className="min-w-0 flex-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+                      className="min-w-0 flex-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F9B129] cursor-pointer"
                       aria-expanded={expanded}
                       aria-controls={`units-${asset.id}`}
                     >
-                      <strong className="block truncate text-[14px] font-bold text-[#212121]">
+                      <strong className="block truncate text-[14px] font-bold text-[#1E293B]">
                         {asset.name}
                       </strong>
-                      <span className="mt-1 block text-[11px] text-[#6B6B6B]">
-                        {asset.id} · {availableCount} of {units.length} shown units available to plan
+                      <span className="mt-1 block text-[11px] text-[#64748B]">
+                        {asset.id} · {availableCount} dari {units.length} unit siap digunakan
                       </span>
                     </button>
-                    <StatusBadge tone={asset.tone}>{asset.status}</StatusBadge>
+                    <StatusBadge tone={asset.tone}>
+                      {asset.status === "Available" ? "Tersedia" : asset.status === "Maintenance" ? "Perbaikan" : asset.status}
+                    </StatusBadge>
                     <button
                       type="button"
                       onClick={() =>
                         setExpandedAssetId(expanded ? "" : asset.id)
                       }
-                      className="flex size-10 items-center justify-center rounded-xl border border-[#E1E1E1] text-[#6B6B6B] hover:bg-[#F5F5F5]"
-                      aria-label={`${expanded ? "Collapse" : "Expand"} ${asset.name} stock units`}
+                      className="flex size-10 items-center justify-center rounded-xl border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#1E293B] transition cursor-pointer"
+                      aria-label={`${expanded ? "Ciutkan" : "Perluas"} unit ${asset.name}`}
                       aria-expanded={expanded}
                     >
                       <ChevronRight
@@ -521,7 +668,7 @@ export function RoomDetailPage({
                             disabled={disabled}
                             onClick={() => chooseUnit(asset.id, unit.id)}
                             className={cn(
-                              "flex min-h-14 items-center justify-between gap-2 rounded-xl border p-3 text-left transition-colors",
+                              "flex min-h-14 items-center justify-between gap-2 rounded-xl border p-3 text-left transition-colors cursor-pointer",
                               selected && "border-[#F9B129] bg-[#FEF1CC]",
                               !selected &&
                                 !disabled &&
@@ -534,14 +681,14 @@ export function RoomDetailPage({
                               <strong className="block text-[11px]">
                                 {unit.label}
                               </strong>
-                              <span className="mt-1 block text-[10px] text-[#6B6B6B]">
+                              <span className="mt-1 block text-[10px] text-[#64748B]">
                                 {unit.status === "Maintenance"
                                   ? unit.notes
                                     ? `${unit.condition ? unit.condition.replace(/_/g, " ") + " · " : ""}${unit.notes}`
                                     : unit.condition
                                       ? unit.condition.replace(/_/g, " ")
                                       : "Dalam perbaikan"
-                                  : (unit.holder ?? "Ready for a new request")}
+                                  : (unit.holder ?? "Siap untuk pengajuan baru")}
                               </span>
                             </span>
                             <span
@@ -555,7 +702,7 @@ export function RoomDetailPage({
                                   "text-[#38529B]",
                               )}
                             >
-                              {unit.status}
+                              {unit.status === "Available" ? "Tersedia" : unit.status === "Maintenance" ? "Perbaikan" : unit.status}
                             </span>
                           </button>
                         );
@@ -567,8 +714,8 @@ export function RoomDetailPage({
             })
           ) : (
             <EmptyState
-              title="No equipment in this room"
-              detail="Try another room from the laboratory map."
+              title="Tidak ada instrumen di ruangan ini"
+              detail="Pilih ruangan lain melalui denah laboratorium."
             />
           )}
         </div>
@@ -577,25 +724,19 @@ export function RoomDetailPage({
       <section className="mt-4 dashboard-card p-5 sm:p-6">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#929292]">
-              Materials
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
+              Bahan Kimia & Reagen
             </p>
-            <h3 className="mt-1 text-[18px] font-bold">
-              Add materials after equipment
+            <h3 className="mt-1 text-[18px] font-bold text-[#1E293B]">
+              Stok Bahan Terpantau
             </h3>
           </div>
-          <Link
-            href={`/student/materials?room=${room.id}`}
-            className="text-[11px] font-bold text-[#38529B]"
-          >
-            Browse materials
-          </Link>
         </div>
         {roomMaterials.length === 0 ? (
           <div className="mt-4">
             <EmptyState
-              title="Lab ini belum punya stok material"
-              detail="Setiap lab menyimpan stoknya sendiri. Pilih material dari lab ini, atau minta admin lab mengisi stok untuk kegiatan tersebut."
+              title="Belum ada stok bahan kimia di ruangan ini"
+              detail="Setiap lab menyimpan stoknya sendiri. Pilih bahan dari lab ini, atau hubungi PLP terkait ketersediaan bahan khusus."
             />
           </div>
         ) : (
@@ -603,7 +744,7 @@ export function RoomDetailPage({
             {roomMaterials.map((material) => (
               <Link
                 href={`/student/laboratory/materials/${material.id}?room=${material.roomId}`}
-                className="flex min-h-16 items-center justify-between gap-3 rounded-xl border border-[#EEEEEE] p-3 hover:bg-[#FAFAF8]"
+                className="flex min-h-16 items-center justify-between gap-3 rounded-xl border border-[#EEEEEE] p-3 hover:bg-[#FAFAF8] transition"
                 key={material.id}
               >
                 <span className="flex items-center gap-3">
@@ -620,15 +761,15 @@ export function RoomDetailPage({
                     </span>
                   )}
                   <span>
-                    <strong className="block text-[12px]">
+                    <strong className="block text-[12px] text-[#1E293B]">
                       {material.name}
                     </strong>
-                    <small className="mt-1 block text-[11px] text-[#929292]">
-                      {material.available} {material.unit} available
+                    <small className="mt-1 block text-[11px] text-[#64748B]">
+                      {material.available} {material.unit} tersedia
                     </small>
                   </span>
                 </span>
-                <StatusBadge tone={material.tone}>Stock</StatusBadge>
+                <StatusBadge tone={material.tone}>Stok</StatusBadge>
               </Link>
             ))}
           </div>
@@ -653,40 +794,40 @@ export function EquipmentDetailPage({
   if (!asset)
     return (
       <FlowShell
-        title="Equipment"
-        eyebrow="Equipment detail"
+        title="Instrumen & Alat"
+        eyebrow="Detail Fasilitas"
         userName={userName}
-        activeKey="equipment"
+        activeKey="dashboard"
         catalog={catalog}
       >
-        <BackLink href="/student/equipment" />
+        <BackLink href="/student" />
         <EmptyState
-          title="Equipment tidak ditemukan"
-          detail="Cek kembali kode equipment atau buka halaman Equipment."
+          title="Instrumen tidak ditemukan"
+          detail="Cek kembali kode instrumen atau kembali ke denah laboratorium."
         />
       </FlowShell>
     );
   return (
     <FlowShell
       title={asset.name}
-      eyebrow="Equipment detail"
+      eyebrow="Detail Fasilitas"
       userName={userName}
-      activeKey="equipment"
+      activeKey="dashboard"
       catalog={catalog}
     >
-      <BackLink href="/student/equipment" />
+      <BackLink href={asset ? `/student/laboratory/rooms/${asset.roomId}` : "/student"} />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.6fr)]">
         <div>
           <section className="dashboard-card p-5 sm:p-6">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#929292]">
-                  Asset {asset.id}
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
+                  Kode Aset: {asset.id}
                 </p>
-                <h2 className="mt-2 text-[26px] font-bold tracking-[-0.04em] text-[#212121]">
+                <h2 className="mt-2 text-[24px] font-extrabold tracking-tight text-[#1E293B]">
                   {asset.name}
                 </h2>
-                <p className="mt-2 text-[12px] text-[#6B6B6B]">
+                <p className="mt-2 text-[12px] text-[#64748B]">
                   {asset.room} · {asset.usage}
                 </p>
               </div>
@@ -696,30 +837,32 @@ export function EquipmentDetailPage({
                   alt={asset.name}
                   size={64}
                 />
-                <StatusBadge tone={asset.tone}>{asset.status}</StatusBadge>
+                <StatusBadge tone={asset.tone}>
+                  {asset.status === "Available" ? "Tersedia" : asset.status === "Maintenance" ? "Perbaikan" : asset.status}
+                </StatusBadge>
               </div>
             </div>
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              <InfoTile label="Condition" value={asset.condition} />
-              <InfoTile label="Usage type" value={asset.usage} />
-              <InfoTile label="Specification" value={asset.meta} />
+              <InfoTile label="Kondisi Fisik" value={asset.condition} />
+              <InfoTile label="Tipe Penggunaan" value={asset.usage} />
+              <InfoTile label="Spesifikasi Teknis" value={asset.meta} />
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <InfoTile label="Tracked units" value={asset.totalUnits} />
-              <InfoTile label="In use now" value={asset.inUseUnits} />
-              <InfoTile label="Available now" value={asset.availableUnits} />
+              <InfoTile label="Total Unit Terdaftar" value={asset.totalUnits} />
+              <InfoTile label="Sedang Digunakan" value={asset.inUseUnits} />
+              <InfoTile label="Unit Siap Pakai" value={asset.availableUnits} />
             </div>
           </section>
           <section className="mt-4 dashboard-card p-5 sm:p-6">
-            <SectionTitle
-              eyebrow="Availability"
-              title="Tracked units"
-              action={
-                <StatusBadge tone={asset.tone}>
-                  {asset.availableUnits} available
-                </StatusBadge>
-              }
-            />
+            <div className="flex items-center justify-between gap-3 border-b border-[#EEEEEE] pb-4">
+              <div>
+                <h3 className="text-[16px] font-bold text-[#1E293B]">Unit Terdaftar</h3>
+                <p className="text-[11px] text-[#64748B] mt-0.5">Status operasional tiap unit instrumen</p>
+              </div>
+              <StatusBadge tone={asset.tone}>
+                {asset.availableUnits} unit siap
+              </StatusBadge>
+            </div>
             <ul className="mt-5 space-y-2">
               {asset.units.map((unit) => (
                 <li
@@ -727,10 +870,10 @@ export function EquipmentDetailPage({
                   className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#EEEEEE] p-3"
                 >
                   <span className="min-w-0">
-                    <strong className="block text-[12px] text-[#212121]">
+                    <strong className="block text-[12px] text-[#1E293B]">
                       {unit.label}
                     </strong>
-                    <small className="mt-1 block text-[11px] text-[#929292]">
+                    <small className="mt-1 block text-[11px] text-[#94A3B8]">
                       {unit.id}
                       {unit.holder ? ` · ${unit.holder}` : ""}
                     </small>
@@ -747,40 +890,46 @@ export function EquipmentDetailPage({
                             : "blue"
                     }
                   >
-                    {unit.status}
+                    {unit.status === "Available"
+                      ? "Tersedia"
+                      : unit.status === "Maintenance"
+                        ? "Perbaikan"
+                        : unit.status === "In use"
+                          ? "Digunakan"
+                          : unit.status === "Awaiting return"
+                            ? "Menunggu Kembali"
+                            : unit.status}
                   </StatusBadge>
                 </li>
               ))}
             </ul>
-            <p className="mt-4 rounded-xl bg-[#F5F5F5] p-4 text-[11px] leading-5 text-[#6B6B6B]">
-              This is the same availability data used on the lab map, the
-              calendar equipment list, and the request picker.
+            <p className="mt-4 rounded-xl bg-[#F8FAFC] p-4 text-[11px] leading-5 text-[#64748B]">
+              Data ketersediaan ini sinkron secara langsung dengan denah lab, kalender penjadwalan, dan formulir permohonan.
             </p>
           </section>
         </div>
         <aside className="dashboard-card p-5 sm:p-6">
-          <SectionTitle eyebrow="Next action" title="Plan your usage" />
-          <p className="mt-3 text-[12px] leading-5 text-[#6B6B6B]">
-            Block dates in the room schedule, then pick this unit when you send
-            the request.
+          <h3 className="text-[16px] font-bold text-[#1E293B]">Perencanaan Jadwal</h3>
+          <p className="mt-2 text-[12px] leading-5 text-[#64748B]">
+            Pilih rentang tanggal pada agenda ruangan, lalu cantumkan instrumen ini saat mengisi formulir permohonan.
           </p>
           <Link
             href={`/student/laboratory/rooms/${asset.roomId}`}
-            className="mt-5 flex min-h-11 items-center justify-center rounded-xl bg-[#F9B129] text-[12px] font-bold text-[#212121]"
+            className="mt-5 flex min-h-11 items-center justify-center rounded-xl bg-[#F9B129] text-[12px] font-bold text-[#1E293B] hover:bg-[#F7B742] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F9B129]"
           >
-            Open room schedule
+            Buka Jadwal Ruangan
           </Link>
           <Link
             href="/student/shared-usage"
-            className="mt-2 flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] text-[12px] font-bold text-[#212121]"
+            className="mt-2 flex min-h-11 items-center justify-center rounded-xl border border-[#E2E8F0] text-[12px] font-bold text-[#1E293B] hover:bg-[#F8FAFC] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F9B129]"
           >
-            View shared-use options
+            Lihat Opsi Sesi Bersama
           </Link>
           <div className="mt-6 border-t border-[#EEEEEE] pt-5">
-            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#929292]">
-              Next open window
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#94A3B8]">
+              Jadwal Terdekat Tersedia
             </p>
-            <p className="mt-2 text-[12px] leading-5 text-[#6B6B6B]">
+            <p className="mt-2 text-[12px] leading-5 text-[#64748B]">
               {asset.nextAvailable}
             </p>
           </div>
@@ -809,39 +958,38 @@ export function MaterialDetailPage({
   if (!material)
     return (
       <FlowShell
-        title="Materials"
-        eyebrow="Material detail"
+        title="Bahan Kimia"
+        eyebrow="Detail Fasilitas"
         userName={userName}
-        activeKey="materials"
+        activeKey="dashboard"
         catalog={catalog}
       >
-        <BackLink href="/student/materials" />
+        <BackLink href="/student" />
         <EmptyState
-          title="Material tidak ditemukan"
-          detail="Cek kembali kode material atau buka halaman Materials."
+          title="Bahan kimia tidak ditemukan"
+          detail="Cek kembali kode bahan kimia atau buka halaman laboratorium."
         />
       </FlowShell>
     );
   return (
     <FlowShell
       title={material.name}
-      eyebrow="Material detail"
+      eyebrow="Detail Fasilitas"
       userName={userName}
-      activeKey="materials"
+      activeKey="dashboard"
       catalog={catalog}
     >
-      <BackLink href="/student/materials" />
+      <BackLink href={material ? `/student/laboratory/rooms/${material.roomId}` : "/student"} />
       <section className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#929292]">
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
             {material.id} · {material.category}
           </p>
-          <h2 className="mt-2 text-[26px] font-bold tracking-[-0.04em] text-[#212121] sm:text-[32px]">
+          <h2 className="mt-2 text-[24px] font-extrabold tracking-tight text-[#1E293B] sm:text-[30px]">
             {material.name}
           </h2>
-          <p className="mt-2 text-[13px] text-[#6B6B6B]">
-            Stored in {material.room}. Stock values are separated into physical,
-            reserved, and available quantities.
+          <p className="mt-2 text-[13px] text-[#64748B]">
+            Tersimpan di {material.room}. Data stok dipisahkan antara stok fisik, alokasi reservasi, dan jumlah yang siap diajukan.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -851,41 +999,40 @@ export function MaterialDetailPage({
             size={64}
           />
           <StatusBadge tone={material.tone}>
-            {material.available} {material.unit} available
+            {material.available} {material.unit} tersedia
           </StatusBadge>
         </div>
       </section>
       <div className="grid gap-4 md:grid-cols-3">
         <InfoTile
-          label="Physical stock"
+          label="Stok Fisik"
           value={`${material.physical} ${material.unit}`}
         />
         <InfoTile
-          label="Reserved stock"
+          label="Alokasi Reservasi"
           value={`${material.reserved} ${material.unit}`}
         />
         <InfoTile
-          label="Available stock"
+          label="Stok Siap Pakai"
           value={`${material.available} ${material.unit}`}
         />
       </div>
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
         <section className="dashboard-card p-5 sm:p-6">
-          <SectionTitle eyebrow="Dispensing rule" title="Request quantity" />
+          <h3 className="text-[16px] font-bold text-[#1E293B]">Ketentuan Pengambilan</h3>
           <div className="mt-4 rounded-xl bg-[#FEF1CC] p-4">
             <p className="text-[12px] font-semibold text-[#705012]">
               {material.rule}
             </p>
             <p className="mt-1 text-[11px] leading-5 text-[#705012]">
-              Aturan ini dikonfigurasi laboratorium dan divalidasi server saat
-              request dikirim.
+              Aturan ini dikonfigurasi laboratorium dan divalidasi server saat pengajuan dikirim.
             </p>
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
             {material.options.slice(0, 6).map((value) => (
               <span
                 key={value}
-                className="rounded-xl border border-[#E1E1E1] bg-white px-3 py-2 text-[11px] font-semibold tabular-nums"
+                className="rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-[11px] font-semibold tabular-nums text-[#1E293B]"
               >
                 {value} {material.unit}
               </span>
@@ -893,29 +1040,27 @@ export function MaterialDetailPage({
           </div>
           <Link
             href={`/student/laboratory/rooms/${material.roomId}`}
-            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121]"
+            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#1E293B] hover:bg-[#F7B742] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F9B129]"
           >
-            Add to a request
+            Ajukan Melalui Jadwal Ruangan
           </Link>
         </section>
         <aside className="dashboard-card p-5 sm:p-6">
-          <SectionTitle eyebrow="Stock note" title="Batch visibility" />
-          <p className="mt-3 text-[12px] leading-5 text-[#6B6B6B]">
-            Available stock is physical stock minus approved reservations. Issue
-            transactions reduce physical stock only when the material is handed
-            out.
+          <h3 className="text-[16px] font-bold text-[#1E293B]">Catatan Inventaris & Batch</h3>
+          <p className="mt-2 text-[12px] leading-5 text-[#64748B]">
+            Stok siap pakai merupakan stok fisik dikurangi reservasi aktif yang telah disetujui. Pengambilan fisik akan memotong stok saat bahan diserahkan oleh PLP.
           </p>
-          <div className="mt-5 flex items-center gap-3 rounded-xl bg-[#F5F5F5] p-3">
+          <div className="mt-5 flex items-center gap-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]/60 p-3">
             <PackageSearch
-              className="size-4 text-[#6B6B6B]"
+              className="size-4 text-[#64748B]"
               aria-hidden="true"
             />
-            <span className="text-[11px] font-medium">
+            <span className="text-[11px] font-medium text-[#1E293B]">
               {material.expiry
                 ? `Batch terdekat kedaluwarsa · ${new Date(
                     material.expiry,
                   ).toLocaleDateString("id-ID")}`
-                : "Tidak ada batch dengan tanggal kedaluwarsa"}
+                : "Tidak ada catatan kedaluwarsa khusus"}
             </span>
           </div>
         </aside>
@@ -932,24 +1077,24 @@ function InfoTile({
   value: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl bg-[#F5F5F5] p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#929292]">
+    <div className="rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]/60 p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#94A3B8]">
         {label}
       </p>
-      <p className="mt-2 text-[14px] font-bold text-[#212121]">{value}</p>
+      <p className="mt-2 text-[14px] font-bold text-[#1E293B]">{value}</p>
     </div>
   );
 }
 
 function EmptyState({ title, detail }: { title: string; detail: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-[#D8D8D8] bg-[#FAFAF8] p-6 text-center">
+    <div className="rounded-xl border border-dashed border-[#CBD5E1] bg-[#FAFAF8] p-6 text-center">
       <PackageSearch
-        className="mx-auto size-6 text-[#929292]"
+        className="mx-auto size-6 text-[#94A3B8]"
         aria-hidden="true"
       />
-      <p className="mt-3 text-[13px] font-semibold">{title}</p>
-      <p className="mt-1 text-[11px] text-[#6B6B6B]">{detail}</p>
+      <p className="mt-3 text-[13px] font-semibold text-[#1E293B]">{title}</p>
+      <p className="mt-1 text-[11px] text-[#64748B]">{detail}</p>
     </div>
   );
 }
@@ -1013,13 +1158,13 @@ function SharedUsageRequestCard({
         <StatusBadge tone={reservation.myRequestStatus ? "yellow" : "blue"}>
           {reservation.myRequestStatus
             ? sharedStatusLabels[reservation.myRequestStatus]
-            : "Occupied"}
+            : "Sedang Berjalan"}
         </StatusBadge>
       </div>
-      <h3 className="mt-5 text-[15px] font-bold">
+      <h3 className="mt-5 text-[15px] font-bold text-[#1E293B]">
         {reservation.unitCode} · {reservation.assetName}
       </h3>
-      <p className="mt-1 text-[12px] text-[#6B6B6B]">
+      <p className="mt-1 text-[12px] text-[#64748B]">
         {reservation.roomName} ·{" "}
         {new Date(reservation.startAt).toLocaleString("id-ID", {
           dateStyle: "medium",
@@ -1030,11 +1175,11 @@ function SharedUsageRequestCard({
           timeStyle: "short",
         })}
       </p>
-      <div className="mt-5 space-y-2 rounded-xl bg-[#F5F5F5] p-3">
-        <p className="text-[11px] font-semibold">
-          Primary user · {reservation.primaryUserName}
+      <div className="mt-5 space-y-2 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]/60 p-3">
+        <p className="text-[11px] font-semibold text-[#1E293B]">
+          Pengguna Utama · {reservation.primaryUserName}
         </p>
-        <p className="text-[11px] text-[#6B6B6B]">{reservation.purpose}</p>
+        <p className="text-[11px] text-[#64748B]">{reservation.purpose}</p>
       </div>
       {error && (
         <p
@@ -1046,7 +1191,7 @@ function SharedUsageRequestCard({
       )}
       {sent ? (
         <p className="mt-4 rounded-xl bg-[#F4FCF7] p-3 text-[11px] leading-5 text-[#03683A]">
-          Permintaan terkirim. Tunggu jawaban {reservation.primaryUserName}.
+          Permintaan terkirim. Menunggu konfirmasi dari {reservation.primaryUserName}.
         </p>
       ) : open ? (
         <form
@@ -1074,7 +1219,7 @@ function SharedUsageRequestCard({
             }
           }}
         >
-          <label className="block text-[11px] font-semibold">
+          <label className="block text-[11px] font-semibold text-[#1E293B]">
             Mulai
             <input
               type="datetime-local"
@@ -1082,11 +1227,11 @@ function SharedUsageRequestCard({
               min={toLocalInputValue(reservation.startAt)}
               max={toLocalInputValue(reservation.endAt)}
               onChange={(event) => setStartAt(event.target.value)}
-              className="mt-1 h-11 w-full rounded-xl border border-[#E1E1E1] px-3 text-[12px]"
+              className="mt-1 h-11 w-full rounded-xl border border-[#E2E8F0] px-3 text-[12px] text-[#1E293B] outline-none focus:border-[#F9B129]"
               required
             />
           </label>
-          <label className="block text-[11px] font-semibold">
+          <label className="block text-[11px] font-semibold text-[#1E293B]">
             Selesai
             <input
               type="datetime-local"
@@ -1094,33 +1239,33 @@ function SharedUsageRequestCard({
               min={startAt}
               max={toLocalInputValue(reservation.endAt)}
               onChange={(event) => setEndAt(event.target.value)}
-              className="mt-1 h-11 w-full rounded-xl border border-[#E1E1E1] px-3 text-[12px]"
+              className="mt-1 h-11 w-full rounded-xl border border-[#E2E8F0] px-3 text-[12px] text-[#1E293B] outline-none focus:border-[#F9B129]"
               required
             />
           </label>
-          <label className="block text-[11px] font-semibold">
-            Purpose
+          <label className="block text-[11px] font-semibold text-[#1E293B]">
+            Tujuan Penggunaan
             <input
               value={purpose}
               onChange={(event) => setPurpose(event.target.value)}
-              placeholder="Bagian yang akan kamu kerjakan"
-              className="mt-1 h-11 w-full rounded-xl border border-[#E1E1E1] px-3 text-[12px]"
+              placeholder="Uraikan bagian instrumen / riset yang akan dikerjakan"
+              className="mt-1 h-11 w-full rounded-xl border border-[#E2E8F0] px-3 text-[12px] text-[#1E293B] outline-none focus:border-[#F9B129]"
             />
           </label>
           <div className="flex flex-wrap gap-2">
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#212121] px-4 text-[11px] font-bold text-white disabled:opacity-70"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#1E293B] px-4 text-[11px] font-bold text-white hover:bg-[#0F172A] transition disabled:opacity-70 cursor-pointer"
             >
-              {pending ? "Memproses..." : "Kirim permintaan"}
+              {pending ? "Memproses..." : "Kirim Permintaan"}
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] px-4 text-[11px] font-bold"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E2E8F0] px-4 text-[11px] font-bold text-[#64748B] hover:bg-[#F8FAFC] transition cursor-pointer"
             >
-              Cancel
+              Batal
             </button>
           </div>
         </form>
@@ -1129,11 +1274,11 @@ function SharedUsageRequestCard({
           type="button"
           onClick={() => setOpen(true)}
           disabled={Boolean(reservation.myRequestStatus)}
-          className="mt-4 min-h-11 w-full rounded-xl bg-[#212121] text-[12px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#E1E1E1] disabled:text-[#929292]"
+          className="mt-4 min-h-11 w-full rounded-xl bg-[#1E293B] text-[12px] font-bold text-white hover:bg-[#0F172A] transition disabled:cursor-not-allowed disabled:bg-[#E2E8F0] disabled:text-[#94A3B8] cursor-pointer"
         >
           {reservation.myRequestStatus
             ? sharedStatusLabels[reservation.myRequestStatus]
-            : "Request shared usage"}
+            : "Ajukan Sesi Bersama"}
         </button>
       )}
     </article>
@@ -1151,33 +1296,34 @@ export function SharedUsagePage({
 }) {
   return (
     <FlowShell
-      title="Shared usage"
-      eyebrow="Coordination"
+      title="Sesi Bersama"
+      eyebrow="Koordinasi Riset"
       userName={userName}
       activeKey="calendar"
       catalog={catalog}
     >
       <BackLink href="/student/calendar" />
       <section className="mb-7">
-        <p className="text-[13px] font-medium text-[#6B6B6B]">
-          Coordinate within an existing reservation
+        <p className="text-[13px] font-medium text-[#64748B]">
+          Koordinasi Penggunaan Bersama
         </p>
-        <h2 className="mt-1 max-w-[720px] text-[26px] font-bold tracking-[-0.04em] text-[#212121] sm:text-[32px]">
-          Ask to share a slot without creating a conflict.
+        <h2 className="mt-1 max-w-[720px] text-[24px] font-extrabold tracking-tight text-[#1E293B] sm:text-[30px]">
+          Pengajuan Sesi Bersama (Shared Usage)
         </h2>
-        <p className="mt-2 max-w-[720px] text-[13px] leading-5 text-[#6B6B6B]">
-          Shared usage stays inside the primary user&apos;s reservation and
-          requires their acceptance. PLP can see confirmed shared usage.
+        <p className="mt-2 max-w-[720px] text-[13px] leading-5 text-[#64748B]">
+          Ajukan izin untuk bergabung dalam slot waktu reservasi yang telah disetujui tanpa menimbulkan bentrok jadwal. Sesi bersama memerlukan persetujuan dari mahasiswa pemegang reservasi utama.
         </p>
       </section>
 
       {data.incoming.length > 0 && (
         <section className="mb-4 dashboard-card p-5 sm:p-6">
-          <SectionTitle
-            eyebrow="Perlu jawabanmu"
-            title={`Incoming shared usage · ${data.incoming.length}`}
-          />
-          <ul className="mt-5 space-y-3">
+          <div className="border-b border-[#EEEEEE] pb-3 mb-4">
+            <h3 className="text-[16px] font-bold text-[#1E293B]">
+              Permintaan Masuk ({data.incoming.length})
+            </h3>
+            <p className="text-[11px] text-[#64748B] mt-0.5">Permintaan mahasiswa lain untuk berbagi sesi reservasi Anda</p>
+          </div>
+          <ul className="space-y-3">
             {data.incoming.map((item) => (
               <IncomingSharedUsageRow key={item.id} item={item} />
             ))}
@@ -1186,15 +1332,17 @@ export function SharedUsagePage({
       )}
 
       <section className="mb-4">
-        <SectionTitle
-          eyebrow="Reservation orang lain"
-          title="Available reservations"
-        />
+        <div className="mb-3">
+          <h3 className="text-[16px] font-bold text-[#1E293B]">
+            Reservasi yang Tersedia
+          </h3>
+          <p className="text-[11px] text-[#64748B] mt-0.5">Reservasi aktif mahasiswa lain yang dapat diajukan sesi bersama</p>
+        </div>
         {data.available.length === 0 ? (
           <div className="mt-4">
             <EmptyState
-              title="Belum ada reservation yang bisa dibagi"
-              detail="Shared usage butuh reservation milik user lain yang sudah disetujui. Cek lagi setelah ada jadwal lain."
+              title="Belum ada reservasi aktif yang dapat dibagi"
+              detail="Sesi bersama hanya dapat diajukan pada reservasi mahasiswa lain yang telah disetujui PLP. Periksa kembali saat ada jadwal aktif."
             />
           </div>
         ) : (
@@ -1210,21 +1358,23 @@ export function SharedUsagePage({
       </section>
 
       <section className="dashboard-card p-5 sm:p-6">
-        <SectionTitle
-          eyebrow="My requests"
-          title="Outgoing shared usage"
-          action={
-            <span className="text-[11px] font-semibold text-[#6B6B6B]">
-              {data.outgoing.length} request
-            </span>
-          }
-        />
+        <div className="flex items-center justify-between border-b border-[#EEEEEE] pb-3 mb-4">
+          <div>
+            <h3 className="text-[16px] font-bold text-[#1E293B]">
+              Permintaan Saya
+            </h3>
+            <p className="text-[11px] text-[#64748B] mt-0.5">Riwayat pengajuan sesi bersama yang Anda kirimkan</p>
+          </div>
+          <span className="text-[11px] font-semibold text-[#64748B]">
+            {data.outgoing.length} pengajuan
+          </span>
+        </div>
         {data.outgoing.length === 0 ? (
-          <p className="mt-4 text-[12px] text-[#6B6B6B]">
-            Kamu belum pernah mengirim shared usage request.
+          <p className="text-[12px] text-[#64748B] py-3">
+            Anda belum pernah mengirimkan permintaan sesi bersama.
           </p>
         ) : (
-          <ul className="mt-4 divide-y divide-[#EEEEEE]">
+          <ul className="divide-y divide-[#EEEEEE]">
             {data.outgoing.map((item) => (
               <OutgoingSharedUsageRow key={item.id} item={item} />
             ))}
@@ -1271,10 +1421,10 @@ function IncomingSharedUsageRow({
             />
           )}
           <div className="min-w-0">
-            <p className="text-[13px] font-bold text-[#212121]">
+            <p className="text-[13px] font-bold text-[#1E293B]">
               {item.requesterName} · {item.unitCode}
             </p>
-            <p className="mt-1 text-[11px] text-[#6B6B6B]">
+            <p className="mt-1 text-[11px] text-[#64748B]">
               {item.roomName} ·{" "}
               {new Date(item.startAt).toLocaleString("id-ID", {
                 dateStyle: "medium",
@@ -1286,7 +1436,7 @@ function IncomingSharedUsageRow({
               })}
             </p>
             {item.purpose && (
-              <p className="mt-1 text-[11px] text-[#6B6B6B]">{item.purpose}</p>
+              <p className="mt-1 text-[11px] text-[#64748B]">{item.purpose}</p>
             )}
           </div>
         </div>
@@ -1295,17 +1445,17 @@ function IncomingSharedUsageRow({
             type="button"
             disabled={pending}
             onClick={() => void respond("accept")}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#048444] px-4 text-[11px] font-bold text-white disabled:opacity-70"
+            className="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#048444] px-4 text-[11px] font-bold text-white hover:bg-[#03683A] transition disabled:opacity-70 cursor-pointer"
           >
-            Accept
+            Terima
           </button>
           <button
             type="button"
             disabled={pending}
             onClick={() => void respond("decline")}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-4 text-[11px] font-bold text-[#9E3636] disabled:opacity-70"
+            className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[#E2E8F0] bg-white px-4 text-[11px] font-bold text-[#9E3636] hover:bg-[#FDF2F2] transition disabled:opacity-70 cursor-pointer"
           >
-            Decline
+            Tolak
           </button>
         </div>
       </div>
@@ -1346,10 +1496,10 @@ function OutgoingSharedUsageRow({
           />
         )}
         <div className="min-w-0">
-          <p className="text-[12px] font-semibold text-[#212121]">
+          <p className="text-[12px] font-semibold text-[#1E293B]">
             {item.unitCode} · {item.roomName}
           </p>
-          <p className="mt-1 text-[11px] text-[#6B6B6B]">
+          <p className="mt-1 text-[11px] text-[#64748B]">
             {new Date(item.startAt).toLocaleString("id-ID", {
               dateStyle: "medium",
               timeStyle: "short",
@@ -1358,7 +1508,7 @@ function OutgoingSharedUsageRow({
             {new Date(item.endAt).toLocaleTimeString("id-ID", {
               timeStyle: "short",
             })}{" "}
-            · {item.primaryUserName}
+            · Pengguna Utama: {item.primaryUserName}
           </p>
         </div>
       </div>
@@ -1381,7 +1531,7 @@ function OutgoingSharedUsageRow({
             type="button"
             disabled={pending}
             onClick={() => void cancel()}
-            className="inline-flex min-h-10 items-center rounded-xl border border-[#E1E1E1] px-3 text-[11px] font-bold text-[#9E3636] disabled:opacity-60"
+            className="inline-flex min-h-9 items-center rounded-xl border border-[#E2E8F0] px-3 text-[11px] font-bold text-[#9E3636] hover:bg-[#FDF2F2] transition disabled:opacity-60 cursor-pointer"
           >
             {pending ? "..." : "Batalkan"}
           </button>
@@ -1418,34 +1568,33 @@ export function IncidentFormPage({
   if (submitted) {
     return (
       <FlowShell
-        title="Report incident"
-        eyebrow="Safety & support"
+        title="Laporkan Kendala"
+        eyebrow="Bantuan & Layanan"
         userName={userName}
         activeKey="incidents"
         catalog={catalog}
       >
         <BackLink href="/student/incidents" />
         <div className="dashboard-card p-6">
-          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#03683A]">
-            Incident tercatat
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#048444]">
+            Laporan Kendala Berhasil Dicatat
           </p>
-          <h2 className="mt-2 text-[20px] font-bold">{submitted}</h2>
-          <p className="mt-2 max-w-[560px] text-[12px] leading-5 text-[#6B6B6B]">
-            Status equipment tidak otomatis berubah. PLP akan melakukan
-            assessment dan mencatat hasilnya di timeline incident.
+          <h2 className="mt-2 text-[20px] font-bold text-[#1E293B]">{submitted}</h2>
+          <p className="mt-2 max-w-[560px] text-[12px] leading-5 text-[#64748B]">
+            Status operasional instrumen tidak otomatis berubah. PLP akan melakukan verifikasi teknis dan mencatat hasilnya pada timeline kendala.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
               href="/student/incidents"
-              className="inline-flex min-h-11 items-center rounded-xl bg-[#212121] px-4 text-[12px] font-bold text-white"
+              className="inline-flex min-h-11 items-center rounded-xl bg-[#1E293B] px-4 text-[12px] font-bold text-white hover:bg-[#0F172A] transition"
             >
-              Lihat daftar incident
+              Lihat Daftar Kendala
             </Link>
             <Link
               href="/student"
-              className="inline-flex min-h-11 items-center rounded-xl border border-[#E1E1E1] px-4 text-[12px] font-bold"
+              className="inline-flex min-h-11 items-center rounded-xl border border-[#E2E8F0] px-4 text-[12px] font-bold text-[#1E293B] hover:bg-[#F8FAFC] transition"
             >
-              Kembali ke dashboard
+              Kembali ke Dashboard
             </Link>
           </div>
         </div>
@@ -1455,8 +1604,8 @@ export function IncidentFormPage({
 
   return (
     <FlowShell
-      title="Report incident"
-      eyebrow="Safety & support"
+      title="Laporkan Kendala"
+      eyebrow="Bantuan & Layanan"
       userName={userName}
       activeKey="incidents"
       catalog={catalog}
@@ -1495,10 +1644,9 @@ export function IncidentFormPage({
             }
           }}
         >
-          <SectionTitle eyebrow="New incident" title="What happened?" />
-          <p className="mt-2 text-[12px] leading-5 text-[#6B6B6B]">
-            Your report will be reviewed by an authorized lab coordinator. A
-            student report does not automatically mark equipment as damaged.
+          <h3 className="text-[18px] font-bold text-[#1E293B]">Apa kendala yang terjadi?</h3>
+          <p className="mt-1 text-[12px] leading-5 text-[#64748B]">
+            Laporan Anda akan ditinjau oleh petugas teknis (PLP). Pelaporan kendala oleh mahasiswa tidak otomatis mengubah status operasional instrumen hingga dikonfirmasi.
           </p>
           {error && (
             <p
@@ -1509,14 +1657,14 @@ export function IncidentFormPage({
             </p>
           )}
           <div className="mt-5 space-y-4">
-            <label className="block text-[12px] font-semibold">
-              Equipment
+            <label className="block text-[12px] font-semibold text-[#1E293B]">
+              Instrumen / Alat Terkait
               <select
                 value={equipmentCode}
                 onChange={(event) => setEquipmentCode(event.target.value)}
-                className="mt-2 h-11 w-full rounded-xl border border-[#E1E1E1] bg-white px-3 text-[12px] outline-none focus:border-[#6E8EDA]"
+                className="mt-2 h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3 text-[12px] text-[#1E293B] outline-none focus:border-[#F9B129]"
               >
-                <option value="">Tidak ada equipment tertentu</option>
+                <option value="">Tidak terkait instrumen tertentu</option>
                 {catalog.equipment.map((asset) => (
                   <option key={asset.id} value={asset.id}>
                     {asset.id} · {asset.name} ({asset.room})
@@ -1524,14 +1672,14 @@ export function IncidentFormPage({
                 ))}
               </select>
             </label>
-            <label className="block text-[12px] font-semibold">
-              Room
+            <label className="block text-[12px] font-semibold text-[#1E293B]">
+              Ruangan Laboratorium
               <select
                 value={roomCode}
                 onChange={(event) => setRoomCode(event.target.value)}
-                className="mt-2 h-11 w-full rounded-xl border border-[#E1E1E1] bg-white px-3 text-[12px] outline-none focus:border-[#6E8EDA]"
+                className="mt-2 h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3 text-[12px] text-[#1E293B] outline-none focus:border-[#F9B129]"
               >
-                <option value="">Ikuti lokasi equipment</option>
+                <option value="">Ikuti lokasi instrumen</option>
                 {catalog.rooms.map((room) => (
                   <option key={room.id} value={room.id}>
                     {room.name}
@@ -1539,76 +1687,71 @@ export function IncidentFormPage({
                 ))}
               </select>
             </label>
-            <label className="block text-[12px] font-semibold">
-              Title
+            <label className="block text-[12px] font-semibold text-[#1E293B]">
+              Judul Kendala
               <input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 required
                 minLength={3}
-                placeholder={selectedAsset ? `${selectedAsset.name} issue` : "Apa yang terjadi"}
-                className="mt-2 h-11 w-full rounded-xl border border-[#E1E1E1] px-3 text-[12px] outline-none focus:border-[#6E8EDA]"
+                placeholder={selectedAsset ? `Kendala pada ${selectedAsset.name}` : "Ringkasan masalah yang terjadi"}
+                className="mt-2 h-11 w-full rounded-xl border border-[#E2E8F0] px-3 text-[12px] text-[#1E293B] outline-none focus:border-[#F9B129]"
               />
             </label>
-            <label className="block text-[12px] font-semibold">
-              Severity
+            <label className="block text-[12px] font-semibold text-[#1E293B]">
+              Tingkat Urgensi
               <select
                 value={severity}
                 onChange={(event) => setSeverity(event.target.value)}
-                className="mt-2 h-11 w-full rounded-xl border border-[#E1E1E1] bg-white px-3 text-[12px] outline-none focus:border-[#6E8EDA]"
+                className="mt-2 h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3 text-[12px] text-[#1E293B] outline-none focus:border-[#F9B129]"
               >
-                <option value="LOW">Low</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="HIGH">High</option>
-                <option value="CRITICAL">Critical</option>
+                <option value="LOW">Rendah (tidak mengganggu fungsi utama)</option>
+                <option value="MEDIUM">Sedang (mengganggu sebagian operasional)</option>
+                <option value="HIGH">Tinggi (alat tidak dapat digunakan)</option>
+                <option value="CRITICAL">Kritis (kondisi darurat / bahaya keselamatan)</option>
               </select>
             </label>
-            <label className="block text-[12px] font-semibold">
-              When did it happen?
+            <label className="block text-[12px] font-semibold text-[#1E293B]">
+              Waktu Kejadian
               <input
                 type="datetime-local"
                 value={occurredAt}
                 onChange={(event) => setOccurredAt(event.target.value)}
-                className="mt-2 h-11 w-full rounded-xl border border-[#E1E1E1] px-3 text-[12px] outline-none focus:border-[#6E8EDA]"
+                className="mt-2 h-11 w-full rounded-xl border border-[#E2E8F0] px-3 text-[12px] text-[#1E293B] outline-none focus:border-[#F9B129]"
               />
             </label>
-            <label className="block text-[12px] font-semibold">
-              What happened?
+            <label className="block text-[12px] font-semibold text-[#1E293B]">
+              Kronologi & Detail Masalah
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 required
                 minLength={10}
                 rows={5}
-                className="mt-2 w-full rounded-xl border border-[#E1E1E1] p-3 text-[12px] outline-none focus:border-[#6E8EDA]"
-                placeholder="Describe the issue, observed behavior, and any immediate safety action."
+                className="mt-2 w-full rounded-xl border border-[#E2E8F0] p-3 text-[12px] text-[#1E293B] outline-none focus:border-[#F9B129]"
+                placeholder="Uraikan detail masalah, perilaku alat yang diamati, serta tindakan darurat yang telah dilakukan jika ada..."
               />
             </label>
           </div>
           <button
             type="submit"
             disabled={pending}
-            className="mt-6 min-h-11 rounded-xl bg-[#F45959] px-4 text-[12px] font-bold text-white disabled:opacity-70"
+            className="mt-6 min-h-11 rounded-xl bg-[#F45959] px-4 text-[12px] font-bold text-white hover:bg-[#E04848] transition disabled:opacity-70 cursor-pointer"
           >
-            {pending ? "Memproses..." : "Submit incident"}
+            {pending ? "Memproses..." : "Kirim Laporan Kendala"}
           </button>
         </form>
         <aside className="dashboard-card h-fit p-5 sm:p-6">
-          <SectionTitle
-            eyebrow="Safety note"
-            title="If there is immediate danger"
-          />
-          <p className="mt-3 text-[12px] leading-5 text-[#6B6B6B]">
-            Stop using the equipment, notify the lab staff nearby, and follow
-            the room&apos;s posted safety procedure.
+          <h3 className="text-[16px] font-bold text-[#1E293B]">Prosedur Keselamatan Kerja</h3>
+          <p className="mt-2 text-[12px] leading-5 text-[#64748B]">
+            Jika terjadi bahaya langsung (asap, kebocoran zat kimia berbahaya, sengatan listrik), segera hentikan penggunaan instrumen, evakuasi area, dan beritahu staf PLP terdekat.
           </p>
           <div className="mt-5 flex gap-2 rounded-xl bg-[#FDE9E9] p-3 text-[11px] leading-5 text-[#9E3636]">
             <ShieldAlert
               className="mt-0.5 size-4 shrink-0"
               aria-hidden="true"
             />
-            Critical safety information stays visible on the page, not only in a
-            toast.
+            Informasi keselamatan kerja wajib diperhatikan oleh seluruh pengguna fasilitas lab kimia.
           </div>
         </aside>
       </div>
@@ -1627,7 +1770,7 @@ export function IncidentDetailPage({
 }) {
   const timeline = [
     {
-      label: "Reported",
+      label: "Dilaporkan",
       detail: `${incident.reporterName} · ${new Date(
         incident.createdAt,
       ).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}`,
@@ -1636,8 +1779,8 @@ export function IncidentDetailPage({
     ...(incident.assessment
       ? [
           {
-            label: "Assessment",
-            detail: `${incident.assessment.assessment} · ${incident.assessment.assessedByName}`,
+            label: "Pemeriksaan Teknis",
+            detail: `${incident.assessment.assessment} · Oleh: ${incident.assessment.assessedByName}`,
             tone: "done" as const,
           },
         ]
@@ -1645,7 +1788,7 @@ export function IncidentDetailPage({
     ...(incident.resolution
       ? [
           {
-            label: "Resolved",
+            label: "Selesai Ditangani",
             detail: `${incident.resolution.action} · ${new Date(
               incident.resolution.resolvedAt,
             ).toLocaleString("id-ID", {
@@ -1657,11 +1800,11 @@ export function IncidentDetailPage({
         ]
       : [
           {
-            label: "Resolution",
+            label: "Tindak Lanjut",
             detail:
               incident.status === "REPORTED"
-                ? "Menunggu assessment PLP"
-                : "Sedang ditindaklanjuti",
+                ? "Menunggu verifikasi teknis PLP"
+                : "Sedang dalam proses penanganan",
             tone: "current" as const,
           },
         ]),
@@ -1669,7 +1812,7 @@ export function IncidentDetailPage({
   return (
     <FlowShell
       title={incident.code}
-      eyebrow="Incident detail"
+      eyebrow="Detail Kendala"
       userName={userName}
       activeKey="incidents"
       catalog={catalog}
@@ -1679,14 +1822,14 @@ export function IncidentDetailPage({
         <section className="dashboard-card p-5 sm:p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#929292]">
-                Incident report
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
+                Laporan Kendala Laboratorium
               </p>
-              <h2 className="mt-2 text-[26px] font-bold tracking-[-0.04em] text-[#212121]">
+              <h2 className="mt-2 text-[24px] font-extrabold tracking-tight text-[#1E293B]">
                 {incident.title}
               </h2>
-              <p className="mt-2 text-[12px] text-[#6B6B6B]">
-                {incident.code} · reported by {incident.reporterName}
+              <p className="mt-2 text-[12px] text-[#64748B]">
+                {incident.code} · Dilaporkan oleh {incident.reporterName}
               </p>
             </div>
             <StatusBadge
@@ -1698,35 +1841,32 @@ export function IncidentDetailPage({
                     : "yellow"
               }
             >
-              {incident.status.replaceAll("_", " ")}
+              {incidentStatusLabel[incident.status] ?? incident.status}
             </StatusBadge>
           </div>
-          <p className="mt-6 text-[13px] leading-6 text-[#6B6B6B]">
+          <p className="mt-6 text-[13px] leading-6 text-[#64748B]">
             {incident.description}
           </p>
           {incident.assessment && (
-            <div className="mt-6 rounded-xl bg-[#F5F5F5] p-4">
-              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#929292]">
-                Assessment
+            <div className="mt-6 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]/60 p-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#94A3B8]">
+                Catatan Pemeriksaan PLP
               </p>
-              <p className="mt-2 text-[12px] font-semibold">
+              <p className="mt-2 text-[12px] font-semibold text-[#1E293B]">
                 {incident.assessment.finding}
               </p>
-              <p className="mt-1 text-[12px] leading-5 text-[#6B6B6B]">
+              <p className="mt-1 text-[12px] leading-5 text-[#64748B]">
                 {incident.assessment.assessment}
               </p>
               {incident.assessment.recommendedAction && (
-                <p className="mt-2 text-[11px] text-[#6B6B6B]">
-                  Next action: {incident.assessment.recommendedAction}
+                <p className="mt-2 text-[11px] text-[#64748B]">
+                  Tindakan lanjutan: {incident.assessment.recommendedAction}
                 </p>
               )}
             </div>
           )}
           <div className="mt-6 border-t border-[#EEEEEE] pt-5">
-            <SectionTitle
-              eyebrow="Accountability"
-              title="Resolution timeline"
-            />
+            <h3 className="text-[16px] font-bold text-[#1E293B]">Kronologi Penanganan</h3>
             <div className="mt-5 space-y-4">
               {timeline.map((step) => (
                 <div className="flex gap-3" key={step.label}>
@@ -1739,8 +1879,8 @@ export function IncidentDetailPage({
                     )}
                   />
                   <div>
-                    <p className="text-[12px] font-semibold">{step.label}</p>
-                    <p className="mt-1 text-[11px] text-[#6B6B6B]">
+                    <p className="text-[12px] font-semibold text-[#1E293B]">{step.label}</p>
+                    <p className="mt-1 text-[11px] text-[#64748B]">
                       {step.detail}
                     </p>
                   </div>
@@ -1750,11 +1890,10 @@ export function IncidentDetailPage({
           </div>
         </section>
         <aside className="dashboard-card h-fit p-5 sm:p-6">
-          <SectionTitle
-            eyebrow="Resource context"
-            title={incident.equipmentName ?? incident.roomName ?? "Resource"}
-          />
-          <p className="mt-2 text-[12px] text-[#6B6B6B]">
+          <h3 className="text-[16px] font-bold text-[#1E293B]">
+            {incident.equipmentName ?? incident.roomName ?? "Fasilitas Terkait"}
+          </h3>
+          <p className="mt-2 text-[12px] text-[#64748B]">
             {[incident.equipmentCode, incident.roomName]
               .filter(Boolean)
               .join(" · ")}
@@ -1762,21 +1901,20 @@ export function IncidentDetailPage({
           {incident.equipmentCode && (
             <Link
               href={`/student/laboratory/equipment/${incident.equipmentCode}`}
-              className="mt-5 flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] text-[12px] font-bold"
+              className="mt-5 flex min-h-11 items-center justify-center rounded-xl border border-[#E2E8F0] text-[12px] font-bold text-[#1E293B] hover:bg-[#F8FAFC] transition"
             >
-              View equipment
+              Lihat Detail Instrumen
             </Link>
           )}
           <Link
             href="/student/incidents/new"
-            className="mt-2 flex min-h-11 items-center justify-center rounded-xl bg-[#212121] text-[12px] font-bold text-white"
+            className="mt-2 flex min-h-11 items-center justify-center rounded-xl bg-[#1E293B] text-[12px] font-bold text-white hover:bg-[#0F172A] transition"
           >
-            Report another issue
+            Laporkan Kendala Lain
           </Link>
           <div className="mt-5 flex gap-2 rounded-xl bg-[#FFF4D9] p-3 text-[11px] leading-5 text-[#705012]">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            Report mahasiswa tidak mengubah status equipment. Perubahan status
-            hanya lewat assessment atau inspeksi PLP.
+            Laporan mahasiswa menjadi dasar bagi PLP untuk inspeksi. Perubahan status resmi instrumen diperbarui setelah verifikasi teknis.
           </div>
         </aside>
       </div>

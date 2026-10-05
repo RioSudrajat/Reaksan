@@ -28,7 +28,8 @@ type SearchParams = Record<string, string | string[] | undefined>;
 
 function pick(params: SearchParams, key: string) {
   const value = params[key];
-  return Array.isArray(value) ? value[0] : value;
+  const str = Array.isArray(value) ? value[0] : value;
+  return str && str.trim().length > 0 ? str.trim() : undefined;
 }
 
 export default async function PlpIncidentsPage({
@@ -129,24 +130,24 @@ export default async function PlpIncidentsPage({
             />
           </div>
         ) : (
-          <ul className="divide-y divide-[#EEEEEE]">
+          <ul className="divide-y divide-[#E5E7EB]">
             {result.data.map((incident) => (
               <li key={incident.id}>
                 <Link
                   href={`/plp/incidents/${incident.code}`}
-                  className="flex flex-col gap-3 p-4 transition hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA] sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 p-4 transition hover:bg-[#FDFBF7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] font-bold text-[#929292]">
+                      <span className="text-[11px] font-bold text-[#64748B]">
                         {incident.code}
                       </span>
                       <SeverityBadge severity={incident.severity} />
                     </div>
-                    <p className="mt-1 text-[13px] font-semibold text-[#212121]">
+                    <p className="mt-1 text-[13px] font-semibold text-[#121826]">
                       {incident.title}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-[#6B6B6B]">
+                    <p className="mt-0.5 text-[11px] text-[#64748B]">
                       {incident.equipmentCode ?? incident.roomName ?? "Lab"} ·{" "}
                       dilaporkan {incident.reporterName} ·{" "}
                       {formatDateTime(

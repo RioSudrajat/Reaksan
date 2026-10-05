@@ -29,7 +29,7 @@ export const ac = createAccessControl(statement);
 // A role is a subset of the statement. Keep `user` deliberately empty: the
 // signed-in default should be able to do nothing beyond its own records.
 // `plp` is the lab operator: request review, fulfillment, inventory, incidents.
-// `lecturer` and `aslab` are read-mostly scoped roles.
+// MVP strictly scopes to 3 roles: user (mahasiswa), plp, and admin.
 export const roles = {
   user: ac.newRole({
     notes: [],
@@ -44,20 +44,11 @@ export const roles = {
     plp: ["view"],
     requests: ["read-any", "review-any", "issue-any", "return-any"],
     inventory: ["read-any", "manage-any"],
+    equipment: ["manage-any"],
+    materials: ["manage-any"],
     schedule: ["read-any"],
     history: ["read-any"],
     incidents: ["read-any", "assess-any", "resolve-any"],
-  }),
-  lecturer: ac.newRole({
-    requests: ["read-any"],
-    schedule: ["read-any"],
-    incidents: ["read-any"],
-  }),
-  aslab: ac.newRole({
-    requests: ["read-any"],
-    schedule: ["read-any"],
-    inventory: ["read-any"],
-    incidents: ["read-any", "assess-any"],
   }),
   admin: ac.newRole({
     ...adminAc.statements,

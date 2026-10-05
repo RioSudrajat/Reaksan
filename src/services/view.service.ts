@@ -54,13 +54,35 @@ function requestTimeRange(request: RequestDto) {
   return `${clock(start.hour, start.minute)}–${clock(end.hour, end.minute)}`;
 }
 
+const UNAPPROVED_REQUEST_STATUSES = new Set([
+  "DRAFT",
+  "SUBMITTED",
+  "PENDING_PLP",
+  "REQUEST_REVISION",
+  "REJECTED",
+  "CANCELLED",
+  "EXPIRED",
+]);
+
 export function requestToScheduleEvent(
   request: RequestDto,
   month: Month,
   viewerId: string,
 ): ScheduleEvent | null {
+  // Aturan Privasi & Integritas: Request yang belum disetujui (review, revisi, ditolak, dll)
+  // TIDAK BOLEH muncul sebagai event bar di jadwal publik/ruangan.
+  // Hanya boleh tampil di My Schedule milik mahasiswa pemohon.
+  if (UNAPPROVED_REQUEST_STATUSES.has(request.status) && request.actorId !== viewerId) {
+    return null;
+  }
+
   const start = jakartaParts(request.startAt);
   if (start.year !== month.year || start.month !== month.month) return null;
+  const end = jakartaParts(request.endAt);
+  const endDay =
+    end.year > start.year || end.month > start.month
+      ? daysInMonth(month)
+      : clampDay(end.day, month);
   const primaryEquipment = request.equipment[0];
   return {
     id: `request-${request.id}`,
@@ -70,7 +92,7 @@ export function requestToScheduleEvent(
     startAt: request.startAt,
     endAt: request.endAt,
     startDay: clampDay(start.day, month),
-    endDay: clampDay(jakartaParts(request.endAt).day, month),
+    endDay,
     time: requestTimeRange(request),
     roomId: request.roomCode,
     roomName: request.roomName,
@@ -98,6 +120,7 @@ export function requestToScheduleEvent(
       name: item.assetName,
       unitId: item.unitCode,
       unitLabel: item.unitLabel,
+      classification: item.classification,
       imageMediaId: item.imageMediaId,
     })),
     materials: request.materials.map((item) => ({
@@ -139,6 +162,10 @@ export function reservationToScheduleEvent(
   const start = jakartaParts(reservation.startAt);
   if (start.year !== month.year || start.month !== month.month) return null;
   const end = jakartaParts(reservation.endAt);
+  const endDay =
+    end.year > start.year || end.month > start.month
+      ? daysInMonth(month)
+      : clampDay(end.day, month);
   return {
     id: `${reservation.kind}-${reservation.id}`,
     reservationId: reservation.kind === "reservation" ? reservation.id : undefined,
@@ -151,7 +178,7 @@ export function reservationToScheduleEvent(
     startAt: reservation.startAt,
     endAt: reservation.endAt,
     startDay: clampDay(start.day, month),
-    endDay: clampDay(end.day, month),
+    endDay,
     time: `${clock(start.hour, start.minute)}–${clock(end.hour, end.minute)}`,
     roomId: reservation.roomCode,
     roomName: reservation.roomName,

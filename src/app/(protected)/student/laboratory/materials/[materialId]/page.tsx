@@ -17,7 +17,7 @@ type Params = {
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { materialId } = await params;
-  return { title: `Material ${materialId}` };
+  return { title: `Bahan Kimia ${materialId} · Reaksan` };
 }
 
 export default async function StudentMaterialDetailPage({

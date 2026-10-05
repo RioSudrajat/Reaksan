@@ -13,7 +13,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  return { title: `Incident ${id}` };
+  return { title: `Kendala ${id} · Reaksan` };
 }
 
 export default async function StudentIncidentDetailPage({

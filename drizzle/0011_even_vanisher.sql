@@ -1,0 +1,3 @@
+ALTER TABLE "stock_opname_entry" ADD COLUMN "equipment_asset_id" uuid;--> statement-breakpoint
+ALTER TABLE "stock_opname_entry" ADD CONSTRAINT "stock_opname_entry_equipment_asset_id_equipment_asset_id_fk" FOREIGN KEY ("equipment_asset_id") REFERENCES "public"."equipment_asset"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "stock_opname_entry_session_asset_unique" ON "stock_opname_entry" USING btree ("session_id","equipment_asset_id");

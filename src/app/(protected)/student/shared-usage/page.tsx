@@ -5,7 +5,7 @@ import { requireSession } from "@/lib/session";
 import { buildLabCatalog } from "@/services/catalog.service";
 import { loadSharedUsagePage } from "@/services/shared-usage.service";
 
-export const metadata: Metadata = { title: "Shared usage" };
+export const metadata: Metadata = { title: "Sesi Bersama · Reaksan" };
 
 export default async function StudentSharedUsagePage() {
   const { user } = await requireSession();

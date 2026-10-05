@@ -399,7 +399,6 @@ export const assignmentScopeTypeEnum = pgEnum("assignment_scope_type", [
 ]);
 
 export const assignmentTypeEnum = pgEnum("assignment_type", [
-  "ASLAB",
   "PIC",
   "PLP",
   "CUSTODIAN",
@@ -1974,55 +1973,10 @@ Jika organisasi memiliki PLP scope per laboratory, authorization dapat dibatasi 
 
 ---
 
-# 38. LECTURER SCOPING
+# 38. SCOPING NOTE (MVP 3-ROLE FOCUS)
 
-Lecturer dapat melihat:
-
-```text
-Activity
-Request
-Resource Usage
-Incident
-```
-
-hanya jika:
-
-```text
-activity.supervisorId === currentUser.id
-```
-
-Lecturer tidak dapat:
-
-```text
-Approve
-Reject
-Adjust Stock
-Issue
-Return
-```
-
----
-
-# 39. ASLAB SCOPING
-
-Aslab dapat mengakses resource sesuai assignment:
-
-```text
-Assignment
-scopeType
-scopeId
-assignmentType
-```
-
-Contoh:
-
-```text
-ASLAB
-LABORATORY
-LAB-03
-```
-
-Maka Aslab dapat melihat relevant operations di LAB-03.
+> [!NOTE]
+> Scoping dan dashboard untuk Lecturer dan Aslab telah dikeluarkan dari perencanaan MVP. Sistem MVP saat ini berfokus secara eksklusif pada 3 role inti: **Student (Mahasiswa)**, **PLP (Operator Lab)**, dan **Admin**.
 
 ---
 
@@ -2113,7 +2067,7 @@ Validation:
 ```text
 title → required, min 3 chars
 type → valid enum
-supervisorId → existing lecturer
+supervisor → string (nama dosen pembimbing)
 startDate < endDate
 ```
 
@@ -2294,8 +2248,6 @@ Role-aware application:
 ```text
 /student/*
 /plp/*
-/lecturer/*
-/aslab/*
 /admin/*
 ```
 
@@ -2361,39 +2313,6 @@ Role-aware application:
 /plp/incidents/[incidentId]
 
 /plp/history
-```
-
----
-
-# 54. LECTURER ROUTES
-
-```text
-/lecturer/dashboard
-
-/lecturer/students
-/lecturer/students/[studentId]
-
-/lecturer/activities
-/lecturer/activities/[activityId]
-
-/lecturer/resource-usage
-
-/lecturer/incidents
-
-/lecturer/notifications
-```
-
----
-
-# 55. ASLAB ROUTES
-
-```text
-/aslab/dashboard
-/aslab/assignments
-/aslab/schedule
-/aslab/activities
-/aslab/resource-usage
-/aslab/incidents
 ```
 
 ---
@@ -2770,7 +2689,7 @@ Relevant Student
        +
 Supervisor
        +
-Aslab/PIC if relevant
+PIC if relevant
 ```
 
 Recipients should be determined by relationship/scope.
@@ -2838,8 +2757,6 @@ Seed harus menyediakan environment demo yang realistis.
 ```text
 admin@reaksan.local
 plp@reaksan.local
-lecturer@reaksan.local
-aslab@reaksan.local
 student1@reaksan.local
 student2@reaksan.local
 ```
@@ -2855,8 +2772,6 @@ Seed:
 ```text
 ADMIN
 PLP
-LECTURER
-ASLAB
 STUDENT
 ```
 
@@ -3474,7 +3389,7 @@ InspectEquipment()
 Steps:
 
 ```text
-1. Authenticate PLP/authorized Aslab
+1. Authenticate PLP
 2. Load incident/equipment
 3. Record condition
 4. Create condition history
@@ -3721,7 +3636,7 @@ Expected:
 
 ### TC-04
 
-Lecturer tries to approve.
+Student tries to approve.
 
 Expected:
 

@@ -4,7 +4,7 @@ import { EmptyState, PageHeader, Panel, formatDate } from "@/components/workspac
 import { listLaboratories } from "@/services/admin.service";
 import { requirePermission } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Laboratories" };
+export const metadata: Metadata = { title: "Data Master Laboratorium · Admin Reaksan" };
 
 export default async function AdminLaboratoriesPage() {
   await requirePermission({ labs: ["manage-any"] });
@@ -13,31 +13,31 @@ export default async function AdminLaboratoriesPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Master data"
-        title="Laboratories"
-        description="Satu laboratorium menaungi beberapa room. Nonaktifkan alih-alih menghapus agar riwayat tetap utuh."
+        eyebrow="Data Master"
+        title="Master Laboratorium"
+        description="Laboratorium induk yang menaungi berbagai ruangan praktikum dan riset Departemen Kimia FMIPA Unpad. Nonaktifkan status alih-alih menghapus data agar integritas riwayat tetap terjaga."
       />
 
-      <Panel context="Tambah" title="Laboratory baru" className="mb-5">
+      <Panel context="Formulir" title="Tambah Laboratorium Baru" className="mb-5">
         <CrudForm
           endpoint="/api/admin/laboratories"
           fields={[
-            { name: "code", label: "Kode", required: true, placeholder: "chem-lab" },
-            { name: "name", label: "Nama", required: true },
-            { name: "description", label: "Deskripsi", type: "textarea" },
-            { name: "active", label: "Aktif", type: "checkbox", defaultValue: true },
+            { name: "code", label: "Kode Lab", required: true, placeholder: "chem-lab" },
+            { name: "name", label: "Nama Laboratorium", required: true, placeholder: "cth. Laboratorium Kimia Fisik" },
+            { name: "description", label: "Deskripsi", type: "textarea", placeholder: "Penjelasan fungsi dan cakupan laboratorium..." },
+            { name: "active", label: "Status Aktif", type: "checkbox", defaultValue: true },
           ]}
-          submitLabel="Tambah laboratory"
-          successMessage="Laboratory ditambahkan."
+          submitLabel="Simpan Laboratorium"
+          successMessage="Laboratorium berhasil ditambahkan."
         />
       </Panel>
 
-      <Panel context={`${laboratories.length} laboratory`} title="Daftar" padded={false}>
+      <Panel context={`${laboratories.length} laboratorium`} title="Daftar Laboratorium Terdaftar" padded={false}>
         {laboratories.length === 0 ? (
           <div className="p-5">
             <EmptyState
-              title="Belum ada laboratory"
-              description="Tambahkan laboratory pertama lewat form di atas."
+              title="Belum ada laboratorium terdaftar"
+              description="Tambahkan laboratorium pertama melalui formulir di atas."
             />
           </div>
         ) : (
@@ -89,8 +89,8 @@ export default async function AdminLaboratoriesPage() {
                           defaultValue: laboratory.active,
                         },
                       ]}
-                      submitLabel="Simpan perubahan"
-                      successMessage="Laboratory diperbarui."
+                      submitLabel="Simpan Perubahan"
+                      successMessage="Data laboratorium berhasil diperbarui."
                     />
                   </EditDisclosure>
                 </div>

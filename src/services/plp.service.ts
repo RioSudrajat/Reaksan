@@ -1,14 +1,24 @@
 import "server-only";
-import { and, asc, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, lte, notInArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   auditLog,
   equipmentAsset,
+  equipmentConditionHistory,
+  equipmentRequestItem,
   equipmentType,
   equipmentUnit,
+  incident,
+  issueTransaction,
   material,
   materialBatch,
+  materialDispensingRule,
+  materialRequestItem,
+  reservation,
+  resourceRequest,
+  returnTransaction,
   room,
+  stockOpnameEntry,
   stockTransaction,
   user,
 } from "@/db/schema";
@@ -25,6 +35,7 @@ import type {
   PlpEquipmentAssetInput,
   PlpEquipmentUnitInput,
   PlpMaterialBatchInput,
+  PlpMaterialCreateInput,
   PlpStockAdjustInput,
 } from "@/validators/plp";
 import {
@@ -107,6 +118,7 @@ export type PlpEquipmentRow = {
   name: string;
   category: string | null;
   typeName: string;
+  classification: "INSTRUMENT" | "TOOL";
   usageType: "BORROWABLE" | "USAGE_ONLY";
   roomCode: string;
   roomName: string;
@@ -120,10 +132,14 @@ export type PlpEquipmentRow = {
   inUseUnits: number;
   awaitingInspectionUnits: number;
   maintenanceUnits: number;
+  totalRequests: number;
+  activeRequests: number;
   units: Array<{
     unitId: string;
     code: string;
     label: string;
+    qrCode: string | null;
+    storageLocation: string | null;
     status: string;
     condition: string;
     notes: string | null;
@@ -142,6 +158,8 @@ export type PlpMaterialRow = {
   roomName: string;
   physical: number;
   reserved: number;
+  issued: number;
+  totalCapacity: number;
   available: number;
   minimum: number | null;
   rule: string;
@@ -151,13 +169,20 @@ export type PlpMaterialRow = {
   outOfStock: boolean;
   hasExpired: boolean;
   hasExpiringSoon: boolean;
+  totalRequests: number;
+  activeRequests: number;
+  totalRequestedQuantity: number;
   batches: Array<{
     batchId: string;
     lotNumber: string | null;
+    qrCode: string | null;
+    storageLocation: string | null;
     roomCode: string;
     roomName: string;
     quantity: number;
     reserved: number;
+    issued?: number;
+    totalCapacity?: number;
     expiryDate: string | null;
     active: boolean;
     expired: boolean;
@@ -198,13 +223,12 @@ export async function listPlpSchedule(input: {
     roomCode: input.room,
     roomCodes: input.roomCodes,
     statuses: [
-      "PENDING_PLP",
-      "REQUEST_REVISION",
       "APPROVED",
       "READY_FOR_PICKUP",
       "ACTIVE",
       "RETURNED",
       "OVERDUE",
+      "COMPLETED",
     ],
     limit: 400,
   };
@@ -275,6 +299,7 @@ async function loadEquipmentRows(
       name: equipmentType.name,
       category: equipmentType.category,
       typeName: equipmentType.name,
+      classification: equipmentType.classification,
       usageType: equipmentType.usageType,
       status: equipmentAsset.status,
       condition: equipmentAsset.condition,
@@ -296,37 +321,62 @@ async function loadEquipmentRows(
     )
     .orderBy(asc(equipmentAsset.assetCode));
   if (assets.length === 0) return [];
-  const units = await exec
-    .select({
-      unitId: equipmentUnit.id,
-      assetId: equipmentUnit.equipmentAssetId,
-      code: equipmentUnit.code,
-      label: equipmentUnit.label,
-      status: equipmentUnit.status,
-      condition: equipmentUnit.condition,
-      notes: equipmentUnit.notes,
-      active: equipmentUnit.active,
-    })
-    .from(equipmentUnit)
-    .where(
-      inArray(
-        equipmentUnit.equipmentAssetId,
-        assets.map((asset) => asset.assetId),
-      ),
-    )
-    .orderBy(asc(equipmentUnit.code));
+  const assetIds = assets.map((asset) => asset.assetId);
+  const [units, requestStats] = await Promise.all([
+    exec
+      .select({
+        unitId: equipmentUnit.id,
+        assetId: equipmentUnit.equipmentAssetId,
+        code: equipmentUnit.code,
+        label: equipmentUnit.label,
+        qrCode: equipmentUnit.qrCode,
+        storageLocation: equipmentUnit.storageLocation,
+        status: equipmentUnit.status,
+        condition: equipmentUnit.condition,
+        notes: equipmentUnit.notes,
+        active: equipmentUnit.active,
+      })
+      .from(equipmentUnit)
+      .where(
+        inArray(
+          equipmentUnit.equipmentAssetId,
+          assetIds,
+        ),
+      )
+      .orderBy(asc(equipmentUnit.code)),
+    exec
+      .select({
+        assetId: equipmentRequestItem.equipmentAssetId,
+        totalRequests: sql<number>`COUNT(DISTINCT ${resourceRequest.id})::int`,
+        activeRequests: sql<number>`COUNT(DISTINCT CASE WHEN ${resourceRequest.status} IN ('APPROVED', 'READY_FOR_PICKUP', 'ACTIVE', 'OVERDUE') THEN ${resourceRequest.id} END)::int`,
+      })
+      .from(equipmentRequestItem)
+      .innerJoin(
+        resourceRequest,
+        eq(resourceRequest.id, equipmentRequestItem.requestId),
+      )
+      .where(
+        and(
+          inArray(equipmentRequestItem.equipmentAssetId, assetIds),
+          notInArray(resourceRequest.status, ["CANCELLED", "REJECTED", "DRAFT"]),
+        ),
+      )
+      .groupBy(equipmentRequestItem.equipmentAssetId),
+  ]);
 
   return assets.map<PlpEquipmentRow>((asset) => {
     const assetUnits = units.filter((unit) => unit.assetId === asset.assetId);
     const countStatus = (statuses: string[]) =>
       assetUnits.filter((unit) => unit.active && statuses.includes(unit.status))
         .length;
+    const req = requestStats.find((r) => r.assetId === asset.assetId);
     return {
       assetId: asset.assetId,
       assetCode: asset.assetCode,
       name: asset.name,
       category: asset.category,
       typeName: asset.typeName,
+      classification: asset.classification,
       usageType: asset.usageType,
       roomCode: asset.roomCode,
       roomName: asset.roomName,
@@ -340,6 +390,8 @@ async function loadEquipmentRows(
       inUseUnits: countStatus(["IN_USE"]),
       awaitingInspectionUnits: countStatus(["UNDER_INSPECTION"]),
       maintenanceUnits: countStatus(["MAINTENANCE", "DAMAGED", "RETIRED"]),
+      totalRequests: req?.totalRequests ?? 0,
+      activeRequests: req?.activeRequests ?? 0,
       units: assetUnits,
     };
   });
@@ -348,6 +400,7 @@ async function loadEquipmentRows(
 export async function listPlpEquipment(input: {
   room?: string;
   roomCodes?: string[] | null;
+  classification?: "INSTRUMENT" | "TOOL";
   status?: string;
   condition?: string;
   usage?: "BORROWABLE" | "USAGE_ONLY";
@@ -358,6 +411,7 @@ export async function listPlpEquipment(input: {
   const rows = await loadEquipmentRows(db, input.room, input.roomCodes);
   const search = input.search?.toLowerCase();
   const filtered = rows.filter((row) => {
+    if (input.classification && row.classification !== input.classification) return false;
     if (input.usage && row.usageType !== input.usage) return false;
     if (input.condition && row.condition !== input.condition) return false;
     if (
@@ -379,13 +433,40 @@ export async function listPlpEquipment(input: {
   const offset = input.offset ?? 0;
   const statusCounts: Record<string, number> = {};
   const conditionCounts: Record<string, number> = {};
+  let totalUnits = 0;
+  let availableUnits = 0;
+  let inUseUnits = 0;
+  let reservedUnits = 0;
+  let maintenanceUnits = 0;
+  let totalRequests = 0;
+  let activeRequests = 0;
   for (const row of filtered) {
     statusCounts[row.status] = (statusCounts[row.status] ?? 0) + 1;
     conditionCounts[row.condition] = (conditionCounts[row.condition] ?? 0) + 1;
+    totalUnits += row.unitCount;
+    availableUnits += row.availableUnits;
+    inUseUnits += row.inUseUnits;
+    reservedUnits += row.reservedUnits;
+    maintenanceUnits += row.maintenanceUnits;
+    totalRequests += row.totalRequests;
+    activeRequests += row.activeRequests;
   }
   return {
     data: filtered.slice(offset, offset + limit),
-    stats: { statusCounts, conditionCounts, total: filtered.length },
+    stats: {
+      statusCounts,
+      conditionCounts,
+      total: filtered.length,
+      unitStats: {
+        totalUnits,
+        availableUnits,
+        inUseUnits,
+        reservedUnits,
+        maintenanceUnits,
+        totalRequests,
+        activeRequests,
+      },
+    },
     meta: {
       limit,
       offset,
@@ -447,6 +528,8 @@ export async function listPlpMaterials(input: {
           batchId: materialBatch.id,
           materialId: materialBatch.materialId,
           lotNumber: materialBatch.lotNumber,
+          qrCode: materialBatch.qrCode,
+          storageLocation: materialBatch.storageLocation,
           quantity: materialBatch.quantity,
           expiryDate: materialBatch.expiryDate,
           active: materialBatch.active,
@@ -465,6 +548,27 @@ export async function listPlpMaterials(input: {
     : [];
   const stockRows = materialIds.length
     ? await listBatchStock(db, materialIds)
+    : [];
+  const materialReqStats = materialIds.length
+    ? await db
+        .select({
+          materialId: materialRequestItem.materialId,
+          totalRequests: sql<number>`COUNT(DISTINCT ${resourceRequest.id})::int`,
+          activeRequests: sql<number>`COUNT(DISTINCT CASE WHEN ${resourceRequest.status} IN ('APPROVED', 'READY_FOR_PICKUP', 'ACTIVE', 'OVERDUE') THEN ${resourceRequest.id} END)::int`,
+          totalRequestedQuantity: sql<string>`COALESCE(SUM(${materialRequestItem.requestedQuantity}), 0)::text`,
+        })
+        .from(materialRequestItem)
+        .innerJoin(
+          resourceRequest,
+          eq(resourceRequest.id, materialRequestItem.requestId),
+        )
+        .where(
+          and(
+            inArray(materialRequestItem.materialId, materialIds),
+            notInArray(resourceRequest.status, ["CANCELLED", "REJECTED", "DRAFT"]),
+          ),
+        )
+        .groupBy(materialRequestItem.materialId)
     : [];
   const search = input.search?.toLowerCase();
   const mapped = rows.map<PlpMaterialRow>((row: MaterialAggregateRow) => {
@@ -485,16 +589,24 @@ export async function listPlpMaterials(input: {
           batch.materialId === row.id && batch.roomCode === row.room_code,
       )
       .map((batch) => {
-        const reserved = materialStock.find(
+        const stockInfo = materialStock.find(
           (stock) => stock.batchId === batch.batchId,
         );
+        const batchQuantity = Number(batch.quantity);
+        const batchReserved = Number(stockInfo?.reserved ?? 0);
+        const batchIssued = Number(stockInfo?.issued ?? 0);
+        const batchCapacity = batchQuantity + batchIssued;
         return {
           batchId: batch.batchId,
           lotNumber: batch.lotNumber,
+          qrCode: batch.qrCode,
+          storageLocation: batch.storageLocation,
           roomCode: batch.roomCode,
           roomName: batch.roomName,
-          quantity: Number(batch.quantity),
-          reserved: Number(reserved?.reserved ?? 0),
+          quantity: batchQuantity,
+          reserved: batchReserved,
+          issued: batchIssued,
+          totalCapacity: batchCapacity,
           expiryDate: batch.expiryDate?.toISOString() ?? null,
           active: batch.active,
           expired: batch.expiryDate
@@ -509,6 +621,7 @@ export async function listPlpMaterials(input: {
         batch.expiryDate !== null &&
         new Date(batch.expiryDate).getTime() <= soonLimit,
     );
+    const reqStat = materialReqStats.find((r) => r.materialId === row.id);
     return {
       materialId: row.id,
       code: row.code,
@@ -520,6 +633,8 @@ export async function listPlpMaterials(input: {
       roomName: row.room_name ?? "Penyimpanan lab",
       physical: totals.physical,
       reserved: totals.reserved,
+      issued: totals.issued,
+      totalCapacity: totals.totalCapacity,
       available: totals.available,
       minimum,
       rule: dispensingRuleLabel(row),
@@ -531,6 +646,9 @@ export async function listPlpMaterials(input: {
       outOfStock: totals.available <= 0,
       hasExpired,
       hasExpiringSoon,
+      totalRequests: reqStat?.totalRequests ?? 0,
+      activeRequests: reqStat?.activeRequests ?? 0,
+      totalRequestedQuantity: Number(reqStat?.totalRequestedQuantity ?? 0),
       batches: materialBatches,
     };
   });
@@ -715,13 +833,12 @@ export async function loadScheduleCalendar(input: {
           roomCode: input.room,
           roomCodes: input.roomCodes,
           statuses: [
-            "PENDING_PLP",
-            "REQUEST_REVISION",
             "APPROVED",
             "READY_FOR_PICKUP",
             "ACTIVE",
             "RETURNED",
             "OVERDUE",
+            "COMPLETED",
           ],
           limit: 500,
         }),
@@ -759,15 +876,19 @@ export async function getPlpBadgeCounts(
   userId: string,
   roomCodes?: string[] | null,
 ) {
-  const [pending, returns, unread] = await Promise.all([
+  const [pending, issue, returns, unread] = await Promise.all([
     countRequestRows(db, { statuses: ["PENDING_PLP"], roomCodes }),
+    countRequestRows(db, {
+      statuses: ["APPROVED", "READY_FOR_PICKUP"],
+      roomCodes,
+    }),
     countRequestRows(db, {
       statuses: ["ACTIVE", "RETURNED", "OVERDUE"],
       roomCodes,
     }),
     countUnreadNotifications(userId),
   ]);
-  return { pending, returns, unread };
+  return { pending, issue, returns, unread };
 }
 
 export async function getPlpDashboard(
@@ -967,13 +1088,32 @@ export async function createPlpEquipmentAsset(
 ) {
   assertRoomInScope(scope, input.roomCode);
   return db.transaction(async (tx) => {
-    const [type] = await tx
-      .select()
-      .from(equipmentType)
-      .where(eq(equipmentType.id, input.equipmentTypeId))
-      .limit(1);
-    if (!type)
-      throw new ApiError(404, "NOT_FOUND", "Equipment type tidak ditemukan.");
+    let typeId = input.equipmentTypeId;
+    let typeName = "";
+
+    if (!typeId && input.newType) {
+      const [newTypeRow] = await tx
+        .insert(equipmentType)
+        .values({
+          name: input.newType.name.trim(),
+          category: input.newType.category ? input.newType.category.trim() : null,
+          classification: input.newType.classification ?? "INSTRUMENT",
+          usageType: input.newType.usageType,
+          imageMediaId: input.newType.imageMediaId ?? null,
+        })
+        .returning();
+      typeId = newTypeRow.id;
+      typeName = newTypeRow.name;
+    } else {
+      const [type] = await tx
+        .select()
+        .from(equipmentType)
+        .where(eq(equipmentType.id, typeId!))
+        .limit(1);
+      if (!type)
+        throw new ApiError(404, "NOT_FOUND", "Equipment type tidak ditemukan.");
+      typeName = type.name;
+    }
 
     const [roomRow] = await tx
       .select()
@@ -999,26 +1139,160 @@ export async function createPlpEquipmentAsset(
     const [created] = await tx
       .insert(equipmentAsset)
       .values({
-        equipmentTypeId: type.id,
+        equipmentTypeId: typeId!,
         roomId: roomRow.id,
         assetCode: input.assetCode,
         serialNumber: input.serialNumber ? input.serialNumber.trim() : null,
         status: input.status,
         condition: input.condition,
         notes: input.notes ? input.notes.trim() : null,
+        imageMediaId: input.imageMediaId ?? null,
         active: input.active,
       })
       .returning();
+
+    // Model 2-Level: Otomatis generate unit fisik dan QR Code agar langsung siap pakai
+    const unitCount = input.unitCount ?? 1;
+    const defaultStorage = input.storageLocation?.trim() || "Gudang Instrumen";
+    if (unitCount === 1) {
+      const unitCode = `${created.assetCode}-01`;
+      await tx.insert(equipmentUnit).values({
+        equipmentAssetId: created.id,
+        code: unitCode,
+        label: `${typeName} 01`,
+        qrCode: `RK-UNT-${unitCode}`,
+        storageLocation: defaultStorage,
+        status: input.status,
+        condition: input.condition,
+        notes: input.notes ? input.notes.trim() : null,
+      });
+    } else {
+      const unitsToInsert = [];
+      for (let i = 1; i <= unitCount; i++) {
+        const numStr = String(i).padStart(2, "0");
+        const unitCode = `${created.assetCode}-${numStr}`;
+        unitsToInsert.push({
+          equipmentAssetId: created.id,
+          code: unitCode,
+          label: `${typeName} ${numStr}`,
+          qrCode: `RK-UNT-${unitCode}`,
+          storageLocation: defaultStorage,
+          status: input.status,
+          condition: input.condition,
+          notes: input.notes ? input.notes.trim() : null,
+        });
+      }
+      await tx.insert(equipmentUnit).values(unitsToInsert);
+    }
 
     await writeAudit(tx, {
       actorId,
       action: "CREATE",
       entityType: "equipment_asset",
       entityId: created.id,
-      after: { assetCode: created.assetCode, room: roomRow.code },
+      after: { assetCode: created.assetCode, room: roomRow.code, units: unitCount },
     });
 
     return created;
+  });
+}
+
+export async function createPlpMaterial(
+  actorId: string,
+  scope: RoomScope,
+  input: PlpMaterialCreateInput,
+) {
+  if (input.initialBatch?.roomCode) {
+    assertRoomInScope(scope, input.initialBatch.roomCode);
+  }
+  return db.transaction(async (tx) => {
+    const existing = await tx
+      .select({ id: material.id })
+      .from(material)
+      .where(eq(material.code, input.code))
+      .limit(1);
+    if (existing.length > 0) {
+      throw new ApiError(409, "CODE_TAKEN", `Kode material ${input.code} sudah dipakai.`);
+    }
+
+    const [createdMaterial] = await tx
+      .insert(material)
+      .values({
+        code: input.code,
+        name: input.name,
+        category: input.category ? input.category.trim() : null,
+        baseUnit: input.baseUnit,
+        description: input.description ? input.description.trim() : null,
+        imageMediaId: input.imageMediaId ?? null,
+        active: true,
+      })
+      .returning();
+
+    await tx.insert(materialDispensingRule).values({
+      materialId: createdMaterial.id,
+      minimumQuantity: "10.000",
+      dispensingIncrement: "10.000",
+      maximumQuantity: "1000.000",
+      unit: input.baseUnit,
+    });
+
+    if (input.initialBatch) {
+      const [roomRow] = await tx
+        .select()
+        .from(room)
+        .where(eq(room.code, input.initialBatch.roomCode))
+        .limit(1);
+      if (!roomRow) {
+        throw new ApiError(404, "NOT_FOUND", "Room untuk batch tidak ditemukan.");
+      }
+
+      const lot = input.initialBatch.lotNumber?.trim() || `LOT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const expiry = input.initialBatch.expiryDate ? new Date(input.initialBatch.expiryDate) : null;
+      const defaultStorage =
+        input.initialBatch.storageLocation?.trim() ||
+        (input.category === "Pelarut" ? "Lemari Asam / B3" : "Gudang Reagen");
+
+      const [batch] = await tx
+        .insert(materialBatch)
+        .values({
+          materialId: createdMaterial.id,
+          roomId: roomRow.id,
+          lotNumber: lot,
+          qrCode: `RK-MAT-${lot}`,
+          storageLocation: defaultStorage,
+          quantity: input.initialBatch.quantity.toFixed(3),
+          expiryDate: expiry,
+          active: true,
+        })
+        .returning();
+
+      await recordStockTransaction(tx, {
+        batchId: batch.id,
+        type: "RECEIVE",
+        quantity: input.initialBatch.quantity,
+        before: 0,
+        after: input.initialBatch.quantity,
+        referenceType: "intake",
+        referenceId: batch.id,
+        performedById: actorId,
+        reason:
+          input.initialBatch.source === "GRANT_HIBAH"
+            ? "Penerimaan Bahan Hibah Dosen/Riset"
+            : input.initialBatch.source === "LEFTOVER"
+              ? "Penerimaan Sisa Praktikum Mahasiswa"
+              : "Pengadaan Bahan Laboratorium Baru",
+      });
+    }
+
+    await writeAudit(tx, {
+      actorId,
+      action: "CREATE",
+      entityType: "material",
+      entityId: createdMaterial.id,
+      after: { code: createdMaterial.code, name: createdMaterial.name },
+    });
+
+    return createdMaterial;
   });
 }
 
@@ -1063,6 +1337,8 @@ export async function createPlpEquipmentUnit(
         equipmentAssetId: asset.id,
         code: input.code,
         label: input.label,
+        qrCode: `RK-UNT-${input.code}`,
+        storageLocation: input.storageLocation?.trim() || null,
         status: input.status,
         condition: input.condition,
         notes: input.notes ? input.notes.trim() : null,
@@ -1106,12 +1382,15 @@ export async function createPlpMaterialBatch(
     if (!roomRow)
       throw new ApiError(404, "NOT_FOUND", "Room tidak ditemukan.");
 
+    const lot = input.lotNumber?.trim() || `LOT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const [created] = await tx
       .insert(materialBatch)
       .values({
         materialId: materialRow.id,
         roomId: roomRow.id,
-        lotNumber: input.lotNumber ? input.lotNumber.trim() : null,
+        lotNumber: lot,
+        qrCode: `RK-MAT-${lot}`,
+        storageLocation: input.storageLocation?.trim() || "Gudang Reagen",
         quantity: input.quantity.toFixed(3),
         expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
         active: input.active,
@@ -1212,6 +1491,372 @@ export async function adjustPlpMaterialStock(
     });
 
     return updated;
+  });
+}
+
+export async function deletePlpEquipmentUnit(
+  actorId: string,
+  scope: RoomScope,
+  unitId: string,
+) {
+  return db.transaction(async (tx) => {
+    const [unit] = await tx
+      .select({
+        id: equipmentUnit.id,
+        code: equipmentUnit.code,
+        label: equipmentUnit.label,
+        status: equipmentUnit.status,
+        equipmentAssetId: equipmentUnit.equipmentAssetId,
+        assetCode: equipmentAsset.assetCode,
+        roomCode: room.code,
+      })
+      .from(equipmentUnit)
+      .innerJoin(equipmentAsset, eq(equipmentAsset.id, equipmentUnit.equipmentAssetId))
+      .innerJoin(room, eq(room.id, equipmentAsset.roomId))
+      .where(eq(equipmentUnit.id, unitId))
+      .limit(1);
+
+    if (!unit) {
+      throw new ApiError(404, "NOT_FOUND", "Unit tidak ditemukan.");
+    }
+
+    assertRoomInScope(scope, unit.roomCode);
+
+    if (unit.status === "IN_USE" || unit.status === "RESERVED") {
+      throw new ApiError(
+        400,
+        "UNIT_IN_USE",
+        `Unit ${unit.code} sedang berstatus ${unit.status} dan tidak dapat dihapus.`,
+      );
+    }
+
+    const [activeRes] = await tx
+      .select({ count: count() })
+      .from(reservation)
+      .where(
+        and(
+          eq(reservation.equipmentUnitId, unitId),
+          inArray(reservation.status, ["RESERVED", "ACTIVE"]),
+        ),
+      );
+
+    if (Number(activeRes?.count ?? 0) > 0) {
+      throw new ApiError(
+        400,
+        "ACTIVE_RESERVATION",
+        `Unit ${unit.code} memiliki jadwal reservasi aktif. Batalkan atau selesaikan reservasi terlebih dahulu.`,
+      );
+    }
+
+    await tx.delete(reservation).where(eq(reservation.equipmentUnitId, unitId));
+    await tx.delete(equipmentRequestItem).where(eq(equipmentRequestItem.equipmentUnitId, unitId));
+    await tx.update(issueTransaction).set({ equipmentUnitId: null }).where(eq(issueTransaction.equipmentUnitId, unitId));
+    await tx.update(stockOpnameEntry).set({ equipmentUnitId: null }).where(eq(stockOpnameEntry.equipmentUnitId, unitId));
+    await tx.delete(equipmentConditionHistory).where(eq(equipmentConditionHistory.equipmentUnitId, unitId));
+    await tx.delete(equipmentUnit).where(eq(equipmentUnit.id, unitId));
+
+    await writeAudit(tx, {
+      actorId,
+      action: "DELETE",
+      entityType: "equipment_unit",
+      entityId: unit.id,
+      before: {
+        code: unit.code,
+        label: unit.label,
+        assetCode: unit.assetCode,
+        roomCode: unit.roomCode,
+      },
+    });
+
+    return { success: true, code: unit.code };
+  });
+}
+
+export async function deletePlpEquipmentAsset(
+  actorId: string,
+  scope: RoomScope,
+  assetCode: string,
+) {
+  return db.transaction(async (tx) => {
+    const [asset] = await tx
+      .select({
+        id: equipmentAsset.id,
+        assetCode: equipmentAsset.assetCode,
+        status: equipmentAsset.status,
+        equipmentTypeId: equipmentAsset.equipmentTypeId,
+        roomCode: room.code,
+      })
+      .from(equipmentAsset)
+      .innerJoin(room, eq(room.id, equipmentAsset.roomId))
+      .where(eq(equipmentAsset.assetCode, assetCode))
+      .limit(1);
+
+    if (!asset) {
+      throw new ApiError(404, "NOT_FOUND", "Aset peralatan tidak ditemukan.");
+    }
+
+    assertRoomInScope(scope, asset.roomCode);
+
+    if (asset.status === "IN_USE") {
+      throw new ApiError(
+        400,
+        "ASSET_IN_USE",
+        `Aset ${asset.assetCode} sedang digunakan dan tidak dapat dihapus.`,
+      );
+    }
+
+    const units = await tx
+      .select({ id: equipmentUnit.id, code: equipmentUnit.code, status: equipmentUnit.status })
+      .from(equipmentUnit)
+      .where(eq(equipmentUnit.equipmentAssetId, asset.id));
+
+    const busyUnit = units.find((u) => u.status === "IN_USE" || u.status === "RESERVED");
+    if (busyUnit) {
+      throw new ApiError(
+        400,
+        "UNIT_IN_USE",
+        `Unit ${busyUnit.code} sedang berstatus ${busyUnit.status}. Selesaikan penggunaan sebelum menghapus aset.`,
+      );
+    }
+
+    const unitIds = units.map((u) => u.id);
+    if (unitIds.length > 0) {
+      const [activeRes] = await tx
+        .select({ count: count() })
+        .from(reservation)
+        .where(
+          and(
+            inArray(reservation.equipmentUnitId, unitIds),
+            inArray(reservation.status, ["RESERVED", "ACTIVE"]),
+          ),
+        );
+      if (Number(activeRes?.count ?? 0) > 0) {
+        throw new ApiError(
+          400,
+          "ACTIVE_RESERVATION",
+          `Aset ${asset.assetCode} memiliki unit dengan reservasi aktif.`,
+        );
+      }
+
+      await tx.delete(reservation).where(inArray(reservation.equipmentUnitId, unitIds));
+      await tx.delete(equipmentRequestItem).where(inArray(equipmentRequestItem.equipmentUnitId, unitIds));
+      await tx.update(issueTransaction).set({ equipmentUnitId: null }).where(inArray(issueTransaction.equipmentUnitId, unitIds));
+      await tx.update(stockOpnameEntry).set({ equipmentUnitId: null }).where(inArray(stockOpnameEntry.equipmentUnitId, unitIds));
+      await tx.delete(equipmentConditionHistory).where(inArray(equipmentConditionHistory.equipmentUnitId, unitIds));
+      await tx.delete(equipmentUnit).where(inArray(equipmentUnit.id, unitIds));
+    }
+
+    await tx.delete(reservation).where(eq(reservation.equipmentAssetId, asset.id));
+    await tx.delete(equipmentRequestItem).where(eq(equipmentRequestItem.equipmentAssetId, asset.id));
+    await tx.delete(returnTransaction).where(eq(returnTransaction.equipmentAssetId, asset.id));
+    await tx.update(issueTransaction).set({ equipmentAssetId: null }).where(eq(issueTransaction.equipmentAssetId, asset.id));
+    await tx.update(stockOpnameEntry).set({ equipmentAssetId: null }).where(eq(stockOpnameEntry.equipmentAssetId, asset.id));
+    await tx.update(incident).set({ equipmentAssetId: null }).where(eq(incident.equipmentAssetId, asset.id));
+    await tx.delete(equipmentConditionHistory).where(eq(equipmentConditionHistory.equipmentAssetId, asset.id));
+    await tx.delete(equipmentAsset).where(eq(equipmentAsset.id, asset.id));
+
+    const remainingAssets = await tx
+      .select({ count: count() })
+      .from(equipmentAsset)
+      .where(eq(equipmentAsset.equipmentTypeId, asset.equipmentTypeId));
+
+    if (Number(remainingAssets[0]?.count ?? 0) === 0) {
+      await tx.delete(equipmentType).where(eq(equipmentType.id, asset.equipmentTypeId));
+    }
+
+    await writeAudit(tx, {
+      actorId,
+      action: "DELETE",
+      entityType: "equipment_asset",
+      entityId: asset.id,
+      before: {
+        assetCode: asset.assetCode,
+        roomCode: asset.roomCode,
+      },
+    });
+
+    return { success: true, assetCode: asset.assetCode };
+  });
+}
+
+export async function deletePlpEquipmentType(
+  actorId: string,
+  typeId: string,
+) {
+  return db.transaction(async (tx) => {
+    const [eqType] = await tx
+      .select()
+      .from(equipmentType)
+      .where(eq(equipmentType.id, typeId))
+      .limit(1);
+
+    if (!eqType) {
+      throw new ApiError(404, "NOT_FOUND", "Katalog peralatan tidak ditemukan.");
+    }
+
+    const assets = await tx
+      .select({ id: equipmentAsset.id, assetCode: equipmentAsset.assetCode })
+      .from(equipmentAsset)
+      .where(eq(equipmentAsset.equipmentTypeId, typeId));
+
+    if (assets.length > 0) {
+      throw new ApiError(
+        400,
+        "HAS_ACTIVE_ASSETS",
+        `Katalog "${eqType.name}" masih memiliki ${assets.length} aset terdaftar (${assets.map((a) => a.assetCode).join(", ")}). Hapus aset terlebih dahulu.`,
+      );
+    }
+
+    await tx.delete(equipmentType).where(eq(equipmentType.id, typeId));
+
+    await writeAudit(tx, {
+      actorId,
+      action: "DELETE",
+      entityType: "equipment_type",
+      entityId: eqType.id,
+      before: { name: eqType.name, classification: eqType.classification },
+    });
+
+    return { success: true, name: eqType.name };
+  });
+}
+
+export async function deletePlpMaterialBatch(
+  actorId: string,
+  scope: RoomScope,
+  batchId: string,
+) {
+  return db.transaction(async (tx) => {
+    const [batch] = await tx
+      .select({
+        id: materialBatch.id,
+        lotNumber: materialBatch.lotNumber,
+        materialId: materialBatch.materialId,
+        materialCode: material.code,
+        materialName: material.name,
+        roomCode: room.code,
+        quantity: materialBatch.quantity,
+      })
+      .from(materialBatch)
+      .innerJoin(room, eq(room.id, materialBatch.roomId))
+      .innerJoin(material, eq(material.id, materialBatch.materialId))
+      .where(eq(materialBatch.id, batchId))
+      .limit(1);
+
+    if (!batch) {
+      throw new ApiError(404, "NOT_FOUND", "Batch bahan kimia tidak ditemukan.");
+    }
+
+    assertRoomInScope(scope, batch.roomCode);
+
+    const [reservedRow] = await tx
+      .select({
+        reserved: sql<string>`COALESCE(SUM(CASE
+          WHEN ${stockTransaction.type} = 'RESERVE' THEN ${stockTransaction.quantity}
+          WHEN ${stockTransaction.type} IN ('RELEASE', 'ISSUE') THEN -${stockTransaction.quantity}
+          ELSE 0
+        END), 0)`,
+      })
+      .from(stockTransaction)
+      .where(eq(stockTransaction.materialBatchId, batchId));
+
+    if (Number(reservedRow?.reserved ?? 0) > 0) {
+      throw new ApiError(
+        400,
+        "BATCH_RESERVED",
+        `Batch ${batch.lotNumber ?? batch.id} memiliki reservasi aktif sebesar ${reservedRow?.reserved}. Batalkan pengajuan terkait sebelum menghapus batch.`,
+      );
+    }
+
+    await tx.update(materialRequestItem).set({ allocatedBatchId: null }).where(eq(materialRequestItem.allocatedBatchId, batchId));
+    await tx.update(issueTransaction).set({ materialBatchId: null }).where(eq(issueTransaction.materialBatchId, batchId));
+    await tx.update(stockOpnameEntry).set({ materialBatchId: null }).where(eq(stockOpnameEntry.materialBatchId, batchId));
+    await tx.delete(stockTransaction).where(eq(stockTransaction.materialBatchId, batchId));
+    await tx.delete(materialBatch).where(eq(materialBatch.id, batchId));
+
+    await writeAudit(tx, {
+      actorId,
+      action: "DELETE",
+      entityType: "material_batch",
+      entityId: batch.id,
+      before: {
+        lotNumber: batch.lotNumber,
+        materialCode: batch.materialCode,
+        roomCode: batch.roomCode,
+        quantity: batch.quantity,
+      },
+    });
+
+    return { success: true, lotNumber: batch.lotNumber };
+  });
+}
+
+export async function deletePlpMaterial(
+  actorId: string,
+  code: string,
+) {
+  return db.transaction(async (tx) => {
+    const [mat] = await tx
+      .select()
+      .from(material)
+      .where(eq(material.code, code))
+      .limit(1);
+
+    if (!mat) {
+      throw new ApiError(404, "NOT_FOUND", "Katalog bahan kimia tidak ditemukan.");
+    }
+
+    const batches = await tx
+      .select({ id: materialBatch.id, lotNumber: materialBatch.lotNumber })
+      .from(materialBatch)
+      .where(eq(materialBatch.materialId, mat.id));
+
+    const batchIds = batches.map((b) => b.id);
+    if (batchIds.length > 0) {
+      const [reservedRow] = await tx
+        .select({
+          reserved: sql<string>`COALESCE(SUM(CASE
+            WHEN ${stockTransaction.type} = 'RESERVE' THEN ${stockTransaction.quantity}
+            WHEN ${stockTransaction.type} IN ('RELEASE', 'ISSUE') THEN -${stockTransaction.quantity}
+            ELSE 0
+          END), 0)`,
+        })
+        .from(stockTransaction)
+        .where(inArray(stockTransaction.materialBatchId, batchIds));
+
+      if (Number(reservedRow?.reserved ?? 0) > 0) {
+        throw new ApiError(
+          400,
+          "MATERIAL_RESERVED",
+          `Bahan ${mat.name} (${mat.code}) memiliki batch dengan alokasi reservasi aktif. Selesaikan atau batalkan permohonan terlebih dahulu.`,
+        );
+      }
+
+      await tx.update(materialRequestItem).set({ allocatedBatchId: null }).where(inArray(materialRequestItem.allocatedBatchId, batchIds));
+      await tx.update(issueTransaction).set({ materialBatchId: null }).where(inArray(issueTransaction.materialBatchId, batchIds));
+      await tx.update(stockOpnameEntry).set({ materialBatchId: null }).where(inArray(stockOpnameEntry.materialBatchId, batchIds));
+      await tx.delete(stockTransaction).where(inArray(stockTransaction.materialBatchId, batchIds));
+      await tx.delete(materialBatch).where(inArray(materialBatch.id, batchIds));
+    }
+
+    await tx.delete(materialDispensingRule).where(eq(materialDispensingRule.materialId, mat.id));
+    await tx.delete(materialRequestItem).where(eq(materialRequestItem.materialId, mat.id));
+    await tx.delete(material).where(eq(material.id, mat.id));
+
+    await writeAudit(tx, {
+      actorId,
+      action: "DELETE",
+      entityType: "material",
+      entityId: mat.id,
+      before: {
+        code: mat.code,
+        name: mat.name,
+        category: mat.category,
+        baseUnit: mat.baseUnit,
+      },
+    });
+
+    return { success: true, code: mat.code, name: mat.name };
   });
 }
 

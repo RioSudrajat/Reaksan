@@ -73,14 +73,14 @@ export function ScheduleToolbar({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="submit"
-          className="inline-flex min-h-11 items-center rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+          className="inline-flex min-h-11 items-center rounded-xl bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] shadow-xs transition hover:bg-[#EAA805] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
         >
           Terapkan filter
         </button>
         {activeFilterCount > 0 && (
           <Link
             href={basePath}
-            className="inline-flex min-h-11 items-center rounded-xl px-3 text-[12px] font-bold text-[#38529B] transition hover:bg-[#E9EEFC] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+            className="inline-flex min-h-11 items-center rounded-xl px-3 text-[12px] font-bold text-[#64748B] transition hover:bg-[#FEF7E6] hover:text-[#8D6500] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
           >
             Hapus filter
           </Link>

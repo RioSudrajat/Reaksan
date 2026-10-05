@@ -1,5 +1,16 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
+export const equipmentClassificationEnum = pgEnum("equipment_classification", [
+  "INSTRUMENT",
+  "TOOL",
+]);
+
+export const stockOpnameItemTypeEnum = pgEnum("stock_opname_item_type", [
+  "MATERIAL",
+  "TOOL",
+  "INSTRUMENT",
+]);
+
 export const equipmentUsageTypeEnum = pgEnum("equipment_usage_type", [
   "BORROWABLE",
   "USAGE_ONLY",
@@ -114,6 +125,23 @@ export const stockOpnameStatusEnum = pgEnum("stock_opname_status", [
   "IN_PROGRESS",
   "COMPLETED",
   "CANCELLED",
+]);
+
+export const opnameEntrySourceEnum = pgEnum("opname_entry_source", [
+  "SYSTEM_PLANNED",
+  "GRANT_HIBAH",
+  "LEFTOVER_RETURN",
+  "DISCOVERY_FOUND",
+]);
+
+export const opnameVarianceReasonEnum = pgEnum("opname_variance_reason", [
+  "NORMAL_EVAPORATION",
+  "SPILL_DAMAGE",
+  "EXPIRED_SPOILED",
+  "RETURNED_LEFTOVER",
+  "GRANT_INTAKE",
+  "COUNT_CORRECTION",
+  "OTHER",
 ]);
 
 export const auditActionEnum = pgEnum("audit_action", [

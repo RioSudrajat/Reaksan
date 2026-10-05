@@ -498,20 +498,15 @@ test("admin mengelola master data, konfigurasi, dan audit", async ({
     expect(target).toBeTruthy();
     const promoted = await admin.post(`/api/admin/users/${target.id}/role`, {
       headers,
-      data: { roles: ["lecturer"] },
+      data: { roles: ["plp"] },
     });
     expect(promoted.status()).toBe(200);
 
-    // A lecturer can read request data through the PLP API but cannot review.
-    const readOnly = await student.get("/api/plp/requests?limit=5", {
+    // After promotion to PLP, student can access the PLP requests API.
+    const plpRequests = await student.get("/api/plp/requests?limit=5", {
       headers,
     });
-    expect(readOnly.status()).toBe(200);
-    const cannotReview = await student.post(
-      `/api/requests/${randomUUID()}/review`,
-      { headers, data: { action: "approve", note: "" } },
-    );
-    expect(cannotReview.status()).toBe(403);
+    expect(plpRequests.status()).toBe(200);
 
     const audit = await admin.get(
       "/api/admin/audit-logs?entity=laboratory&limit=5",

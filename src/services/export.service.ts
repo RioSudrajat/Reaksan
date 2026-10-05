@@ -6,6 +6,7 @@ import { db } from "@/db";
 import {
   auditLog,
   equipmentAsset,
+  equipmentType,
   equipmentUnit,
   incident,
   incidentResolution,
@@ -482,58 +483,112 @@ export async function exportAudit(
 
 export async function exportOpnameVariance(sessionId: string) {
   const [session] = await db
-    .select({ id: stockOpnameSession.id })
+    .select({
+      id: stockOpnameSession.id,
+      roomCode: room.code,
+      roomName: room.name,
+    })
     .from(stockOpnameSession)
+    .innerJoin(room, eq(room.id, stockOpnameSession.roomId))
     .where(eq(stockOpnameSession.id, sessionId))
     .limit(1);
   if (!session)
     throw new ApiError(404, "NOT_FOUND", "Sesi hitung tidak ditemukan.");
+
   const rows = await db
     .select({
-      materialCode: material.code,
-      materialName: material.name,
-      lotNumber: materialBatch.lotNumber,
-      unit: material.baseUnit,
+      itemType: stockOpnameEntry.itemType,
       baselineQuantity: stockOpnameEntry.baselineQuantity,
       countedQuantity: stockOpnameEntry.countedQuantity,
-      countedByName: user.name,
+      condition: stockOpnameEntry.condition,
+      storageLocation: stockOpnameEntry.storageLocation,
+      varianceReason: stockOpnameEntry.varianceReason,
+      notes: stockOpnameEntry.notes,
       countedAt: stockOpnameEntry.countedAt,
+      countedByName: user.name,
+      // Material
+      materialCode: material.code,
+      materialName: material.name,
+      materialUnit: material.baseUnit,
+      batchLot: materialBatch.lotNumber,
+      batchLocation: materialBatch.storageLocation,
+      // Equipment
+      assetCode: equipmentAsset.assetCode,
+      assetCondition: equipmentAsset.condition,
+      typeName: equipmentType.name,
     })
     .from(stockOpnameEntry)
-    .innerJoin(
+    .leftJoin(
       materialBatch,
       eq(materialBatch.id, stockOpnameEntry.materialBatchId),
     )
-    .innerJoin(material, eq(material.id, materialBatch.materialId))
-    .innerJoin(user, eq(user.id, stockOpnameEntry.countedById))
+    .leftJoin(material, eq(material.id, materialBatch.materialId))
+    .leftJoin(
+      equipmentAsset,
+      eq(equipmentAsset.id, stockOpnameEntry.equipmentAssetId),
+    )
+    .leftJoin(
+      equipmentType,
+      eq(equipmentType.id, equipmentAsset.equipmentTypeId),
+    )
+    .leftJoin(user, eq(user.id, stockOpnameEntry.countedById))
     .where(eq(stockOpnameEntry.sessionId, sessionId))
-    .orderBy(asc(material.name), asc(materialBatch.expiryDate))
+    .orderBy(asc(stockOpnameEntry.itemType), asc(stockOpnameEntry.countedAt))
     .limit(ROW_LIMIT);
+
   return csvResult(
-    "selisih-opname",
+    `laporan-opname-${session.roomCode}`,
     rows.map((row) => {
-      const baseline = Number(row.baselineQuantity);
-      const counted = Number(row.countedQuantity);
+      const isMaterial = row.itemType === "MATERIAL";
+      const typeLabel =
+        row.itemType === "MATERIAL"
+          ? "Bahan Kimia"
+          : row.itemType === "INSTRUMENT"
+            ? "Instrumen"
+            : "Alat & Glassware";
+
+      const code = isMaterial ? (row.materialCode ?? "-") : (row.assetCode ?? "-");
+      const name = isMaterial ? (row.materialName ?? "-") : (row.typeName ?? "-");
+      const location = row.storageLocation ?? row.batchLocation ?? "-";
+      const lotOrLabel = isMaterial ? (row.batchLot ?? "-") : (row.assetCode ?? "-");
+      const unit = isMaterial ? (row.materialUnit ?? "unit") : "unit";
+
+      const baseline = Number(row.baselineQuantity ?? 0);
+      const counted = Number(row.countedQuantity ?? 0);
+      const difference = Math.round((counted - baseline) * 1000) / 1000;
+
       return {
-        material: `${row.materialCode} · ${row.materialName}`,
-        lotNumber: row.lotNumber ?? "",
-        unit: row.unit,
+        type: typeLabel,
+        code,
+        name,
+        location,
+        lotOrLabel,
+        unit,
         baseline,
         counted,
-        difference: counted - baseline,
-        countedBy: row.countedByName,
-        countedAt: formatStamp(row.countedAt),
+        difference,
+        condition: row.condition ?? row.assetCondition ?? "Baik",
+        varianceReason: row.varianceReason ?? "-",
+        notes: row.notes ?? "-",
+        countedBy: row.countedByName ?? "Petugas Sensus",
+        countedAt: row.countedAt ? formatStamp(row.countedAt) : "-",
       };
     }),
     [
-      { key: "material", label: "Material" },
-      { key: "lotNumber", label: "Lot" },
-      { key: "unit", label: "Unit" },
-      { key: "baseline", label: "Baseline" },
-      { key: "counted", label: "Fisik" },
-      { key: "difference", label: "Selisih" },
-      { key: "countedBy", label: "Dihitung oleh" },
-      { key: "countedAt", label: "Waktu hitung" },
+      { key: "type", label: "Tipe Item" },
+      { key: "code", label: "Kode Item" },
+      { key: "name", label: "Nama Fasilitas / Bahan" },
+      { key: "location", label: "Lokasi Simpan" },
+      { key: "lotOrLabel", label: "Lot / Label" },
+      { key: "unit", label: "Satuan" },
+      { key: "baseline", label: "Stok Baseline (Sistem)" },
+      { key: "counted", label: "Jumlah Fisik (Hitungan)" },
+      { key: "difference", label: "Selisih (Variance)" },
+      { key: "condition", label: "Kondisi Fisik" },
+      { key: "varianceReason", label: "Alasan Selisih" },
+      { key: "notes", label: "Catatan" },
+      { key: "countedBy", label: "Dihitung Oleh" },
+      { key: "countedAt", label: "Waktu Hitung" },
     ],
   );
 }

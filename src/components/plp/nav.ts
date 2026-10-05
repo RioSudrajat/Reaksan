@@ -2,6 +2,7 @@ import type { NavGroup } from "@/components/workspace-shell";
 
 export function plpNav(counts: {
   pending: number;
+  issue?: number;
   returns: number;
 }): NavGroup[] {
   return [
@@ -14,36 +15,50 @@ export function plpNav(counts: {
           icon: "dashboard",
         },
         {
-          label: "Request review",
-          href: "/plp/requests",
-          icon: "requests",
-          badge: counts.pending,
+          label: "Schedule",
+          href: "/plp/schedule",
+          icon: "schedule",
         },
       ],
     },
     {
       label: "Fulfillment",
       items: [
-        { label: "Issue", href: "/plp/fulfillment/issue", icon: "issue" },
+        {
+          label: "Request review",
+          href: "/plp/requests",
+          icon: "requests",
+          badge: counts.pending,
+        },
+        {
+          label: "Issue",
+          href: "/plp/fulfillment/issue",
+          icon: "issue",
+          badge: counts.issue,
+        },
         {
           label: "Return & inspeksi",
           href: "/plp/fulfillment/return",
           icon: "return",
           badge: counts.returns,
         },
-        { label: "Schedule", href: "/plp/schedule", icon: "schedule" },
       ],
     },
     {
       label: "Inventori",
       items: [
         {
-          label: "Equipment",
+          label: "Instrumen",
+          href: "/plp/inventory/instruments",
+          icon: "instruments",
+        },
+        {
+          label: "Alat (Glassware)",
           href: "/plp/inventory/equipment",
           icon: "equipment",
         },
         {
-          label: "Materials",
+          label: "Bahan",
           href: "/plp/inventory/materials",
           icon: "materials",
         },

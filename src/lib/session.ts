@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { headers } from "next/headers";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import type { Permissions } from "@/lib/permissions";
 import { userHasPermission } from "@/services/permissions.service";
@@ -27,6 +27,11 @@ export async function hasPermission(userId: string, permissions: Permissions) {
 // screen so a signed-in user cannot map out the routes they lack access to.
 export async function requirePermission(permissions: Permissions) {
   const session = await requireSession();
-  if (!(await hasPermission(session.user.id, permissions))) notFound();
+  if (!(await hasPermission(session.user.id, permissions))) {
+    const role = (session.user.role ?? "").split(",").map((s) => s.trim());
+    if (role.includes("admin")) redirect("/admin/dashboard");
+    if (role.includes("plp")) redirect("/plp/dashboard");
+    redirect("/student");
+  }
   return session;
 }

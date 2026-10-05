@@ -34,6 +34,7 @@ import {
   StatusBadge,
   toneClasses,
 } from "@/components/reaksan-dashboard";
+import type { BadgeTone } from "@/components/status-badge";
 
 export type ReaksanPage =
   | "calendar"
@@ -47,30 +48,30 @@ const pageCopy: Record<
   { eyebrow: string; title: string; description: string }
 > = {
   calendar: {
-    eyebrow: "Workspace",
-    title: "My calendar",
-    description: "See your requests and reservations in one place.",
+    eyebrow: "Ruang Kerja",
+    title: "Kalender Saya",
+    description: "Pantau pengajuan dan jadwal reservasi laboratorium dalam satu tempat.",
   },
   incidents: {
-    eyebrow: "Support",
-    title: "Incidents",
-    description: "Report issues early so the lab stays safe and ready.",
+    eyebrow: "Bantuan & Layanan",
+    title: "Laporan Kendala",
+    description: "Laporkan kendala fasilitas atau kerusakan alat agar lab tetap aman dan siap pakai.",
   },
   notifications: {
-    eyebrow: "Support",
-    title: "Notifications",
+    eyebrow: "Bantuan & Layanan",
+    title: "Notifikasi",
     description:
-      "Important updates from your requests, reservations, and lab team.",
+      "Pembaruan status pengajuan, reservasi, dan koordinasi laboratorium.",
   },
   equipment: {
-    eyebrow: "Inventory",
-    title: "Equipment",
-    description: "Browse equipment availability and operating locations.",
+    eyebrow: "Inventaris",
+    title: "Instrumen & Alat",
+    description: "Ketersediaan instrumen serta lokasi laboratorium tempat alat berada.",
   },
   materials: {
-    eyebrow: "Inventory",
-    title: "Materials",
-    description: "Check monitored stock before adding materials to a request.",
+    eyebrow: "Inventaris",
+    title: "Bahan Kimia",
+    description: "Cek ketersediaan stok bahan kimia sebelum mengajukan permohonan.",
   },
 };
 
@@ -85,10 +86,10 @@ const incidentStatusTone: Record<
 };
 
 const incidentStatusLabel: Record<IncidentView["status"], string> = {
-  REPORTED: "Reported",
-  UNDER_ASSESSMENT: "Under assessment",
-  IN_MAINTENANCE: "In maintenance",
-  RESOLVED: "Resolved",
+  REPORTED: "Dilaporkan",
+  UNDER_ASSESSMENT: "Pemeriksaan",
+  IN_MAINTENANCE: "Dalam Perbaikan",
+  RESOLVED: "Selesai",
 };
 
 function PageHeader({
@@ -204,39 +205,38 @@ function MyCalendarPage({
     <>
       <section className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-[13px] font-medium text-[#6B6B6B]">
-            Your lab schedule · request status real-time
+          <p className="text-[13px] font-medium text-[#64748B]">
+            Jadwal Laboratorium · Status Pengajuan Real-time
           </p>
-          <h2 className="mt-1 max-w-[650px] text-[26px] font-bold leading-tight tracking-[-0.04em] text-[#212121] sm:text-[32px]">
-            Follow the status of every request you sent.
+          <h2 className="mt-1 max-w-[650px] text-[24px] font-extrabold leading-tight tracking-tight text-[#1E293B] sm:text-[30px]">
+            Pantau status setiap pengajuan dan reservasi Anda
           </h2>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
             href="/student"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-4 text-[12px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E2E8F0] bg-white px-4 text-[12px] font-bold text-[#1E293B] hover:bg-[#F8FAFC] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F9B129]"
           >
-            Open lab map
+            Denah Laboratorium
           </Link>
           <Link
             href="/student/shared-usage"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#1E293B] hover:bg-[#F7B742] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F9B129]"
           >
-            Shared usage
+            Sesi Bersama
           </Link>
         </div>
       </section>
       <ScheduleCalendar
         events={events}
         eventsMonth={month}
-        ariaLabel="My calendar"
+        ariaLabel="Kalender Saya"
         selectable={false}
-        emptyLabel="Belum ada request atau reservation di bulan ini. Approval PLP muncul otomatis saat halaman aktif kembali."
+        emptyLabel="Belum ada pengajuan atau reservasi di bulan ini. Persetujuan dari PLP akan muncul otomatis saat jadwal dikonfirmasi."
         toolbar={
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] font-medium text-[#6B6B6B]">
-              Pilih block untuk melihat status, alasan revisi, dan aksi edit,
-              resubmit, atau cancel.
+            <p className="text-[12px] font-medium text-[#64748B]">
+              Pilih blok jadwal untuk melihat status, catatan PLP, atau mengelola pengajuan.
             </p>
             <CalendarRefresh />
           </div>
@@ -273,52 +273,51 @@ function IncidentsPage({ incidents }: { incidents: IncidentView[] }) {
     <>
       <section className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-[13px] font-medium text-[#6B6B6B]">
-            Safety & support
+          <p className="text-[13px] font-medium text-[#64748B]">
+            Keselamatan & Kendala Fasilitas
           </p>
-          <h2 className="mt-1 text-[26px] font-bold tracking-[-0.04em] text-[#212121] sm:text-[32px]">
-            Keep every issue visible and actionable.
+          <h2 className="mt-1 text-[24px] font-extrabold tracking-tight text-[#1E293B] sm:text-[30px]">
+            Laporan Kendala Laboratorium
           </h2>
         </div>
         <Link
           href="/student/incidents/new"
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F45959] px-4 text-[12px] font-bold text-white"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F45959] px-4 text-[12px] font-bold text-white hover:bg-[#E04848] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F45959]"
         >
-          Report incident <ShieldAlert className="size-4" aria-hidden="true" />
+          Laporkan Kendala <ShieldAlert className="size-4" aria-hidden="true" />
         </Link>
       </section>
       <div className="mb-4 flex items-center justify-between">
-        <p className="text-[12px] text-[#6B6B6B]">
+        <p className="text-[12px] text-[#64748B]">
           {showResolved
-            ? "Showing open and resolved incidents"
-            : "Showing open incidents"}
+            ? "Menampilkan semua kendala (aktif & selesai)"
+            : "Menampilkan kendala aktif"}
         </p>
         <button
           onClick={() => setShowResolved((value) => !value)}
-          className="min-h-10 rounded-xl border border-[#E1E1E1] bg-white px-3 text-[11px] font-semibold text-[#6B6B6B]"
+          className="min-h-10 rounded-xl border border-[#E2E8F0] bg-white px-3 text-[11px] font-semibold text-[#64748B] hover:text-[#1E293B] hover:bg-[#F8FAFC] transition cursor-pointer"
         >
-          {showResolved ? "Hide resolved" : "Show resolved"}
+          {showResolved ? "Sembunyikan Selesai" : "Tampilkan Selesai"}
         </button>
       </div>
       {visible.length === 0 ? (
         <div className="dashboard-card border-dashed p-8 text-center">
           <ShieldAlert
-            className="mx-auto size-6 text-[#929292]"
+            className="mx-auto size-6 text-[#94A3B8]"
             aria-hidden="true"
           />
-          <p className="mt-3 text-[13px] font-semibold">
-            Tidak ada incident yang perlu ditindaklanjuti.
+          <p className="mt-3 text-[13px] font-semibold text-[#1E293B]">
+            Tidak ada kendala aktif yang dilaporkan.
           </p>
-          <p className="mt-1 text-[11px] text-[#6B6B6B]">
-            Laporkan kerusakan atau kejadian tidak aman lewat tombol Report
-            incident.
+          <p className="mt-1 text-[11px] text-[#64748B]">
+            Laporkan kerusakan alat atau kondisi tidak aman melalui tombol Laporkan Kendala di atas.
           </p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {visible.map((incident) => (
             <Link
-              className="dashboard-card block p-5 transition hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(33,33,33,0.08)] sm:p-6"
+              className="dashboard-card block p-5 transition hover:-translate-y-0.5 hover:shadow-md sm:p-6"
               key={incident.id}
               href={`/student/incidents/${incident.code}`}
             >
@@ -337,8 +336,8 @@ function IncidentsPage({ incidents }: { incidents: IncidentView[] }) {
                   {incidentStatusLabel[incident.status]}
                 </StatusBadge>
               </div>
-              <p className="mt-5 text-[14px] font-bold">{incident.title}</p>
-              <p className="mt-1 text-[12px] text-[#6B6B6B]">
+              <p className="mt-5 text-[14px] font-bold text-[#1E293B]">{incident.title}</p>
+              <p className="mt-1 text-[12px] text-[#64748B]">
                 {incident.equipmentName ?? incident.roomName}{" "}
                 {incident.roomName && incident.equipmentName
                   ? `· ${incident.roomName}`
@@ -346,11 +345,11 @@ function IncidentsPage({ incidents }: { incidents: IncidentView[] }) {
                 · {new Date(incident.createdAt).toLocaleDateString("id-ID")}
               </p>
               {incident.assessment && (
-                <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-[#6B6B6B]">
-                  Assessment: {incident.assessment.assessment}
+                <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-[#64748B]">
+                  Catatan PLP: {incident.assessment.assessment}
                 </p>
               )}
-              <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.1em] text-[#929292]">
+              <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.1em] text-[#94A3B8]">
                 {incident.code}
               </p>
             </Link>
@@ -361,17 +360,15 @@ function IncidentsPage({ incidents }: { incidents: IncidentView[] }) {
         id="report-incident"
         className="mt-4 dashboard-card border-dashed p-5 sm:p-6"
       >
-        <SectionTitle eyebrow="Need help?" title="Report an incident" />
-        <p className="mt-2 max-w-[600px] text-[12px] leading-5 text-[#6B6B6B]">
-          Include the room, equipment, and what happened. The lab coordinator
-          will follow up with the next safe action. Reporting tidak otomatis
-          mengubah status equipment.
+        <h3 className="text-[16px] font-bold text-[#1E293B]">Pelaporan Kendala Laboratorium</h3>
+        <p className="mt-2 max-w-[600px] text-[12px] leading-5 text-[#64748B]">
+          Sertakan ruangan, instrumen terkait, serta kronologi kejadian secara jelas. Koordinator lab (PLP) akan menindaklanjuti untuk tindakan perbaikan atau kalibrasi. Pelaporan mahasiswa tidak otomatis mengubah status operasional instrumen secara sepihak.
         </p>
         <Link
           href="/student/incidents/new"
-          className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-[#212121] px-4 text-[12px] font-bold text-white"
+          className="mt-4 inline-flex min-h-11 items-center rounded-xl bg-[#1E293B] px-4 text-[12px] font-bold text-white hover:bg-[#0F172A] transition"
         >
-          Start report
+          Mulai Laporan Kendala
         </Link>
       </div>
     </>
@@ -411,29 +408,29 @@ function NotificationsPage({
     <>
       <section className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-[13px] font-medium text-[#6B6B6B]">
-            Stay in the loop
+          <p className="text-[13px] font-medium text-[#64748B]">
+            Pemberitahuan & Aktivitas
           </p>
-          <h2 className="mt-1 text-[26px] font-bold tracking-[-0.04em] text-[#212121] sm:text-[32px]">
-            Updates that deserve your attention.
+          <h2 className="mt-1 text-[24px] font-extrabold tracking-tight text-[#1E293B] sm:text-[30px]">
+            Pembaruan Terkini
           </h2>
         </div>
         <button
           onClick={markAll}
           disabled={pending === "all" || notifications.length === 0}
-          className="min-h-11 rounded-xl border border-[#E1E1E1] bg-white px-4 text-[12px] font-bold text-[#212121] disabled:opacity-60"
+          className="min-h-11 rounded-xl border border-[#E2E8F0] bg-white px-4 text-[12px] font-bold text-[#1E293B] hover:bg-[#F8FAFC] disabled:opacity-60 transition cursor-pointer"
         >
-          {pending === "all" ? "Memproses..." : "Mark all as read"}
+          {pending === "all" ? "Memproses..." : "Tandai Semua Dibaca"}
         </button>
       </section>
       {notifications.length === 0 ? (
         <div className="dashboard-card border-dashed p-8 text-center">
-          <Bell className="mx-auto size-6 text-[#929292]" aria-hidden="true" />
-          <p className="mt-3 text-[13px] font-semibold">
+          <Bell className="mx-auto size-6 text-[#94A3B8]" aria-hidden="true" />
+          <p className="mt-3 text-[13px] font-semibold text-[#1E293B]">
             Belum ada notifikasi.
           </p>
-          <p className="mt-1 text-[11px] text-[#6B6B6B]">
-            Update request, shared usage, dan incident akan muncul di sini.
+          <p className="mt-1 text-[11px] text-[#64748B]">
+            Pembaruan pengajuan jadwal, persetujuan sesi bersama, dan laporan kendala akan muncul di sini.
           </p>
         </div>
       ) : (
@@ -446,7 +443,7 @@ function NotificationsPage({
                 onClick={() => void markRead(item.id)}
                 disabled={pending === item.id}
                 className={cn(
-                  "flex min-h-[94px] w-full items-start gap-3 p-5 text-left transition hover:bg-[#FAFAF8] sm:p-6",
+                  "flex min-h-[94px] w-full items-start gap-3 p-5 text-left transition hover:bg-[#FAFAF8] sm:p-6 cursor-pointer",
                   !isRead && "bg-[#FFFCF3]",
                 )}
               >
@@ -463,11 +460,11 @@ function NotificationsPage({
                   <Bell className="size-4" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <strong className="block text-[13px]">{item.title}</strong>
-                  <span className="mt-1 block text-[12px] leading-5 text-[#6B6B6B]">
+                  <strong className="block text-[13px] text-[#1E293B]">{item.title}</strong>
+                  <span className="mt-1 block text-[12px] leading-5 text-[#64748B]">
                     {item.message}
                   </span>
-                  <span className="mt-2 block text-[10px] font-semibold text-[#929292]">
+                  <span className="mt-2 block text-[10px] font-semibold text-[#94A3B8]">
                     {new Date(item.createdAt).toLocaleString("id-ID", {
                       dateStyle: "medium",
                       timeStyle: "short",
@@ -477,7 +474,7 @@ function NotificationsPage({
                 {!isRead && (
                   <span
                     className="mt-2 size-2 shrink-0 rounded-full bg-[#F45959]"
-                    aria-label="Unread"
+                    aria-label="Belum dibaca"
                   />
                 )}
               </button>
@@ -503,7 +500,7 @@ function ResourceThumb({
   return (
     <div
       role="img"
-      aria-label={`${name} visual preview`}
+      aria-label={`Pratinjau visual ${name}`}
       className={cn(
         "relative flex h-36 items-center justify-center overflow-hidden rounded-xl border border-white/70",
         isEquipment
@@ -534,7 +531,7 @@ function ResourceThumb({
           </div>
         </>
       )}
-      <span className="absolute left-3 top-3 rounded-full bg-white/80 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.1em] text-[#6B6B6B]">
+      <span className="absolute left-3 top-3 rounded-full bg-white/80 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.1em] text-[#64748B]">
         {status}
       </span>
     </div>
@@ -554,16 +551,30 @@ function InventoryPage({
 }) {
   const isEquipment = kind === "equipment";
   const [roomFilter, setRoomFilter] = useState(initialRoom ?? "all");
+  const [classificationFilter, setClassificationFilter] = useState<"ALL" | "INSTRUMENT" | "TOOL">("ALL");
   const rooms = catalog.rooms;
-  const items = isEquipment
+  const items: Array<{
+    code: string;
+    name: string;
+    classification?: "INSTRUMENT" | "TOOL";
+    roomId: string;
+    room: string;
+    detail: string;
+    stock: string;
+    status: string;
+    tone: BadgeTone;
+    meta: string;
+    mediaId?: string | null;
+  }> = isEquipment
     ? catalog.equipment.map((asset) => ({
         code: asset.id,
         name: asset.name,
+        classification: asset.classification,
         roomId: asset.roomId,
         room: asset.room,
         detail: asset.usage,
-        stock: `${asset.availableUnits}/${asset.totalUnits} units free`,
-        status: asset.status,
+        stock: `${asset.availableUnits}/${asset.totalUnits} unit siap`,
+        status: asset.status === "Available" ? "Tersedia" : asset.status === "Maintenance" ? "Perbaikan" : asset.status,
         tone: asset.tone,
         meta: asset.meta,
         mediaId: asset.imageMediaId,
@@ -571,16 +582,17 @@ function InventoryPage({
     : catalog.materials.map((material) => ({
         code: material.id,
         name: material.name,
+        classification: undefined,
         roomId: material.roomId,
         room: material.room,
         detail: material.category,
-        stock: `${material.available} ${material.unit} ready`,
+        stock: `${material.available} ${material.unit} tersedia`,
         status:
           material.available <= 0
-            ? "Out of stock"
+            ? "Stok Habis"
             : material.tone === "yellow"
-              ? "Low stock"
-              : "Available",
+              ? "Stok Menipis"
+              : "Tersedia",
         tone: material.tone,
         meta: material.rule,
         mediaId: material.imageMediaId,
@@ -588,6 +600,7 @@ function InventoryPage({
   const filtered = items.filter(
     (item) =>
       (roomFilter === "all" || item.roomId === roomFilter) &&
+      (!isEquipment || classificationFilter === "ALL" || item.classification === classificationFilter) &&
       `${item.name} ${item.code} ${item.room} ${item.detail}`
         .toLowerCase()
         .includes(searchTerm.toLowerCase()),
@@ -596,28 +609,28 @@ function InventoryPage({
     <>
       <section className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-[13px] font-medium text-[#6B6B6B]">
-            Laboratory inventory
+          <p className="text-[13px] font-medium text-[#64748B]">
+            Inventaris Laboratorium Kimia
           </p>
-          <h2 className="mt-1 text-[26px] font-bold tracking-[-0.04em] text-[#212121] sm:text-[32px]">
+          <h2 className="mt-1 text-[24px] font-extrabold tracking-tight text-[#1E293B] sm:text-[30px]">
             {isEquipment
-              ? "Equipment ready for your next run."
-              : "Materials with stock you can trust."}
+              ? "Katalog Instrumen & Alat Praktikum"
+              : "Katalog Bahan Kimia & Reagen"}
           </h2>
         </div>
         <div className="flex flex-wrap gap-2">
           <label className="relative">
-            <span className="sr-only">Filter room</span>
+            <span className="sr-only">Filter ruangan</span>
             <Filter
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#929292]"
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#94A3B8]"
               aria-hidden="true"
             />
             <select
               value={roomFilter}
               onChange={(event) => setRoomFilter(event.target.value)}
-              className="h-11 rounded-xl border border-[#E1E1E1] bg-white pl-9 pr-3 text-[12px] font-semibold text-[#212121] outline-none focus:border-[#6E8EDA]"
+              className="h-11 rounded-xl border border-[#E2E8F0] bg-white pl-9 pr-3 text-[12px] font-semibold text-[#1E293B] outline-none focus:border-[#F9B129]"
             >
-              <option value="all">All rooms</option>
+              <option value="all">Semua Ruangan</option>
               {rooms.map((room) => (
                 <option key={room.id} value={room.id}>
                   {room.name}
@@ -627,23 +640,63 @@ function InventoryPage({
           </label>
           <Link
             href="/student/calendar"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#1E293B] hover:bg-[#F7B742] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F9B129]"
           >
-            Send a request{" "}
+            Ajukan Jadwal{" "}
             <ChevronRight className="size-4" aria-hidden="true" />
           </Link>
         </div>
       </section>
       <div className="dashboard-card p-4 sm:p-6">
+        {isEquipment && (
+          <div className="mb-5 flex items-center gap-2 overflow-x-auto border-b border-[#EEEEEE] pb-3">
+            <button
+              type="button"
+              onClick={() => setClassificationFilter("ALL")}
+              className={cn(
+                "rounded-xl px-3 py-1.5 text-[12px] font-bold transition cursor-pointer",
+                classificationFilter === "ALL"
+                  ? "bg-[#1E293B] text-white"
+                  : "bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0]",
+              )}
+            >
+              Semua
+            </button>
+            <button
+              type="button"
+              onClick={() => setClassificationFilter("INSTRUMENT")}
+              className={cn(
+                "rounded-xl px-3 py-1.5 text-[12px] font-bold transition cursor-pointer",
+                classificationFilter === "INSTRUMENT"
+                  ? "bg-[#F9B129] text-[#1E293B]"
+                  : "bg-[#FEF1CC] text-[#AE7C1D] hover:bg-[#F9B129]/30",
+              )}
+            >
+              Instrumen Laboratorium
+            </button>
+            <button
+              type="button"
+              onClick={() => setClassificationFilter("TOOL")}
+              className={cn(
+                "rounded-xl px-3 py-1.5 text-[12px] font-bold transition cursor-pointer",
+                classificationFilter === "TOOL"
+                  ? "bg-[#1E293B] text-white"
+                  : "bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0]",
+              )}
+            >
+              Alat Praktikum & Glassware
+            </button>
+          </div>
+        )}
         {filtered.length === 0 ? (
           <div className="p-8 text-center">
             <PackageSearch
-              className="mx-auto size-6 text-[#929292]"
+              className="mx-auto size-6 text-[#94A3B8]"
               aria-hidden="true"
             />
-            <p className="mt-3 text-[13px] font-semibold">No inventory match</p>
-            <p className="mt-1 text-[11px] text-[#6B6B6B]">
-              Coba kata kunci lain atau pilih room berbeda.
+            <p className="mt-3 text-[13px] font-semibold text-[#1E293B]">Tidak ada data yang sesuai</p>
+            <p className="mt-1 text-[11px] text-[#64748B]">
+              Coba kata kunci pencarian lain atau pilih filter ruangan yang berbeda.
             </p>
           </div>
         ) : (
@@ -655,7 +708,7 @@ function InventoryPage({
                     ? `/student/laboratory/equipment/${item.code}`
                     : `/student/laboratory/materials/${item.code}?room=${item.roomId}`
                 }
-                className="group rounded-2xl border border-[#EEEEEE] bg-white p-3 transition hover:-translate-y-0.5 hover:border-[#D6C6A6] hover:shadow-[0_12px_28px_rgba(33,33,33,0.08)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+                className="group rounded-2xl border border-[#EEEEEE] bg-white p-3 transition hover:-translate-y-0.5 hover:border-[#F9B129]/60 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F9B129]"
                 key={`${item.code}:${item.roomId}`}
               >
                 <ResourceThumb
@@ -667,21 +720,37 @@ function InventoryPage({
                 <div className="px-1 pb-1 pt-4">
                   <div className="flex items-start justify-between gap-3">
                     <span>
-                      <strong className="block text-[14px] text-[#212121]">
+                      <strong className="block text-[14px] text-[#1E293B]">
                         {item.name}
                       </strong>
-                      <small className="mt-1 block text-[11px] text-[#929292]">
-                        {item.code}
-                      </small>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <small className="block text-[11px] text-[#94A3B8]">
+                          {item.code}
+                        </small>
+                        {isEquipment && (
+                          <span
+                            className={cn(
+                              "rounded px-1.5 py-0.2 text-[9px] font-bold uppercase tracking-wider",
+                              item.classification === "INSTRUMENT"
+                                ? "bg-[#FEF1CC] text-[#AE7C1D] border border-[#F9B129]/30"
+                                : "bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0]",
+                            )}
+                          >
+                            {item.classification === "INSTRUMENT"
+                              ? "Instrumen"
+                              : "Alat"}
+                          </span>
+                        )}
+                      </div>
                     </span>
                     <StatusBadge tone={item.tone}>{item.status}</StatusBadge>
                   </div>
-                  <p className="mt-4 text-[11px] text-[#6B6B6B]">{item.room}</p>
-                  <p className="mt-1 text-[12px] font-semibold text-[#212121]">
+                  <p className="mt-4 text-[11px] text-[#64748B]">{item.room}</p>
+                  <p className="mt-1 text-[12px] font-semibold text-[#1E293B]">
                     {item.stock}
                   </p>
-                  <span className="mt-4 inline-flex min-h-10 items-center text-[11px] font-bold text-[#38529B]">
-                    View availability <ChevronRight className="ml-1 size-3.5" />
+                  <span className="mt-4 inline-flex min-h-10 items-center text-[11px] font-bold text-[#38529B] group-hover:text-[#283C72]">
+                    Lihat Ketersediaan <ChevronRight className="ml-1 size-3.5" />
                   </span>
                 </div>
               </Link>
@@ -706,7 +775,7 @@ export function ReaksanSubpage({
 }: {
   page: ReaksanPage;
   userName: string;
-  catalog: LabCatalog;
+  catalog?: LabCatalog;
   events?: ScheduleEvent[];
   incidents?: IncidentView[];
   notifications?: NotificationView[];
@@ -714,10 +783,7 @@ export function ReaksanSubpage({
   month: { year: number; month: number };
   initialRoom?: string;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const copy = pageCopy[page];
   const content =
     page === "calendar" ? (
       <MyCalendarPage events={events} month={month} />
@@ -725,46 +791,18 @@ export function ReaksanSubpage({
       <IncidentsPage incidents={incidents} />
     ) : page === "notifications" ? (
       <NotificationsPage notifications={notifications} />
-    ) : (
+    ) : catalog ? (
       <InventoryPage
         kind={page}
         searchTerm={searchTerm}
         catalog={catalog}
         initialRoom={initialRoom}
       />
-    );
+    ) : null;
 
   return (
-    <div className="dashboard-shell min-h-screen">
-      <Sidebar
-        collapsed={collapsed}
-        mobileOpen={mobileOpen}
-        onToggle={() => setCollapsed((value) => !value)}
-        onClose={() => setMobileOpen(false)}
-        userName={userName}
-        activeKey={page}
-      />
-      <div
-        className={cn(
-          "min-h-screen transition-[padding] duration-200 lg:pl-[256px]",
-          collapsed && "lg:pl-[80px]",
-        )}
-      >
-        <PageHeader
-          copy={copy}
-          userName={userName}
-          searchTerm={searchTerm}
-          onSearch={setSearchTerm}
-          onOpenMenu={() => setMobileOpen(true)}
-          unreadCount={unreadCount}
-        />
-        <main
-          id="top"
-          className="mx-auto max-w-[1680px] px-4 pb-10 pt-6 sm:px-6 lg:px-8"
-        >
-          {content}
-        </main>
-      </div>
+    <div id="top" className="space-y-6">
+      {content}
     </div>
   );
 }

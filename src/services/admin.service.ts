@@ -269,8 +269,10 @@ export async function createEquipmentType(
       .values({
         name: input.name,
         category: input.category ?? null,
+        classification: input.classification ?? "INSTRUMENT",
         description: input.description ?? null,
         usageType: input.usageType,
+        imageMediaId: input.imageMediaId ?? null,
         active: input.active ?? true,
       })
       .returning();
@@ -279,7 +281,11 @@ export async function createEquipmentType(
       action: "CREATE",
       entityType: "equipment_type",
       entityId: created.id,
-      after: { name: created.name, usageType: created.usageType },
+      after: {
+        name: created.name,
+        usageType: created.usageType,
+        classification: created.classification,
+      },
     });
     return created;
   });
@@ -307,11 +313,16 @@ export async function updateEquipmentType(
       .set({
         name: input.name ?? current.name,
         category: input.category === undefined ? current.category : input.category,
+        classification: input.classification ?? current.classification,
         description:
           input.description === undefined
             ? current.description
             : input.description,
         usageType: input.usageType ?? current.usageType,
+        imageMediaId:
+          input.imageMediaId === undefined
+            ? current.imageMediaId
+            : input.imageMediaId,
         active: input.active ?? current.active,
       })
       .where(eq(equipmentType.id, id))
@@ -321,8 +332,16 @@ export async function updateEquipmentType(
       action: "UPDATE",
       entityType: "equipment_type",
       entityId: id,
-      before: { name: current.name, usageType: current.usageType },
-      after: { name: updated.name, usageType: updated.usageType },
+      before: {
+        name: current.name,
+        usageType: current.usageType,
+        classification: current.classification,
+      },
+      after: {
+        name: updated.name,
+        usageType: updated.usageType,
+        classification: updated.classification,
+      },
     });
     return updated;
   });
@@ -506,12 +525,15 @@ export async function listEquipmentUnitsAdmin(assetCode?: string) {
       id: equipmentUnit.id,
       code: equipmentUnit.code,
       label: equipmentUnit.label,
+      qrCode: equipmentUnit.qrCode,
+      storageLocation: equipmentUnit.storageLocation,
       status: equipmentUnit.status,
       condition: equipmentUnit.condition,
       notes: equipmentUnit.notes,
       active: equipmentUnit.active,
       assetCode: equipmentAsset.assetCode,
       assetName: equipmentType.name,
+      classification: equipmentType.classification,
     })
     .from(equipmentUnit)
     .innerJoin(
@@ -546,6 +568,8 @@ export async function createEquipmentUnit(
         equipmentAssetId: asset.id,
         code: input.code,
         label: input.label,
+        qrCode: `RK-UNT-${input.code}`,
+        storageLocation: input.storageLocation ? input.storageLocation.trim() : null,
         status: input.status ?? "AVAILABLE",
         condition: input.condition ?? "GOOD",
         notes: input.notes ? input.notes.trim() : null,
@@ -587,6 +611,12 @@ export async function updateEquipmentUnit(
       .set({
         code: input.code ?? current.code,
         label: input.label ?? current.label,
+        storageLocation:
+          input.storageLocation === undefined
+            ? current.storageLocation
+            : input.storageLocation
+              ? input.storageLocation.trim()
+              : null,
         status: input.status ?? current.status,
         condition: input.condition ?? current.condition,
         notes:
@@ -688,6 +718,7 @@ export async function createMaterial(actorId: string, input: MaterialInput) {
         category: input.category ?? null,
         baseUnit: input.baseUnit,
         description: input.description ?? null,
+        imageMediaId: input.imageMediaId ?? null,
         active: input.active ?? true,
       })
       .returning();
@@ -738,6 +769,10 @@ export async function updateMaterial(
           input.description === undefined
             ? current.description
             : input.description,
+        imageMediaId:
+          input.imageMediaId === undefined
+            ? current.imageMediaId
+            : input.imageMediaId,
         active: input.active ?? current.active,
       })
       .where(eq(material.id, id))
@@ -783,6 +818,8 @@ export async function listBatchesAdmin(materialCode?: string) {
     .select({
       id: materialBatch.id,
       lotNumber: materialBatch.lotNumber,
+      qrCode: materialBatch.qrCode,
+      storageLocation: materialBatch.storageLocation,
       quantity: materialBatch.quantity,
       expiryDate: materialBatch.expiryDate,
       receivedDate: materialBatch.receivedDate,
@@ -820,12 +857,16 @@ export async function createMaterialBatch(
         )[0],
       "Room not found.",
     );
+    const lotPart = input.lotNumber ?? Date.now().toString(36).slice(-6).toUpperCase();
+    const qrCode = `RK-MAT-${lotPart}`;
     const [created] = await tx
       .insert(materialBatch)
       .values({
         materialId: materialRow.id,
         roomId: roomRow.id,
         lotNumber: input.lotNumber ?? null,
+        qrCode,
+        storageLocation: input.storageLocation ? input.storageLocation.trim() : null,
         quantity: input.quantity.toFixed(3),
         expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
         active: input.active ?? true,
@@ -884,6 +925,12 @@ export async function updateMaterialBatch(
       .set({
         lotNumber:
           input.lotNumber === undefined ? current.lotNumber : input.lotNumber,
+        storageLocation:
+          input.storageLocation === undefined
+            ? current.storageLocation
+            : input.storageLocation
+              ? input.storageLocation.trim()
+              : null,
         quantity: nextQuantity.toFixed(3),
         expiryDate:
           input.expiryDate === undefined
@@ -924,8 +971,7 @@ export async function updateMaterialBatch(
 
 const assignmentTypeRoles: Record<string, string[]> = {
   PLP: ["plp", "admin"],
-  ASLAB: ["aslab", "admin"],
-  PIC: ["lecturer", "aslab", "plp", "admin"],
+  PIC: ["plp", "admin"],
 };
 
 async function assertAssignmentScope(
@@ -1025,7 +1071,7 @@ async function assertAssignmentRules(
         eq(assignment.scopeId, input.scopeId),
         eq(
           assignment.assignmentType,
-          input.assignmentType as "PLP" | "ASLAB" | "PIC",
+          input.assignmentType as "PLP" | "PIC",
         ),
         eq(assignment.active, true),
         input.excludeId ? ne(assignment.id, input.excludeId) : undefined,
@@ -1207,11 +1253,185 @@ export async function writeRoleAudit(
   });
 }
 
+export async function deleteUserAccount(
+  operatorUserId: string,
+  targetUserId: string,
+) {
+  if (operatorUserId === targetUserId) {
+    throw new ApiError(
+      400,
+      "BAD_REQUEST",
+      "Tidak dapat menghapus akun Anda sendiri.",
+    );
+  }
+
+  const [targetUser] = await db
+    .select()
+    .from(user)
+    .where(eq(user.id, targetUserId))
+    .limit(1);
+
+  if (!targetUser) {
+    throw new ApiError(404, "NOT_FOUND", "Pengguna tidak ditemukan.");
+  }
+
+  await db.transaction(async (tx) => {
+    // 1. Clean up assignments for this user
+    await tx.delete(assignment).where(eq(assignment.userId, targetUserId));
+
+    // 2. Clean up user's resource requests and their child records
+    const userRequests = await tx
+      .select({ id: resourceRequest.id })
+      .from(resourceRequest)
+      .where(eq(resourceRequest.studentId, targetUserId));
+
+    for (const req of userRequests) {
+      await tx.execute(
+        sql`DELETE FROM return_transaction WHERE issue_transaction_id IN (SELECT id FROM issue_transaction WHERE request_id = ${req.id})`,
+      );
+      await tx.execute(
+        sql`DELETE FROM issue_transaction WHERE request_id = ${req.id}`,
+      );
+      await tx.execute(
+        sql`DELETE FROM shared_usage_request WHERE reservation_id IN (SELECT id FROM reservation WHERE request_id = ${req.id})`,
+      );
+      await tx.execute(
+        sql`DELETE FROM shared_usage WHERE reservation_id IN (SELECT id FROM reservation WHERE request_id = ${req.id})`,
+      );
+      await tx.execute(
+        sql`DELETE FROM reservation WHERE request_id = ${req.id}`,
+      );
+      await tx.execute(
+        sql`DELETE FROM equipment_request_item WHERE request_id = ${req.id}`,
+      );
+      await tx.execute(
+        sql`DELETE FROM material_request_item WHERE request_id = ${req.id}`,
+      );
+      await tx.delete(resourceRequest).where(eq(resourceRequest.id, req.id));
+    }
+
+    // 3. Clean up direct shared usage and reservations
+    await tx.execute(
+      sql`DELETE FROM shared_usage_request WHERE requester_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`DELETE FROM shared_usage WHERE user_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`DELETE FROM shared_usage_request WHERE reservation_id IN (SELECT id FROM reservation WHERE primary_user_id = ${targetUserId})`,
+    );
+    await tx.execute(
+      sql`DELETE FROM shared_usage WHERE reservation_id IN (SELECT id FROM reservation WHERE primary_user_id = ${targetUserId})`,
+    );
+    await tx.execute(
+      sql`DELETE FROM reservation WHERE primary_user_id = ${targetUserId}`,
+    );
+
+    // 4. Clean up activities where user is student; nullify supervisor
+    await tx.execute(
+      sql`DELETE FROM activity WHERE student_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`UPDATE activity SET supervisor_id = NULL WHERE supervisor_id = ${targetUserId}`,
+    );
+
+    // 5. Reassign non-nullable operator/auditing references to operatorUserId
+    await tx.execute(
+      sql`UPDATE incident SET reporter_id = ${operatorUserId} WHERE reporter_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`UPDATE incident_assessment SET assessed_by_id = ${operatorUserId} WHERE assessed_by_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`UPDATE incident_resolution SET resolved_by_id = ${operatorUserId} WHERE resolved_by_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`UPDATE equipment_condition_history SET recorded_by_id = ${operatorUserId} WHERE recorded_by_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`UPDATE issue_transaction SET issued_by_id = ${operatorUserId} WHERE issued_by_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`UPDATE issue_transaction SET issued_to_id = ${operatorUserId} WHERE issued_to_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`UPDATE return_transaction SET received_by_id = ${operatorUserId} WHERE received_by_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`UPDATE return_transaction SET returned_by_id = ${operatorUserId} WHERE returned_by_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`UPDATE stock_transaction SET performed_by_id = ${operatorUserId} WHERE performed_by_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`UPDATE stock_opname_session SET started_by_id = ${operatorUserId} WHERE started_by_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`UPDATE stock_opname_entry SET counted_by_id = ${operatorUserId} WHERE counted_by_id = ${targetUserId}`,
+    );
+
+    // 6. Nullify nullable audit / operator references
+    await tx.execute(
+      sql`UPDATE app_setting SET updated_by_id = NULL WHERE updated_by_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`UPDATE media SET uploaded_by_id = NULL WHERE uploaded_by_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`UPDATE stock_opname_session SET completed_by_id = NULL WHERE completed_by_id = ${targetUserId}`,
+    );
+
+    // 7. Delete user's cascading auth tables
+    await tx.execute(
+      sql`DELETE FROM session WHERE user_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`DELETE FROM account WHERE user_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`DELETE FROM notification WHERE recipient_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`DELETE FROM notes WHERE user_id = ${targetUserId}`,
+    );
+
+    // 8. Delete the user record permanently from database
+    await tx.delete(user).where(eq(user.id, targetUserId));
+
+    // 9. Write audit record
+    await writeAudit(tx, {
+      actorId: operatorUserId,
+      action: "DELETE",
+      entityType: "user",
+      entityId: targetUserId,
+      before: {
+        id: targetUser.id,
+        name: targetUser.name,
+        email: targetUser.email,
+        role: targetUser.role,
+      },
+      reason: `Akun dihapus oleh admin (${operatorUserId}).`,
+    });
+  });
+
+  invalidateRoomScope(targetUserId);
+
+  return {
+    success: true,
+    deletedUser: {
+      id: targetUser.id,
+      name: targetUser.name,
+      email: targetUser.email,
+    },
+  };
+}
+
 // ------------------------------------------------------------ dashboard counts
 
 export async function getAdminDashboard() {
   const [
     userCount,
+    labCount,
     roomCount,
     assetCount,
     materialCount,
@@ -1224,6 +1444,7 @@ export async function getAdminDashboard() {
     activeAssignments,
   ] = await Promise.all([
     db.select({ count: count() }).from(user),
+    db.select({ count: count() }).from(laboratory).where(eq(laboratory.active, true)),
     db.select({ count: count() }).from(room).where(eq(room.active, true)),
     db.select({ count: count() }).from(equipmentAsset),
     db.select({ count: count() }).from(material).where(eq(material.active, true)),
@@ -1264,6 +1485,7 @@ export async function getAdminDashboard() {
   return {
     counts: {
       users: userCount[0]?.count ?? 0,
+      laboratories: labCount[0]?.count ?? 0,
       rooms: roomCount[0]?.count ?? 0,
       assets: assetCount[0]?.count ?? 0,
       materials: materialCount[0]?.count ?? 0,

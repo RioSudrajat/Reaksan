@@ -14,7 +14,7 @@ import { listPlpHistory } from "@/services/plp.service";
 import { requirePermission } from "@/lib/session";
 import { historyQuerySchema } from "@/validators/plp";
 
-export const metadata: Metadata = { title: "Audit Logs" };
+export const metadata: Metadata = { title: "Log Audit Sistem · Admin Reaksan" };
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -54,9 +54,9 @@ export default async function AdminAuditLogsPage({
   return (
     <>
       <PageHeader
-        eyebrow="Operasional"
-        title="Audit logs"
-        description="Audit bersifat append-only. Administrasi tidak menghapus jejak: setiap perubahan penting tetap tercatat."
+        eyebrow="Operasional & Keamanan"
+        title="Log Audit & Jejak Aktivitas"
+        description="Audit bersifat append-only dan permanen. Setiap tindakan administratif, perubahan izin, serta transaksi sumber daya terekam untuk akuntabilitas."
         actions={
           <ExportLink
             report="audit"
@@ -75,7 +75,7 @@ export default async function AdminAuditLogsPage({
         activeCount={activeFilterCount}
         clearHref="/admin/audit-logs"
       >
-        <FilterField label="Entity" className="w-full sm:w-52">
+        <FilterField label="Tipe Entitas" className="w-full sm:w-52">
           <input
             type="search"
             name="entity"
@@ -84,7 +84,7 @@ export default async function AdminAuditLogsPage({
             className={controlClass}
           />
         </FilterField>
-        <FilterField label="Action" className="w-full sm:w-44">
+        <FilterField label="Tindakan / Aksi" className="w-full sm:w-44">
           <input
             type="search"
             name="action"
@@ -93,16 +93,16 @@ export default async function AdminAuditLogsPage({
             className={controlClass}
           />
         </FilterField>
-        <FilterField label="Actor" className="w-full sm:w-48">
+        <FilterField label="Pelaksana / Aktor" className="w-full sm:w-48">
           <input
             type="search"
             name="actor"
             defaultValue={query.actor ?? ""}
-            placeholder="Nama aktor"
+            placeholder="Nama aktor atau sistem"
             className={controlClass}
           />
         </FilterField>
-        <FilterField label="Dari" className="w-full sm:w-40">
+        <FilterField label="Dari Tanggal" className="w-full sm:w-40">
           <input
             type="date"
             name="from"
@@ -110,7 +110,7 @@ export default async function AdminAuditLogsPage({
             className={controlClass}
           />
         </FilterField>
-        <FilterField label="Sampai" className="w-full sm:w-40">
+        <FilterField label="Sampai Tanggal" className="w-full sm:w-40">
           <input
             type="date"
             name="to"
@@ -124,30 +124,30 @@ export default async function AdminAuditLogsPage({
         {result.data.length === 0 ? (
           <div className="p-5">
             <EmptyState
-              title="Tidak ada audit log"
-              description="Ubah filter atau lakukan perubahan lewat admin workspace."
+              title="Tidak ada log audit"
+              description="Tidak ditemukan catatan log audit yang cocok dengan filter aktif. Coba sesuaikan rentang tanggal atau kriteria pencarian."
             />
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
-              <caption className="sr-only">Audit log Reaksan</caption>
+              <caption className="sr-only">Audit log sistem Reaksan</caption>
               <thead>
                 <tr className="border-b border-[#EEEEEE] text-[11px] uppercase tracking-[0.08em] text-[#929292]">
                   <th scope="col" className="px-4 py-3 font-semibold">
                     Waktu
                   </th>
                   <th scope="col" className="px-4 py-3 font-semibold">
-                    Aktor
+                    Pelaksana
                   </th>
                   <th scope="col" className="px-4 py-3 font-semibold">
-                    Action
+                    Tindakan
                   </th>
                   <th scope="col" className="px-4 py-3 font-semibold">
-                    Entity
+                    Entitas Data
                   </th>
                   <th scope="col" className="px-4 py-3 font-semibold">
-                    Catatan
+                    Catatan / Alasan
                   </th>
                 </tr>
               </thead>

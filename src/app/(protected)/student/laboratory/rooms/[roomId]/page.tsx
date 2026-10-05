@@ -22,7 +22,7 @@ type Params = { params: Promise<{ roomId: string }> };
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { roomId } = await params;
   const room = await findRoomByCode(db, roomId);
-  return { title: room?.name ?? "Room" };
+  return { title: `${room?.name ?? "Ruangan"} · Reaksan` };
 }
 
 export default async function StudentRoomPage({ params }: Params) {

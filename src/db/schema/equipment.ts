@@ -7,6 +7,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import {
+  equipmentClassificationEnum,
   equipmentConditionEnum,
   equipmentStatusEnum,
   equipmentUsageTypeEnum,
@@ -21,6 +22,9 @@ export const equipmentType = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
     category: text("category"),
+    classification: equipmentClassificationEnum("classification")
+      .default("INSTRUMENT")
+      .notNull(),
     description: text("description"),
     usageType: equipmentUsageTypeEnum("usage_type").notNull(),
     imageMediaId: uuid("image_media_id").references(() => media.id),
@@ -33,7 +37,10 @@ export const equipmentType = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index("equipment_type_category_idx").on(table.category)],
+  (table) => [
+    index("equipment_type_category_idx").on(table.category),
+    index("equipment_type_classification_idx").on(table.classification),
+  ],
 );
 
 export const equipmentAsset = pgTable(
@@ -79,6 +86,8 @@ export const equipmentUnit = pgTable(
       .references(() => equipmentAsset.id),
     code: text("code").notNull().unique(),
     label: text("label").notNull(),
+    qrCode: text("qr_code").unique(),
+    storageLocation: text("storage_location"),
     status: equipmentStatusEnum("status").default("AVAILABLE").notNull(),
     condition: equipmentConditionEnum("condition").default("GOOD").notNull(),
     notes: text("notes"),
@@ -94,6 +103,8 @@ export const equipmentUnit = pgTable(
   (table) => [
     index("equipment_unit_asset_idx").on(table.equipmentAssetId),
     index("equipment_unit_status_idx").on(table.status),
+    index("equipment_unit_qr_code_idx").on(table.qrCode),
+    index("equipment_unit_storage_location_idx").on(table.storageLocation),
   ],
 );
 

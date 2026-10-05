@@ -8,8 +8,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { user } from "./user";
 
-// Assignment keeps Aslab/PIC scope flexible without hardcoding roles per room.
-// Example: scopeType = LABORATORY, scopeId = chem-lab, assignmentType = ASLAB.
+// Assignment keeps operational PLP/PIC scope flexible without hardcoding roles per room.
+// Example: scopeType = ROOM, scopeId = lab-organik, assignmentType = PLP.
 export const assignment = pgTable(
   "assignment",
   {

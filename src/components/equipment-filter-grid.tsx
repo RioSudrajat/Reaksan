@@ -97,10 +97,10 @@ export function EquipmentFilterGrid({
             available assets.
           </p>
           <Link
-            href="/student/equipment"
+            href="/student"
             className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5]"
           >
-            Browse equipment
+            Kembali ke Dashboard
           </Link>
         </div>
       ) : (

@@ -46,13 +46,22 @@ function setPath(
 }
 
 function readValue(field: CrudField, form: HTMLFormElement) {
-  const element = form.elements.namedItem(field.name) as
-    HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+  const item = form.elements.namedItem(field.name);
+  if (!item) return undefined;
+  let element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null =
+    null;
+  if (typeof RadioNodeList !== "undefined" && item instanceof RadioNodeList) {
+    const list = Array.from(item) as (HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement)[];
+    element =
+      list.find((el) => Boolean(el.value?.trim())) ?? list[0] ?? null;
+  } else {
+    element = item as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+  }
   if (!element) return undefined;
   if (field.type === "checkbox") {
     return (element as HTMLInputElement).checked;
   }
-  const value = element.value.trim();
+  const value = (element.value ?? "").trim();
   if (field.type === "hidden") return value === "" ? null : value;
   if (field.type === "external") return value === "" ? undefined : value;
   if (field.type === "number") return value === "" ? undefined : Number(value);

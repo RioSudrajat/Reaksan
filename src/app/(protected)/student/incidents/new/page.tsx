@@ -4,7 +4,7 @@ import { currentScheduleMonth } from "@/components/schedule-data";
 import { requireSession } from "@/lib/session";
 import { buildLabCatalog } from "@/services/catalog.service";
 
-export const metadata: Metadata = { title: "Report incident" };
+export const metadata: Metadata = { title: "Laporkan Kendala · Reaksan" };
 
 export default async function StudentIncidentNewPage() {
   const { user } = await requireSession();

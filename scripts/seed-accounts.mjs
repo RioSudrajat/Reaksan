@@ -8,9 +8,12 @@ import { databaseUrl, databaseError } from "./postgres.mjs";
 // SEED_ACCOUNT_PASSWORD. Never run this against production data.
 const ACCOUNTS = [
   { email: "admin@reaksan.local", name: "Admin Reaksan", role: "admin" },
-  { email: "plp@reaksan.local", name: "PLP Reaksan", role: "plp" },
-  { email: "lecturer@reaksan.local", name: "Dosen Pembimbing", role: "lecturer" },
-  { email: "aslab@reaksan.local", name: "Aslab Laboratorium", role: "aslab" },
+  { email: "plp@reaksan.local", name: "Koordinator PLP", role: "plp" },
+  { email: "plp.organik@reaksan.local", name: "PLP Lab Organik", role: "plp" },
+  { email: "plp.anorganik@reaksan.local", name: "PLP Lab Anorganik", role: "plp" },
+  { email: "plp.biokimia@reaksan.local", name: "PLP Lab Biokimia", role: "plp" },
+  { email: "plp.analitik@reaksan.local", name: "PLP Lab Analitik", role: "plp" },
+  { email: "plp.fisik@reaksan.local", name: "PLP Lab Fisik", role: "plp" },
   { email: "student1@reaksan.local", name: "Mahasiswa Satu", role: "user" },
   { email: "student2@reaksan.local", name: "Mahasiswa Dua", role: "user" },
 ];
@@ -84,41 +87,48 @@ async function upsertAssignment(client, userId, scopeType, scopeId, assignmentTy
 const client = await pool.connect();
 try {
   await client.query("BEGIN");
-  const userIds = {};
+  const userIdsByEmail = {};
   for (const account of ACCOUNTS) {
     const userId = await upsertUser(client, account);
-    userIds[account.role] = userId;
+    userIdsByEmail[account.email] = userId;
     await upsertCredential(client, userId);
   }
 
-  // Demo scope for the operational roles: the Aslab covers the whole
-  // laboratory, while the PLP is only responsible for two assigned labs.
-  const lab = await client.query("SELECT code FROM laboratory LIMIT 1");
-  if (lab.rowCount > 0 && userIds.aslab) {
-    await upsertAssignment(
-      client,
-      userIds.aslab,
-      "LABORATORY",
-      lab.rows[0].code,
-      "ASLAB",
-      "Seed demo aslab scope",
-    );
-  }
-  if (userIds.plp) {
-    for (const roomCode of ["lab-organik"]) {
+  // Dedicated PLP per room
+  const plpRoomMap = {
+    "plp.organik@reaksan.local": "lab-organik",
+    "plp.anorganik@reaksan.local": "lab-anorganik",
+    "plp.biokimia@reaksan.local": "lab-biokimia",
+    "plp.analitik@reaksan.local": "lab-analitik",
+    "plp.fisik@reaksan.local": "lab-fisik",
+  };
+
+  for (const [email, roomCode] of Object.entries(plpRoomMap)) {
+    const plpId = userIdsByEmail[email];
+    if (plpId) {
       await upsertAssignment(
         client,
-        userIds.plp,
+        plpId,
         "ROOM",
         roomCode,
         "PLP",
-        "Seed demo PLP scope",
+        `Penugasan dedicated PLP ${roomCode}`,
       );
     }
-    await client.query(
-      "UPDATE assignment SET active = false WHERE user_id = $1 AND scope_id != 'lab-organik'",
-      [userIds.plp],
-    );
+  }
+
+  // Multi-lab / supervisor PLP
+  if (userIdsByEmail["plp@reaksan.local"]) {
+    for (const roomCode of ["lab-organik", "lab-anorganik", "lab-biokimia", "lab-analitik", "lab-fisik"]) {
+      await upsertAssignment(
+        client,
+        userIdsByEmail["plp@reaksan.local"],
+        "ROOM",
+        roomCode,
+        "PLP",
+        "Koordinator PLP multi-room scope",
+      );
+    }
   }
 
   await client.query("COMMIT");

@@ -26,6 +26,7 @@ export function GET(request: Request) {
         roomCodes,
         from,
         to,
+        orderBy: "statusPriority",
         limit: query.limit,
         offset: query.offset,
         search: query.student ?? query.activity,

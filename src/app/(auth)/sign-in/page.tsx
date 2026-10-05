@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
-import { AuthForm } from "@/components/auth-form";
+import { SignInSplitForm } from "@/components/sign-in-split-form";
 
-export const metadata: Metadata = { title: "Sign in" };
+export const metadata: Metadata = {
+  title: "Login - Reaksan Unpad",
+  description: "Masuk ke Sistem Manajemen Laboratorium Terpadu Kimia Unpad",
+};
+
 export default function SignInPage() {
-  return <AuthForm mode="sign-in" />;
+  return <SignInSplitForm />;
 }

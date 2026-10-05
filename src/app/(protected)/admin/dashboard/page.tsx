@@ -15,12 +15,10 @@ import {
   formatDateTime,
 } from "@/components/workspace";
 import { requirePermission } from "@/lib/session";
-import { getEquipmentRoomDistribution, getRequestTrend, type RequestTrendRange } from "@/services/analytics.service";
+import { getRequestTrend, type RequestTrendRange } from "@/services/analytics.service";
 import { getAdminDashboard } from "@/services/admin.service";
-import { listMaintenanceUnits } from "@/services/plp.service";
-import { MaintenanceUnitsPanel } from "@/components/maintenance-units-panel";
 
-export const metadata: Metadata = { title: "Admin Dashboard" };
+export const metadata: Metadata = { title: "Dashboard Administrator · Reaksan" };
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -29,7 +27,13 @@ function pick(params: SearchParams, key: string) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+const currentMonthShort = new Intl.DateTimeFormat("id-ID", {
+  timeZone: "Asia/Jakarta",
+  month: "short",
+}).format(new Date());
+
 const trendOptions = [
+  { value: "month", label: `Bulan ini (${currentMonthShort})` },
   { value: "7", label: "7 hari" },
   { value: "30", label: "30 hari" },
   { value: "90", label: "90 hari" },
@@ -42,109 +46,92 @@ export default async function AdminDashboardPage({
 }) {
   await requirePermission({ configuration: ["manage-any"] });
   const params = await searchParams;
-  const requested = Number(pick(params, "trend"));
+  const rawTrend = pick(params, "trend");
   const trendDays: RequestTrendRange =
-    requested === 7 || requested === 30 || requested === 90 ? requested : 30;
-  const [data, trend, equipment, maintenanceUnits] = await Promise.all([
+    rawTrend === "7"
+      ? 7
+      : rawTrend === "30"
+        ? 30
+        : rawTrend === "90"
+          ? 90
+          : "month";
+  const [data, trend] = await Promise.all([
     getAdminDashboard(),
     getRequestTrend({ days: trendDays }),
-    getEquipmentRoomDistribution(),
-    listMaintenanceUnits(),
   ]);
 
   return (
     <>
       <PageHeader
-        eyebrow="Overview"
-        title="Admin workspace"
-        description="Kesehatan data Reaksan: akun, inventaris, expiry batch, assignment, tren request, dan audit terbaru."
+        eyebrow="Kendali Sistem"
+        title="Dashboard Administrator"
+        description="Ringkasan kesehatan ekosistem Reaksan Unpad: tata kelola akun pengguna, master laboratorium & ruangan, penugasan PLP, agenda sesi, serta audit aktivitas sistem."
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Akun"
+          label="Akun Pengguna"
           value={data.counts.users}
-          detail="Semua role"
+          detail="Mahasiswa, PLP & Admin"
           href="/admin/users"
           tone="blue"
         />
         <StatCard
-          label="Rooms aktif"
+          label="Laboratorium"
+          value={data.counts.laboratories}
+          detail="Bidang keilmuan kimia"
+          href="/admin/laboratories"
+          tone="yellow"
+        />
+        <StatCard
+          label="Ruangan Lab Aktif"
           value={data.counts.rooms}
-          detail="Laboratorium terdaftar"
+          detail="Ruang riset & praktikum"
           href="/admin/rooms"
           tone="green"
         />
         <StatCard
-          label="Equipment asset"
-          value={data.counts.assets}
-          detail="Semua tipe"
-          href="/admin/equipment/assets"
+          label="Penugasan PLP"
+          value={data.counts.activeAssignments}
+          detail="Laboran & penanggung jawab"
+          href="/admin/assignments"
           tone="cream"
         />
         <StatCard
-          label="Material aktif"
-          value={data.counts.materials}
-          detail="Dengan batch"
-          href="/admin/materials"
-          tone="yellow"
-        />
-        <StatCard
-          label="Request pending"
+          label="Pengajuan Sesi"
           value={data.counts.pendingRequests}
-          detail="Menunggu PLP"
-          href="/plp/requests?status=PENDING_PLP"
+          detail="Menunggu tindakan PLP"
+          href="/admin/schedule"
           tone="blue"
         />
         <StatCard
-          label="Incident terbuka"
-          value={data.counts.openIncidents}
-          detail="Belum resolved"
-          href="/plp/incidents"
-          tone="rose"
-        />
-        <StatCard
-          label="Assignment aktif"
-          value={data.counts.activeAssignments}
-          detail="Aslab dan PIC"
-          href="/admin/assignments"
-          tone="green"
-        />
-        <StatCard
-          label="Batch segera expiry"
-          value={data.counts.expiringBatches}
-          detail={`${data.counts.expiredBatches} batch sudah terlewat`}
-          href="/plp/inventory/materials"
-          tone="yellow"
-        />
-        <StatCard
-          label="Stok menipis"
-          value={data.counts.lowStockMaterials}
-          detail="Di bawah ambang"
-          href="/plp/inventory/materials?stock=low"
-          tone="rose"
-        />
-        <StatCard
-          label="Unit maintenance"
-          value={maintenanceUnits.length}
-          detail="Perlu perbaikan"
-          href="/admin/equipment/units?status=MAINTENANCE"
-          tone="yellow"
-        />
-        <StatCard
-          label="Reservasi aktif"
+          label="Reservasi Berjalan"
           value={data.counts.activeReservations}
-          detail="Berjalan / menunggu"
-          href="/plp/schedule"
+          detail="Sesi lab terjadwal aktif"
+          href="/admin/schedule"
           tone="green"
+        />
+        <StatCard
+          label="Laporan Kendala"
+          value={data.counts.openIncidents}
+          detail="Insiden belum selesai"
+          href="/admin/schedule"
+          tone="rose"
+        />
+        <StatCard
+          label="Konfigurasi Sistem"
+          value={data.counts.configuredSettings}
+          detail="Parameter operasional"
+          href="/admin/configuration"
+          tone="cream"
         />
       </div>
 
-      <div className="mt-6 grid gap-5 xl:grid-cols-2">
+      <div className="mt-6">
         <ChartPanel
-          context="Beban sistem"
-          title="Tren request lintas lab"
-          range={`${trend.range.label} · ${trend.total} request`}
+          context="Beban Sistem"
+          title="Tren Pengajuan Sesi Lintas Lab"
+          range={`${trend.range.label} · ${trend.total} pengajuan`}
           action={
             <RangeSwitcher
               basePath="/admin/dashboard"
@@ -160,16 +147,15 @@ export default async function AdminDashboardPage({
           }))}
           footnote={
             <>
-              Sumber data sama dengan{" "}
-              <ChartLink href="/plp/requests">request review</ChartLink>. Klik bar
-              untuk membuka request periode itu.
+              Data diagregasikan dari seluruh jadwal laboratorium. Buka{" "}
+              <ChartLink href="/admin/schedule">jadwal & agenda</ChartLink> untuk detail operasional.
             </>
           }
         >
           {trend.total === 0 ? (
             <ChartEmpty
-              title="Belum ada request pada rentang ini"
-              description="Data akan muncul setelah mahasiswa mengirim request."
+              title="Belum ada pengajuan pada rentang ini"
+              description="Data akan muncul setelah mahasiswa mengirim pengajuan sesi laboratorium."
             />
           ) : (
             <StackedBarChart
@@ -177,72 +163,26 @@ export default async function AdminDashboardPage({
                 key: bucket.key,
                 label: bucket.label,
                 sublabel: bucket.sublabel,
-                href: bucket.href,
+                href: "/admin/schedule",
                 segments: bucket.segments,
               }))}
-              unit="request"
-              ariaLabel={`Tren request ${trend.range.label}`}
+              unit="pengajuan"
+              ariaLabel={`Tren pengajuan ${trend.range.label}`}
             />
           )}
         </ChartPanel>
-
-        <ChartPanel
-          context="Sebaran aset"
-          title="Equipment per room dan status"
-          range={`${equipment.buckets.reduce(
-            (sum, bucket) =>
-              sum + bucket.segments.reduce((inner, segment) => inner + segment.value, 0),
-            0,
-          )} asset aktif`}
-          legend={equipment.groups.map((group) => ({
-            label: group.label,
-            tone: group.tone,
-          }))}
-          footnote={
-            <>
-              Grafik menghitung asset, bukan unit. Kelola data di{" "}
-              <ChartLink href="/admin/equipment/assets">
-                equipment assets
-              </ChartLink>
-              .
-            </>
-          }
-        >
-          {equipment.buckets.length === 0 ? (
-            <ChartEmpty
-              title="Belum ada equipment"
-              description="Tambahkan equipment asset terlebih dahulu untuk melihat sebarannya."
-            />
-          ) : (
-            <StackedBarChart
-              buckets={equipment.buckets}
-              unit="asset"
-              ariaLabel="Jumlah equipment per room dan status"
-            />
-          )}
-        </ChartPanel>
-      </div>
-
-      <div className="mt-6">
-        <MaintenanceUnitsPanel
-          units={maintenanceUnits}
-          title="Daftar unit dalam maintenance & perbaikan"
-          viewAllHref="/admin/equipment/units?status=MAINTENANCE"
-          canManage={true}
-          endpointPrefix="/api/admin/equipment-units"
-        />
       </div>
 
       <Panel
-        context="Jejak"
-        title="Aktivitas admin terakhir"
+        context="Jejak Audit"
+        title="Aktivitas Sistem Terakhir"
         className="mt-6"
         action={
           <Link
             href="/admin/audit-logs"
-            className="inline-flex min-h-11 items-center rounded-xl px-3 text-[12px] font-bold text-[#38529B] hover:bg-[#E9EEFC] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+            className="inline-flex min-h-11 items-center rounded-xl px-3 text-[12px] font-bold text-[#8D6500] hover:bg-[#FEF1CC] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F9B129]"
           >
-            Semua audit log
+            Semua log audit →
           </Link>
         }
       >

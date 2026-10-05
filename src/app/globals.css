@@ -32,31 +32,31 @@
 
 :root {
   --radius: 0.75rem;
-  --background: #f5f5f5;
-  --foreground: #212121;
+  --background: #f8f9fa;
+  --foreground: #121826;
   --card: #ffffff;
-  --card-foreground: #212121;
-  --primary: #f9b129;
-  --primary-foreground: #212121;
-  --secondary: #fef1cc;
-  --muted: #eeeeee;
-  --muted-foreground: #6b6b6b;
-  --border: #e1e1e1;
-  --destructive: #f45959;
+  --card-foreground: #121826;
+  --primary: #fdb913;
+  --primary-foreground: #121826;
+  --secondary: #fef7e6;
+  --muted: #f1f3f5;
+  --muted-foreground: #64748b;
+  --border: #e5e7eb;
+  --destructive: #ef4444;
 }
 
 .dark {
-  --background: #161616;
-  --foreground: #f5f5f4;
-  --card: #202020;
-  --card-foreground: #f5f5f4;
-  --primary: #fb846b;
-  --primary-foreground: #29100a;
-  --secondary: #2d2d2b;
-  --muted: #252525;
-  --muted-foreground: #b0b0aa;
-  --border: #3b3b37;
-  --destructive: #ff8a8a;
+  --background: #121826;
+  --foreground: #f8f9fa;
+  --card: #1a2234;
+  --card-foreground: #f8f9fa;
+  --primary: #fdb913;
+  --primary-foreground: #121826;
+  --secondary: #26334d;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --border: #2d3748;
+  --destructive: #f87171;
 }
 
 @layer base {
@@ -78,20 +78,22 @@
     cursor: pointer;
   }
   ::selection {
-    background: #f9b12966;
+    background: #fdb9134d;
   }
 }
 
 @layer components {
   .dashboard-shell {
-    background: #f5f5f5;
-    color: #212121;
+    background: #f8f9fa;
+    color: #121826;
   }
 
   .dashboard-card {
-    border: 1px solid #e1e1e1;
+    border: 1px solid #e5e7eb;
     border-radius: 16px;
     background: #ffffff;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.03);
+    transition: border-color 150ms ease, box-shadow 150ms ease;
   }
 
   .map-grid {

@@ -32,8 +32,10 @@ export const equipmentTypeInputSchema = z
   .object({
     name,
     category: z.string().trim().max(80).optional(),
+    classification: z.enum(["INSTRUMENT", "TOOL"]).default("INSTRUMENT"),
     description: optionalDescription,
     usageType: z.enum(["BORROWABLE", "USAGE_ONLY"]),
+    imageMediaId: z.string().uuid().optional().nullable(),
     active: z.boolean().optional(),
   })
   .strict();
@@ -66,6 +68,7 @@ export const equipmentUnitInputSchema = z
     assetCode: requiredCode,
     code: requiredCode,
     label: z.string().trim().min(1).max(120),
+    storageLocation: z.string().trim().max(120).optional().or(z.literal("")),
     status: z
       .enum([
         "AVAILABLE",
@@ -104,6 +107,7 @@ export const materialInputSchema = z
     category: z.string().trim().max(80).optional(),
     baseUnit: z.string().trim().min(1).max(24),
     description: optionalDescription,
+    imageMediaId: z.string().uuid().optional().nullable(),
     active: z.boolean().optional(),
     rule: dispensingRuleInputSchema.optional(),
   })
@@ -114,6 +118,7 @@ export const materialBatchInputSchema = z
     materialCode: requiredCode,
     roomCode: requiredCode,
     lotNumber: z.string().trim().max(80).optional(),
+    storageLocation: z.string().trim().max(120).optional().or(z.literal("")),
     quantity: z.number().min(0).max(10_000_000),
     expiryDate: z.iso.datetime({ offset: true }).optional(),
     active: z.boolean().optional(),
@@ -125,7 +130,7 @@ export const assignmentInputSchema = z
     userId: z.string().trim().min(1).max(128),
     scopeType: z.enum(["LABORATORY", "ROOM", "ACTIVITY"]),
     scopeId: z.string().trim().min(1).max(64),
-    assignmentType: z.enum(["PLP", "ASLAB", "PIC"]),
+    assignmentType: z.enum(["PLP", "PIC"]),
     startDate: z.iso.datetime({ offset: true }).optional(),
     endDate: z.iso.datetime({ offset: true }).optional(),
     notes: z.string().trim().max(1000).optional(),
@@ -157,12 +162,21 @@ export const userRoleInputSchema = z
     // Better Auth stores several roles as a comma-separated string; the union
     // of their permissions applies.
     roles: z
-      .array(z.enum(["user", "plp", "lecturer", "aslab", "admin"]))
+      .array(z.enum(["user", "plp", "admin"]))
       .min(1)
-      .max(5)
+      .max(3)
       .refine((values) => new Set(values).size === values.length, {
         message: "Peran tidak boleh duplikat.",
       }),
+  })
+  .strict();
+
+export const userCreateInputSchema = z
+  .object({
+    name: z.string().trim().min(2, "Nama minimal 2 karakter.").max(120),
+    email: z.string().trim().email("Format email tidak valid.").max(180),
+    password: z.string().min(8, "Password minimal 8 karakter.").max(128),
+    role: z.enum(["user", "plp", "admin"]).default("user"),
   })
   .strict();
 
@@ -198,3 +212,4 @@ export type MaterialInput = z.infer<typeof materialInputSchema>;
 export type MaterialBatchInput = z.infer<typeof materialBatchInputSchema>;
 export type AssignmentInput = z.infer<typeof assignmentInputSchema>;
 export type SettingsInput = z.infer<typeof settingsInputSchema>;
+export type UserCreateInput = z.infer<typeof userCreateInputSchema>;

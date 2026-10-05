@@ -27,7 +27,8 @@ type SearchParams = Record<string, string | string[] | undefined>;
 
 function pick(params: SearchParams, key: string) {
   const value = params[key];
-  return Array.isArray(value) ? value[0] : value;
+  const str = Array.isArray(value) ? value[0] : value;
+  return str && str.trim().length > 0 ? str.trim() : undefined;
 }
 
 const statusLabel: Record<string, string> = {
@@ -36,10 +37,10 @@ const statusLabel: Record<string, string> = {
   CANCELLED: "Dibatalkan",
 };
 
-const statusTone: Record<string, "blue" | "green" | "cream"> = {
-  IN_PROGRESS: "blue",
+const statusTone: Record<string, "yellow" | "green" | "neutral"> = {
+  IN_PROGRESS: "yellow",
   COMPLETED: "green",
-  CANCELLED: "cream",
+  CANCELLED: "neutral",
 };
 
 export default async function OpnameSessionsPage({
@@ -130,34 +131,34 @@ export default async function OpnameSessionsPage({
             />
           </div>
         ) : (
-          <ul className="divide-y divide-[#EEEEEE]">
+          <ul className="divide-y divide-[#E5E7EB]">
             {result.data.map((session) => (
               <li key={session.id}>
                 <Link
                   href={`/plp/inventory/opname/${session.id}`}
-                  className="flex flex-col gap-3 p-4 transition hover:bg-[#FAFAFA] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA] sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 p-4 transition hover:bg-[#FDFBF7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[12px] font-semibold text-[#212121]">
+                      <span className="text-[12px] font-semibold text-[#121826]">
                         {session.roomName}
                       </span>
-                      <StatusBadge tone={statusTone[session.status] ?? "cream"}>
+                      <StatusBadge tone={statusTone[session.status] ?? "neutral"}>
                         {statusLabel[session.status] ?? session.status}
                       </StatusBadge>
                     </div>
-                    <p className="mt-1 text-[11px] text-[#6B6B6B]">
+                    <p className="mt-1 text-[11px] text-[#64748B]">
                       {session.roomCode} · dimulai {session.startedByName} ·{" "}
                       {formatDateTime(session.startedAt)} · {session.entryCount}{" "}
                       batch
                     </p>
                     {session.notes && (
-                      <p className="mt-1 text-[12px] text-[#6B6B6B]">
+                      <p className="mt-1 text-[12px] text-[#64748B]">
                         {session.notes}
                       </p>
                     )}
                   </div>
-                  <span className="text-[11px] text-[#929292]">
+                  <span className="text-[11px] text-[#64748B]">
                     {session.completedAt
                       ? `Selesai ${formatDateTime(session.completedAt)}`
                       : "Lihat detail"}

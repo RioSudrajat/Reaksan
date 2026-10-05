@@ -11,7 +11,7 @@ import { requirePermission } from "@/lib/session";
 import { listAssignments } from "@/services/admin.service";
 import { listRoleAccess } from "@/services/permissions.service";
 
-export const metadata: Metadata = { title: "Peran & akses" };
+export const metadata: Metadata = { title: "Peran & Hak Akses · Admin Reaksan" };
 
 export default async function AdminRolesPage() {
   await requirePermission({ configuration: ["manage-any"] });
@@ -37,28 +37,28 @@ export default async function AdminRolesPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Akses"
-        title="Peran & akses"
-        description="Atur apa yang boleh dilakukan tiap peran dalam bahasa sehari-hari, lihat siapa saja anggotanya, dan periksa penanggung jawab tiap lab."
+        eyebrow="Akses & Keamanan"
+        title="Peran & Hak Akses Sistem"
+        description="Konfigurasi matriks izin akses untuk peran Mahasiswa, PLP Laboratorium, dan Administrator. Perubahan hak akses berlaku langsung ke seluruh ekosistem Reaksan."
       />
 
       <RoleAccessBoard items={roleAccess} members={members} />
 
       <Panel
         context={`${plpAssignments.length} penugasan aktif`}
-        title="PLP per lab"
+        title="Penugasan PLP per Laboratorium"
         className="mt-5"
       >
         {plpAssignments.length === 0 ? (
           <EmptyState
             title="Belum ada PLP yang ditugaskan"
-            description="PLP hanya melihat lab yang ditugaskan. Tambahkan penugasan lewat halaman Assignments."
+            description="PLP hanya dapat memvalidasi dan mengelola laboratorium yang ditugaskan. Atur penugasan melalui menu Penugasan PLP."
             action={
               <Link
                 href="/admin/assignments"
-                className="inline-flex min-h-11 items-center rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+                className="inline-flex min-h-11 items-center rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#E5A020] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F9B129]"
               >
-                Atur penugasan
+                Atur Penugasan PLP
               </Link>
             }
           />
@@ -84,9 +84,9 @@ export default async function AdminRolesPage() {
             <div className="mt-3">
               <Link
                 href="/admin/assignments"
-                className="text-[11px] font-bold text-[#38529B]"
+                className="text-[12px] font-bold text-[#8D6500] hover:underline transition"
               >
-                Kelola penugasan lab
+                Kelola penugasan lab →
               </Link>
             </div>
           </>

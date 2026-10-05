@@ -19,6 +19,7 @@ export function AddUnitDialog({
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState(suggestedUnitCode ?? `${assetCode}-U1`);
   const [label, setLabel] = useState("");
+  const [storageLocation, setStorageLocation] = useState("Meja Praktikum 1");
   const [status, setStatus] = useState("AVAILABLE");
   const [condition, setCondition] = useState("GOOD");
   const [notes, setNotes] = useState("");
@@ -35,6 +36,7 @@ export function AddUnitDialog({
         body: {
           code: code.trim().toUpperCase(),
           label: label.trim() || `Unit ${code.trim().toUpperCase()}`,
+          storageLocation: storageLocation.trim() || undefined,
           status,
           condition,
           notes: notes.trim() || undefined,
@@ -43,6 +45,7 @@ export function AddUnitDialog({
       });
       setOpen(false);
       setLabel("");
+      setStorageLocation("Meja Praktikum 1");
       setNotes("");
       router.refresh();
     } catch (caught) {
@@ -60,7 +63,7 @@ export function AddUnitDialog({
           setCode(suggestedUnitCode ?? `${assetCode}-U1`);
           setOpen(true);
         }}
-        className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-[#38529B] px-3.5 text-[12px] font-bold text-white transition hover:bg-[#2C417C] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#38529B]"
+        className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-[#FDB913] px-3.5 text-[12px] font-bold text-[#121826] shadow-xs transition hover:bg-[#EAA805] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
       >
         <Plus className="size-4" aria-hidden="true" />
         Tambah Unit Fisik
@@ -73,20 +76,20 @@ export function AddUnitDialog({
           aria-labelledby="add-unit-title"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs"
         >
-          <div className="w-full max-w-md rounded-2xl border border-[#EEEEEE] bg-white p-6 shadow-xl">
+          <div className="w-full max-w-md rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-xl">
             <div className="flex items-center justify-between pb-3">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#929292]">
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#64748B]">
                   {assetCode} · {assetName}
                 </p>
-                <h3 id="add-unit-title" className="text-[16px] font-bold text-[#212121]">
+                <h3 id="add-unit-title" className="text-[16px] font-bold text-[#121826]">
                   Tambah Unit Fisik Baru
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-lg p-1.5 text-[#929292] hover:bg-[#F5F5F5] hover:text-[#212121]"
+                className="rounded-lg p-1.5 text-[#64748B] hover:bg-[#FEF7E6] hover:text-[#121826] transition"
               >
                 <X className="size-5" aria-hidden="true" />
                 <span className="sr-only">Tutup</span>
@@ -128,6 +131,33 @@ export function AddUnitDialog({
                   placeholder="misal: Unit 01 (Meja Lab 3)"
                   className={controlClass + " mt-1"}
                 />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="plp-unit-location"
+                  className="block text-[11px] font-semibold text-[#6B6B6B]"
+                >
+                  Lokasi Penyimpanan (Meja / Rak / Gudang)
+                </label>
+                <input
+                  id="plp-unit-location"
+                  type="text"
+                  value={storageLocation}
+                  onChange={(e) => setStorageLocation(e.target.value)}
+                  placeholder="misal: Meja Praktikum 1 atau Rak Gantung B"
+                  className={controlClass + " mt-1"}
+                />
+              </div>
+
+              <div className="rounded-xl border border-dashed border-[#E5E7EB] bg-[#F8F9FA] p-3 text-[11px] text-[#475569]">
+                <p className="font-semibold text-[#121826]">🏷️ Tag QR Code Otomatis:</p>
+                <p className="mt-0.5">
+                  Unit akan langsung diterbitkan QR Code unik:{" "}
+                  <code className="rounded bg-white px-1.5 py-0.5 font-mono font-bold text-[#8D6500] border border-[#FDE68A]">
+                    RK-UNT-{code.trim().toUpperCase()}
+                  </code>
+                </p>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -194,7 +224,7 @@ export function AddUnitDialog({
               {error && (
                 <p
                   role="alert"
-                  className="rounded-xl bg-[#FDE9E9] p-3 text-[12px] text-[#9E3636]"
+                  className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] p-3 text-[12px] font-medium text-[#991B1B]"
                 >
                   {error}
                 </p>
@@ -205,14 +235,14 @@ export function AddUnitDialog({
                   type="button"
                   onClick={() => setOpen(false)}
                   disabled={pending}
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-4 text-[12px] font-bold text-[#212121] hover:bg-[#F5F5F5]"
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white px-4 text-[12px] font-semibold text-[#121826] hover:bg-[#FEF7E6] hover:border-[#FDE68A] hover:text-[#8D6500] transition"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={pending}
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#38529B] px-5 text-[12px] font-bold text-white hover:bg-[#2C417C] disabled:opacity-70"
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#FDB913] px-5 text-[12px] font-bold text-[#121826] shadow-xs hover:bg-[#EAA805] transition disabled:opacity-70"
                 >
                   {pending ? "Menyimpan..." : "Simpan Unit"}
                 </button>

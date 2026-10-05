@@ -1,28 +1,24 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import {
   AlertTriangle,
   Bell,
   CalendarDays,
-  ChevronDown,
   ChevronRight,
   ClipboardList,
   FlaskConical,
+  GraduationCap,
   LayoutDashboard,
-  ListFilter,
   MapPin,
-  Menu,
   PackageSearch,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
-  Settings,
   ShieldAlert,
   SlidersHorizontal,
-  Sparkles,
   X,
 } from "lucide-react";
 import { cn } from "cn";
@@ -60,23 +56,6 @@ const navGroups = [
     ],
   },
   {
-    label: "Inventory",
-    items: [
-      {
-        label: "Equipment",
-        icon: PackageSearch,
-        key: "equipment",
-        href: "/student/equipment",
-      },
-      {
-        label: "Materials",
-        icon: FlaskConical,
-        key: "materials",
-        href: "/student/materials",
-      },
-    ],
-  },
-  {
     label: "Support",
     items: [
       {
@@ -98,7 +77,7 @@ const navGroups = [
 export { StatusBadge, toneClasses };
 
 export function SectionTitle({
-  eyebrow,
+  eyebrow: _eyebrow,
   title,
   action,
 }: {
@@ -109,12 +88,7 @@ export function SectionTitle({
   return (
     <div className="flex items-end justify-between gap-4">
       <div>
-        {eyebrow && (
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#929292]">
-            {eyebrow}
-          </p>
-        )}
-        <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[#212121]">
+        <h2 className="text-[17px] sm:text-[18px] font-bold tracking-tight text-[#1E293B]">
           {title}
         </h2>
       </div>
@@ -290,19 +264,12 @@ export function LabMap({
   searchTerm,
 }: {
   rooms: RoomView[];
-  selectedRoom: RoomView;
-  onSelectRoom: (room: RoomView) => void;
+  selectedRoom: RoomView | null;
+  onSelectRoom: (room: RoomView | null) => void;
   searchTerm: string;
 }) {
   const [rotation, setRotation] = useState({ yaw: -8, pitch: 18 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef<{
-    pointerId: number;
-    x: number;
-    y: number;
-    yaw: number;
-    pitch: number;
-  } | null>(null);
+
   const visibleRooms = rooms.filter((room) =>
     `${room.name} ${room.description}`
       .toLowerCase()
@@ -314,37 +281,6 @@ export function LabMap({
       yaw: current.yaw + yawDelta,
       pitch: Math.max(-80, Math.min(80, current.pitch + pitchDelta)),
     }));
-  };
-
-  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.currentTarget.setPointerCapture(event.pointerId);
-    dragRef.current = {
-      pointerId: event.pointerId,
-      x: event.clientX,
-      y: event.clientY,
-      yaw: rotation.yaw,
-      pitch: rotation.pitch,
-    };
-    setIsDragging(true);
-  };
-
-  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    const drag = dragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    setRotation({
-      yaw: drag.yaw + (event.clientX - drag.x) * 0.45,
-      pitch: Math.max(
-        -80,
-        Math.min(80, drag.pitch - (event.clientY - drag.y) * 0.28),
-      ),
-    });
-  };
-
-  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (dragRef.current?.pointerId === event.pointerId) {
-      dragRef.current = null;
-      setIsDragging(false);
-    }
   };
 
   return (
@@ -360,7 +296,7 @@ export function LabMap({
               Laboratorium Kimia
             </p>
             <p className="text-[10px] text-[#6B6B6B]">
-              {rooms.length} lab · ringkasan langsung
+              {rooms.length} lab · klik untuk pilih / lepas seleksi
             </p>
           </div>
         </div>
@@ -368,15 +304,16 @@ export function LabMap({
         <div className="absolute right-4 top-4 z-20 flex gap-2">
           <button
             className="flex min-h-10 items-center gap-2 rounded-xl border border-white/80 bg-white/95 px-3 text-[11px] font-semibold text-[#6B6B6B] shadow-sm transition hover:text-[#212121] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
-            aria-label="Filter lab map"
+            aria-label="Filter denah laboratorium"
           >
             <SlidersHorizontal className="size-3.5" aria-hidden="true" />
             <span className="hidden sm:inline">Filter</span>
           </button>
           <button
             className="flex size-10 items-center justify-center rounded-xl border border-white/80 bg-white/95 text-[#6B6B6B] shadow-sm transition hover:text-[#212121] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
-            aria-label="Reset 3D map view"
+            aria-label="Kembalikan sudut pandang denah"
             onClick={() => setRotation({ yaw: -8, pitch: 18 })}
+            title="Reset sudut pandang"
           >
             <span className="text-[16px]" aria-hidden="true">
               ↺
@@ -388,88 +325,91 @@ export function LabMap({
           <button
             className="flex size-9 items-center justify-center rounded-lg text-[16px] text-[#6B6B6B] hover:bg-[#F5F5F5] hover:text-[#212121] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
             onClick={() => updateRotation(-18, 0)}
-            aria-label="Rotate map left"
+            aria-label="Putar denah ke kiri"
+            title="Putar ke kiri"
           >
             ←
           </button>
           <button
             className="flex size-9 items-center justify-center rounded-lg text-[16px] text-[#6B6B6B] hover:bg-[#F5F5F5] hover:text-[#212121] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
             onClick={() => updateRotation(18, 0)}
-            aria-label="Rotate map right"
+            aria-label="Putar denah ke kanan"
+            title="Putar ke kanan"
           >
             →
           </button>
         </div>
 
         <div className="pointer-events-none absolute bottom-4 left-4 z-20 flex flex-wrap gap-2 rounded-xl border border-white/80 bg-white/95 p-2 shadow-sm">
-          <StatusBadge tone="green">Available</StatusBadge>
-          <StatusBadge tone="blue">Reserved</StatusBadge>
-          <StatusBadge tone="yellow">In use</StatusBadge>
+          <StatusBadge tone="green">Tersedia</StatusBadge>
+          <StatusBadge tone="blue">Direservasi</StatusBadge>
+          <StatusBadge tone="yellow">Digunakan</StatusBadge>
         </div>
 
         <div
-          className={cn(
-            "lab-floor absolute inset-[7%] cursor-grab select-none active:cursor-grabbing",
-            isDragging && "cursor-grabbing",
-          )}
-          role="group"
-          aria-label="Interactive 3D laboratory map. Hold and drag to rotate the map."
+          className="lab-floor absolute inset-[7%] select-none cursor-default"
+          role="region"
+          aria-label="Denah interaktif laboratorium. Klik ruangan untuk memilih, klik sekali lagi atau area kosong untuk membatalkan."
           style={{
             transform: `perspective(1200px) rotateX(${rotation.pitch}deg) rotateY(${rotation.yaw}deg)`,
             transformStyle: "preserve-3d",
-            transition: isDragging ? "none" : "transform 160ms ease-out",
-            touchAction: "none",
+            transition: "transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1)",
           }}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
+          onClick={() => {
+            if (selectedRoom) {
+              onSelectRoom(null);
+            }
+          }}
         >
           <div className="absolute inset-[5%] rounded-[6%] border-[10px] border-[#E8E4DB] bg-[#D9D1C1] shadow-2xl shadow-[#6B5A3A]/20" />
           <div className="absolute inset-[8%] rounded-[4%] border border-[#B8AE9D] bg-[#D8D0C2]" />
           {visibleRooms.map((room) => {
-            const isSelected = selectedRoom.id === room.id;
+            const isSelected = selectedRoom?.id === room.id;
             return (
               <button
                 key={room.id}
+                type="button"
                 className={cn(
-                  "lab-room absolute z-10 flex flex-col justify-between rounded-md border-2 p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#212121]",
-                  room.tone === "yellow" && "border-[#D3A02D] bg-[#F8E3A9]",
-                  room.tone === "blue" && "border-[#91A9E6] bg-[#C9D6F5]",
-                  room.tone === "green" && "border-[#8FC9A5] bg-[#C8E7D1]",
-                  room.tone === "cream" && "border-[#BAB6AC] bg-[#F0EEE8]",
-                  room.tone === "rose" && "border-[#D7A0A0] bg-[#F7D7D7]",
-                  isSelected && "ring-4 ring-[#F9B129]/70 ring-offset-2",
+                  "lab-room absolute z-20 flex flex-col justify-between rounded-md border-2 p-3 text-left transition-all duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#212121]",
+                  room.tone === "yellow" && "border-[#D3A02D] bg-[#F8E3A9] hover:bg-[#F3DC9B]",
+                  room.tone === "blue" && "border-[#91A9E6] bg-[#C9D6F5] hover:bg-[#BCD0F5]",
+                  room.tone === "green" && "border-[#8FC9A5] bg-[#C8E7D1] hover:bg-[#BBE2C6]",
+                  room.tone === "cream" && "border-[#BAB6AC] bg-[#F0EEE8] hover:bg-[#EAE7DF]",
+                  room.tone === "rose" && "border-[#D7A0A0] bg-[#F7D7D7] hover:bg-[#F5CCCC]",
+                  isSelected
+                    ? "z-30 ring-4 ring-[#F9B129] ring-offset-2 scale-[1.04] shadow-lg brightness-105"
+                    : "hover:scale-[1.02] active:scale-[0.98]",
                 )}
                 style={room.position}
-                onPointerDown={(event) => event.stopPropagation()}
-                onPointerUp={(event) => event.stopPropagation()}
-                onClick={() => onSelectRoom(room)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelectRoom(isSelected ? null : room);
+                }}
                 aria-label={`Pilih ${room.name}`}
                 aria-pressed={isSelected}
               >
-                <div className="flex items-start justify-between gap-2">
+                <div className="pointer-events-none flex items-start justify-between gap-2">
                   <span className="max-w-[75%] text-[10px] font-bold uppercase tracking-[0.09em] text-[#4F4B43] sm:text-[11px]">
                     {room.shortName}
                   </span>
                   <span
                     className="size-2 rounded-full bg-[#048444] ring-2 ring-white/70"
-                    aria-label="available"
+                    aria-label="tersedia"
                   />
                 </div>
-                <div className="space-y-1 text-[10px] font-medium text-[#5D5B53]">
+                <div className="pointer-events-none space-y-1 text-[10px] font-medium text-[#5D5B53]">
                   <div className="h-2 w-2/3 rounded-full bg-white/50" />
                   <div className="h-2 w-1/2 rounded-full bg-white/50" />
                   <div className="flex items-center gap-1 pt-1">
                     <PackageSearch className="size-3" aria-hidden="true" />
-                    {room.available} free
+                    {room.available} siap pakai
                   </div>
                 </div>
               </button>
             );
           })}
           <div className="absolute left-[34%] top-[46%] flex h-[10%] w-[38%] items-center justify-center rounded-sm border border-[#C6B99F] bg-[#EFE9DC] text-[9px] font-bold uppercase tracking-[0.1em] text-[#8A7B61] shadow-sm">
-            Main circulation
+            Sirkulasi Utama
           </div>
           <div className="absolute left-[30%] top-[18%] h-[8%] w-[5%] rounded-sm bg-[#B8D9AE] shadow-sm" />
           <div className="absolute right-[22%] bottom-[16%] h-[9%] w-[6%] rounded-sm bg-[#B8D9AE] shadow-sm" />
@@ -486,7 +426,7 @@ export function LabMap({
                 aria-hidden="true"
               />
               <p className="mt-3 text-sm font-semibold text-[#212121]">
-                Room tidak ditemukan
+                Ruangan tidak ditemukan
               </p>
               <p className="mt-1 text-xs text-[#6B6B6B]">
                 Coba kata kunci lain.
@@ -503,7 +443,7 @@ export function ReaksanDashboard({
   userName,
   catalog,
   events,
-  unreadCount,
+  unreadCount: _unreadCount,
   latestIncident,
 }: {
   userName: string;
@@ -515,15 +455,13 @@ export function ReaksanDashboard({
   const rooms = catalog.rooms;
   const [selectedRoom, setSelectedRoom] = useState<RoomView | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [requestView, setRequestView] = useState<"upcoming" | "requests">(
     "upcoming",
   );
   const currentRoom =
     selectedRoom && rooms.some((room) => room.id === selectedRoom.id)
       ? selectedRoom
-      : (rooms[1] ?? rooms[0] ?? null);
+      : null;
   const myEvents = events;
   const lab = {
     availableUnits: catalog.equipment.reduce(
@@ -553,8 +491,8 @@ export function ReaksanDashboard({
         : event.title,
     detail: `${event.roomName} · ${
       event.equipment?.length
-        ? `${event.equipment.length} equipment`
-        : "no equipment"
+        ? `${event.equipment.length} alat/instrumen`
+        : "tanpa instrumen"
     }`,
     status: requestStatusLabels[event.status],
     tone: requestStatusTone(event.status),
@@ -567,11 +505,11 @@ export function ReaksanDashboard({
     detail:
       [
         event.requestCode,
-        event.equipment?.length ? `${event.equipment.length} equipment` : null,
-        event.materials?.length ? `${event.materials.length} materials` : null,
+        event.equipment?.length ? `${event.equipment.length} instrumen` : null,
+        event.materials?.length ? `${event.materials.length} bahan` : null,
       ]
         .filter(Boolean)
-        .join(" · ") || "No resources yet",
+        .join(" · ") || "Belum ada instrumen/bahan",
     status: requestStatusLabels[event.status],
     tone: requestStatusTone(event.status),
   }));
@@ -589,200 +527,72 @@ export function ReaksanDashboard({
   const selectedRoomMatchesSearch = currentRoom
     ? searchMatches.some((room) => room.id === currentRoom.id)
     : false;
-  const emptyRoom: RoomView = {
-    id: "",
-    name: "Belum ada room",
-    shortName: "No room",
-    description:
-      "Katalog laboratorium belum tersedia. Jalankan npm run db:seed lalu muat ulang halaman.",
-    tone: "cream",
-    position: {},
-    equipment: 0,
-    available: 0,
-    reserved: 0,
-    inUse: 0,
-    awaitingReturn: 0,
-    maintenance: 0,
-    typeCount: 0,
-  };
   const visibleSelectedRoom =
     (searchTerm.trim() && currentRoom && !selectedRoomMatchesSearch
       ? (searchMatches[0] ?? currentRoom)
-      : currentRoom) ?? emptyRoom;
-  const selectedTone = toneClasses[visibleSelectedRoom.tone];
+      : currentRoom) ?? null;
+  const selectedTone = visibleSelectedRoom ? toneClasses[visibleSelectedRoom.tone] : null;
   const roomOpenPercent =
-    visibleSelectedRoom.equipment > 0
+    visibleSelectedRoom && visibleSelectedRoom.equipment > 0
       ? Math.round(
           (visibleSelectedRoom.available / visibleSelectedRoom.equipment) * 100,
         )
       : 0;
 
-  const roomMaintenanceUnits = useMemo(() => {
-    if (!visibleSelectedRoom || !visibleSelectedRoom.id) return [];
-    const roomEquip = catalog.equipment.filter(
-      (e) => e.roomId === visibleSelectedRoom.id,
-    );
-    return roomEquip.flatMap((eq) =>
-      eq.units
-        .filter((u) => u.status === "Maintenance")
-        .map((u) => ({
-          unitId: u.id,
-          unitLabel: u.label,
-          assetName: eq.name,
-          condition: u.condition ?? "Perlu perbaikan",
-          notes: u.notes,
-        })),
-    );
-  }, [catalog.equipment, visibleSelectedRoom]);
-
   return (
-    <div className="dashboard-shell min-h-screen">
-      <Sidebar
-        collapsed={collapsed}
-        mobileOpen={mobileOpen}
-        onToggle={() => setCollapsed((value) => !value)}
-        onClose={() => setMobileOpen(false)}
-        userName={userName}
-        activeKey="dashboard"
-      />
-
-      <div
-        className={cn(
-          "min-h-screen transition-[padding] duration-200 lg:pl-[256px]",
-          collapsed && "lg:pl-[80px]",
-        )}
-      >
-        <header className="sticky top-0 z-30 border-b border-[#E1E1E1]/90 bg-[#F5F5F5]/95 backdrop-blur-sm">
-          <div className="flex min-h-[72px] items-center gap-3 px-4 sm:px-6 lg:px-8">
-            <button
-              className="flex size-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white text-[#6B6B6B] hover:text-[#212121] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA] lg:hidden"
-              onClick={() => setMobileOpen(true)}
-              aria-label="Buka menu"
-            >
-              <Menu className="size-5" aria-hidden="true" />
-            </button>
-            <div className="min-w-0 flex-1">
-              <p className="hidden text-[11px] font-semibold uppercase tracking-[0.14em] text-[#929292] sm:block">
-                Student workspace
-              </p>
-              <h1 className="truncate text-[20px] font-bold tracking-[-0.03em] text-[#212121] sm:text-[24px]">
-                Dashboard
-              </h1>
-            </div>
-            <div className="hidden items-center gap-2 sm:flex">
-              <label className="relative block w-[190px] lg:w-[238px]">
-                <span className="sr-only">Cari resource atau room</span>
-                <Search
-                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#929292]"
-                  aria-hidden="true"
-                />
-                <input
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  className="h-10 w-full rounded-xl border border-transparent bg-white pl-9 pr-3 text-[12px] text-[#212121] outline-none placeholder:text-[#929292] focus:border-[#6E8EDA] focus:ring-2 focus:ring-[#6E8EDA]/20"
-                  placeholder="Search room or resource"
-                />
-              </label>
-              <button className="flex h-10 items-center gap-2 rounded-xl border border-transparent bg-white px-3 text-[12px] font-semibold text-[#6B6B6B] hover:border-[#E1E1E1] hover:text-[#212121] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]">
-                <ListFilter className="size-4" aria-hidden="true" />
-                Filter
-              </button>
-              <Link
-                href="/student/notifications"
-                className="relative flex size-10 items-center justify-center rounded-xl border border-transparent bg-white text-[#6B6B6B] hover:border-[#E1E1E1] hover:text-[#212121] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
-                aria-label={
-                  unreadCount > 0
-                    ? `${unreadCount} unread notifications`
-                    : "Notifications"
-                }
-              >
-                <Bell className="size-[17px]" aria-hidden="true" />
-                {unreadCount > 0 && (
-                  <span className="absolute right-2 top-2 size-1.5 rounded-full bg-[#F45959]" />
-                )}
-              </Link>
-              <button
-                className="flex size-10 items-center justify-center rounded-xl border border-transparent bg-white text-[#6B6B6B] hover:border-[#E1E1E1] hover:text-[#212121] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
-                aria-label="Settings"
-              >
-                <Settings className="size-[17px]" aria-hidden="true" />
-              </button>
-              <span
-                className="flex size-10 items-center justify-center rounded-full bg-[#D9E2F8] text-[12px] font-bold text-[#38529B]"
-                aria-label={`Profil ${userName}`}
-              >
-                {userName.slice(0, 1).toUpperCase()}
-              </span>
-            </div>
-            <button
-              className="flex size-11 items-center justify-center rounded-xl border border-transparent bg-white text-[#6B6B6B] sm:hidden"
-              aria-label="Search"
-            >
-              <Search className="size-[18px]" aria-hidden="true" />
-            </button>
+    <div id="top" className="space-y-6">
+      <section className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <p className="text-[13px] font-medium text-[#64748B]">
+            Selamat datang kembali, {firstName}
+          </p>
+          <h2 className="mt-1 max-w-[650px] text-[24px] font-extrabold leading-tight tracking-tight text-[#1E293B] sm:text-[30px]">
+            Pusat Reservasi & Koordinasi Laboratorium Kimia
+          </h2>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="relative block w-52 sm:w-72">
+            <span className="sr-only">Cari ruangan atau instrumen</span>
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#94A3B8]"
+              aria-hidden="true"
+            />
+            <input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="h-10 w-full rounded-xl border border-[#E2E8F0] bg-white pl-9 pr-3 text-[12px] text-[#1E293B] outline-none placeholder:text-[#94A3B8] transition focus:border-[#F9B129] focus:ring-2 focus:ring-[#F9B129]/20"
+              placeholder="Cari ruangan atau instrumen..."
+            />
+          </label>
+          <div className="hidden sm:flex items-center gap-2 text-[12px] font-medium text-[#64748B]">
+            <span
+              className="flex size-2 rounded-full bg-[#048444]"
+              aria-hidden="true"
+            />
+            <span>Status Terkini</span>
           </div>
-          <div className="border-t border-[#E1E1E1]/70 px-4 py-2 sm:hidden">
-            <label className="relative block">
-              <span className="sr-only">Cari resource atau room</span>
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#929292]"
-                aria-hidden="true"
-              />
-              <input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                className="h-10 w-full rounded-xl border border-transparent bg-white pl-9 pr-3 text-[12px] text-[#212121] outline-none placeholder:text-[#929292] focus:border-[#6E8EDA] focus:ring-2 focus:ring-[#6E8EDA]/20"
-                placeholder="Cari room atau resource"
-              />
-            </label>
-          </div>
-        </header>
-
-        <main
-          className="mx-auto max-w-[1680px] px-4 pb-10 pt-6 sm:px-6 lg:px-8"
-          id="top"
-        >
-          <section className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-            <div>
-              <p className="text-[13px] font-medium text-[#6B6B6B]">
-                Good morning, {firstName}.
-              </p>
-              <h2 className="mt-1 max-w-[650px] text-[26px] font-bold leading-tight tracking-[-0.04em] text-[#212121] sm:text-[32px]">
-                Plan your next lab session with clarity.
-              </h2>
-            </div>
-            <div className="flex items-center gap-2 text-[12px] text-[#6B6B6B]">
-              <span
-                className="flex size-2 rounded-full bg-[#048444]"
-                aria-hidden="true"
-              />
-              <span>Live resource overview</span>
-              <ChevronDown className="size-3.5" aria-hidden="true" />
-            </div>
-          </section>
+        </div>
+      </section>
 
           <section
-            className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]"
+            className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]"
             aria-labelledby="lab-overview-title"
           >
             <div>
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#929292]">
-                    Visibility first
-                  </p>
                   <h2
                     id="lab-overview-title"
-                    className="mt-1 text-[18px] font-semibold tracking-[-0.02em]"
+                    className="text-[18px] font-bold tracking-tight text-[#1E293B]"
                   >
-                    Explore the laboratory
+                    Denah Laboratorium & Status Ruangan
                   </h2>
                 </div>
                 <a
-                  className="hidden items-center gap-1 text-[12px] font-semibold text-[#6B6B6B] hover:text-[#212121] sm:flex"
+                  className="hidden items-center gap-1 text-[12px] font-semibold text-[#64748B] hover:text-[#1E293B] sm:flex"
                   href="#map"
                 >
-                  Open full map{" "}
+                  Buka denah lengkap{" "}
                   <ChevronRight className="size-3.5" aria-hidden="true" />
                 </a>
               </div>
@@ -794,171 +604,206 @@ export function ReaksanDashboard({
               />
             </div>
 
-            <motion.aside
-              key={visibleSelectedRoom.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-              className="dashboard-card flex flex-col p-5"
-              aria-live="polite"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#929292]">
-                    Selected room
-                  </p>
-                  <h3 className="mt-2 text-[20px] font-semibold leading-tight tracking-[-0.03em]">
-                    {visibleSelectedRoom.name}
-                  </h3>
+            {visibleSelectedRoom && selectedTone ? (
+              <motion.aside
+                key={visibleSelectedRoom.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className="dashboard-card flex flex-col p-5"
+                aria-live="polite"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[#AE7C1D]">
+                      Ruang Terpilih
+                    </span>
+                    <h3 className="mt-1 text-[20px] font-bold leading-tight tracking-tight text-[#1E293B]">
+                      {visibleSelectedRoom.name}
+                    </h3>
+                  </div>
+                  <span
+                    className={cn(
+                      "flex size-10 items-center justify-center rounded-xl",
+                      selectedTone.soft,
+                    )}
+                  >
+                    <FlaskConical className="size-[18px]" aria-hidden="true" />
+                  </span>
                 </div>
-                <span
-                  className={cn(
-                    "flex size-10 items-center justify-center rounded-xl",
-                    selectedTone.soft,
-                  )}
-                >
-                  <FlaskConical className="size-[18px]" aria-hidden="true" />
-                </span>
-              </div>
-              <p className="mt-3 text-[13px] leading-5 text-[#6B6B6B]">
-                {visibleSelectedRoom.description}
-              </p>
-
-              <div className="mt-6 rounded-xl border border-[#E1E1E1] bg-[#F5F5F5] p-3">
-                <p className="text-[11px] font-semibold text-[#6B6B6B]">
-                  Total equipment ·{" "}
-                  <span className="font-bold tabular-nums text-[#212121]">
-                    {visibleSelectedRoom.equipment} units
-                  </span>{" "}
-                  from {visibleSelectedRoom.typeCount} tracked types
+                <p className="mt-3 text-[13px] leading-relaxed text-[#64748B]">
+                  {visibleSelectedRoom.description}
                 </p>
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  <div className="rounded-lg bg-white p-3 text-center">
-                    <p className="text-[20px] font-bold tabular-nums text-[#048444]">
-                      {visibleSelectedRoom.available}
-                    </p>
-                    <p className="mt-1 text-[10px] text-[#6B6B6B]">Available</p>
-                  </div>
-                  <div className="rounded-lg bg-white p-3 text-center">
-                    <p className="text-[20px] font-bold tabular-nums text-[#6E8EDA]">
-                      {visibleSelectedRoom.reserved}
-                    </p>
-                    <p className="mt-1 text-[10px] text-[#6B6B6B]">Reserved</p>
-                  </div>
-                  <div className="rounded-lg bg-white p-3 text-center">
-                    <p className="text-[20px] font-bold tabular-nums text-[#AE7C1D]">
-                      {visibleSelectedRoom.inUse}
-                    </p>
-                    <p className="mt-1 text-[10px] text-[#6B6B6B]">In use</p>
-                  </div>
-                  <div className="rounded-lg bg-white p-3 text-center">
-                    <p className="text-[20px] font-bold tabular-nums text-[#9E3636]">
-                      {visibleSelectedRoom.awaitingReturn}
-                    </p>
-                    <p className="mt-1 text-[10px] text-[#6B6B6B]">Return</p>
-                  </div>
-                  <div className="rounded-lg bg-white p-3 text-center">
-                    <p className="text-[20px] font-bold tabular-nums text-[#9E3636]">
-                      {visibleSelectedRoom.maintenance}
-                    </p>
-                    <p className="mt-1 text-[10px] text-[#6B6B6B]">
-                      Maintenance
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-[#212121] p-3 text-center text-white">
-                    <p className="text-[20px] font-bold tabular-nums">
-                      {visibleSelectedRoom.equipment}
-                    </p>
-                    <p className="mt-1 text-[10px] text-white/70">Total units</p>
-                  </div>
-                </div>
-              </div>
 
-              <div className="mt-6 space-y-3">
-                <div className="flex items-center justify-between text-[12px]">
-                  <span className="font-medium text-[#6B6B6B]">
-                    Available now
-                  </span>
-                  <span className="font-semibold text-[#048444]">
-                    {roomOpenPercent}% open
-                  </span>
+                <div className="mt-6 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3">
+                  <p className="text-[11px] font-semibold text-[#64748B]">
+                    Total Instrumen ·{" "}
+                    <span className="font-bold tabular-nums text-[#1E293B]">
+                      {visibleSelectedRoom.equipment} unit
+                    </span>{" "}
+                    dari {visibleSelectedRoom.typeCount} jenis terdata
+                  </p>
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <div className="rounded-lg bg-white p-2.5 text-center border border-slate-100 shadow-2xs">
+                      <p className="text-[18px] font-bold tabular-nums text-[#048444]">
+                        {visibleSelectedRoom.available}
+                      </p>
+                      <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">Tersedia</p>
+                    </div>
+                    <div className="rounded-lg bg-white p-2.5 text-center border border-slate-100 shadow-2xs">
+                      <p className="text-[18px] font-bold tabular-nums text-[#6E8EDA]">
+                        {visibleSelectedRoom.reserved}
+                      </p>
+                      <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">Reservasi</p>
+                    </div>
+                    <div className="rounded-lg bg-white p-2.5 text-center border border-slate-100 shadow-2xs">
+                      <p className="text-[18px] font-bold tabular-nums text-[#AE7C1D]">
+                        {visibleSelectedRoom.inUse}
+                      </p>
+                      <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">Dipakai</p>
+                    </div>
+                    <div className="rounded-lg bg-white p-2.5 text-center border border-slate-100 shadow-2xs">
+                      <p className="text-[18px] font-bold tabular-nums text-[#9E3636]">
+                        {visibleSelectedRoom.awaitingReturn}
+                      </p>
+                      <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">Kembali</p>
+                    </div>
+                    <div className="rounded-lg bg-white p-2.5 text-center border border-slate-100 shadow-2xs">
+                      <p className="text-[18px] font-bold tabular-nums text-[#9E3636]">
+                        {visibleSelectedRoom.maintenance}
+                      </p>
+                      <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">Perbaikan</p>
+                    </div>
+                    <div className="rounded-lg bg-[#1E293B] p-2.5 text-center text-white">
+                      <p className="text-[18px] font-bold tabular-nums">
+                        {visibleSelectedRoom.equipment}
+                      </p>
+                      <p className="mt-0.5 text-[10px] text-white/70">Total Unit</p>
+                    </div>
+                  </div>
                 </div>
-                <div
-                  className="h-2 overflow-hidden rounded-full bg-[#EEEEEE]"
-                  aria-label={`${visibleSelectedRoom.available} of ${visibleSelectedRoom.equipment} units available in ${visibleSelectedRoom.name}`}
-                >
-                  <div
-                    className="h-full rounded-full bg-[#048444]"
-                    style={{ width: `${roomOpenPercent}%` }}
-                  />
-                </div>
-              </div>
 
-              {roomMaintenanceUnits.length > 0 && (
-                <div className="mt-4 rounded-xl border border-[#FDE9E9] bg-[#FFF8F8] p-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-bold text-[#9E3636]">
-                      {roomMaintenanceUnits.length} unit sedang maintenance
-                    </p>
-                    <span className="rounded-full bg-[#FDE9E9] px-2 py-0.5 text-[10px] font-semibold text-[#9E3636]">
-                      Tidak dapat dipinjam
+                <div className="mt-5 space-y-2">
+                  <div className="flex items-center justify-between text-[12px]">
+                    <span className="font-medium text-[#64748B]">
+                      Kesiapan Penggunaan
+                    </span>
+                    <span className="font-semibold text-[#048444]">
+                      {roomOpenPercent}% siap pakai
                     </span>
                   </div>
-                  <ul className="mt-2 space-y-1.5">
-                    {roomMaintenanceUnits.map((u) => (
-                      <li
-                        key={u.unitId}
-                        className="rounded-lg border border-[#F7D0D0] bg-white p-2 text-[11px]"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-[#212121]">
-                            {u.unitLabel} · {u.assetName}
-                          </span>
-                          <span className="text-[10px] font-medium text-[#9E3636]">
-                            {u.condition.replace(/_/g, " ")}
-                          </span>
-                        </div>
-                        {u.notes && (
-                          <p className="mt-0.5 text-[10px] text-[#6B6B6B] italic">
-                            &quot;{u.notes}&quot;
-                          </p>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+                  <div
+                    className="h-2 overflow-hidden rounded-full bg-[#EEEEEE]"
+                    aria-label={`${visibleSelectedRoom.available} dari ${visibleSelectedRoom.equipment} unit siap digunakan di ${visibleSelectedRoom.name}`}
+                  >
+                    <div
+                      className="h-full rounded-full bg-[#048444] transition-all"
+                      style={{ width: `${roomOpenPercent}%` }}
+                    />
+                  </div>
                 </div>
-              )}
 
-              <div className="mt-auto pt-7">
-                <Link
-                  href={`/student/laboratory/rooms/${visibleSelectedRoom.id}`}
-                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
-                >
-                  View room schedule{" "}
-                  <ChevronRight className="size-4" aria-hidden="true" />
-                </Link>
-                <p className="mt-3 text-center text-[11px] text-[#929292]">
-                  {searchMatches.length} room
-                  {searchMatches.length === 1 ? "" : "s"} match your search
+                <div className="mt-auto pt-6">
+                  <Link
+                    href={`/student/laboratory/rooms/${visibleSelectedRoom.id}`}
+                    className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+                  >
+                    Lihat Jadwal Ruangan{" "}
+                    <ChevronRight className="size-4" aria-hidden="true" />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRoom(null)}
+                    className="mt-2 text-center w-full text-[11px] font-semibold text-[#94A3B8] hover:text-[#64748B] transition"
+                  >
+                    Tutup detail ruangan (tampilkan ikhtisar)
+                  </button>
+                </div>
+              </motion.aside>
+            ) : (
+              <motion.aside
+                key="facility-overview"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className="dashboard-card flex flex-col p-5"
+                aria-live="polite"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[#AE7C1D]">
+                      Ikhtisar Fasilitas
+                    </span>
+                    <h3 className="mt-1 text-[20px] font-bold leading-tight tracking-tight text-[#1E293B]">
+                      Laboratorium Kimia
+                    </h3>
+                  </div>
+                  <span className="flex size-10 items-center justify-center rounded-xl bg-[#FEF1CC] text-[#AE7C1D]">
+                    <MapPin className="size-[18px]" aria-hidden="true" />
+                  </span>
+                </div>
+                <p className="mt-3 text-[13px] leading-relaxed text-[#64748B]">
+                  Pilih ruangan pada denah atau daftar di bawah untuk memeriksa ketersediaan instrumen, spesifikasi teknis, serta jadwal pemakaian aktif.
                 </p>
-              </div>
-            </motion.aside>
+
+                <div className="mt-5 space-y-2">
+                  <p className="text-[11px] font-semibold text-[#64748B]">
+                    Pilih Ruangan Cepat
+                  </p>
+                  <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+                    {rooms.map((room) => (
+                      <button
+                        key={room.id}
+                        type="button"
+                        onClick={() => setSelectedRoom(room)}
+                        className="flex w-full items-center justify-between rounded-xl border border-slate-200/80 bg-white p-2.5 text-left transition hover:border-[#F9B129] hover:bg-[#FEF1CC]/20 focus-visible:outline-2 focus-visible:outline-[#6E8EDA]"
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="truncate text-[12px] font-bold text-[#1E293B]">
+                            {room.name}
+                          </p>
+                          <p className="text-[11px] text-[#64748B]">
+                            {room.available} unit siap pakai · {room.equipment} total
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-[#E5F5ED] px-2 py-0.5 text-[10px] font-semibold text-[#048444]">
+                          {room.available > 0 ? "Tersedia" : "Penuh"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-auto pt-6">
+                  <Link
+                    href="/student/calendar"
+                    className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+                  >
+                    Buka Kalender Laboratorium{" "}
+                    <ChevronRight className="size-4" aria-hidden="true" />
+                  </Link>
+                  <p className="mt-2.5 text-center text-[11px] text-[#94A3B8]">
+                    {rooms.length} ruang laboratorium terintegrasi
+                  </p>
+                </div>
+              </motion.aside>
+            )}
           </section>
 
           <section
             className="mb-6 grid gap-4 md:grid-cols-3"
-            aria-label="Resource summary"
+            aria-label="Ringkasan sumber daya"
           >
             <div className="dashboard-card flex items-start justify-between gap-4 p-5">
               <div>
-                <p className="text-[12px] font-medium text-[#6B6B6B]">
-                  Available equipment
+                <p className="text-[12px] font-semibold text-[#64748B]">
+                  Instrumen & Alat Siap Pakai
                 </p>
-                <p className="mt-2 text-[28px] font-bold tracking-[-0.04em] tabular-nums">
+                <p className="mt-2 text-[28px] font-bold tracking-tight tabular-nums text-[#1E293B]">
                   {lab.availableUnits}
                 </p>
                 <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#E5F5ED] px-2.5 py-1 text-[11px] font-semibold text-[#03683A]">
-                  {lab.typeCount} equipment types · {lab.totalUnits} units
+                  {lab.typeCount} jenis instrumen · {lab.totalUnits} unit total
                 </p>
               </div>
               <span className="flex size-10 items-center justify-center rounded-xl bg-[#E5F5ED] text-[#048444]">
@@ -967,14 +812,14 @@ export function ReaksanDashboard({
             </div>
             <div className="dashboard-card flex items-start justify-between gap-4 p-5">
               <div>
-                <p className="text-[12px] font-medium text-[#6B6B6B]">
-                  Approved reservations
+                <p className="text-[12px] font-semibold text-[#64748B]">
+                  Reservasi Terkonfirmasi
                 </p>
-                <p className="mt-2 text-[28px] font-bold tracking-[-0.04em] tabular-nums">
+                <p className="mt-2 text-[28px] font-bold tracking-tight tabular-nums text-[#1E293B]">
                   {approvedEvents.length}
                 </p>
                 <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#E9EEFC] px-2.5 py-1 text-[11px] font-semibold text-[#38529B]">
-                  Shown in the room schedule
+                  Tercatat resmi di jadwal laboratorium
                 </p>
               </div>
               <span className="flex size-10 items-center justify-center rounded-xl bg-[#E9EEFC] text-[#6E8EDA]">
@@ -983,14 +828,14 @@ export function ReaksanDashboard({
             </div>
             <div className="dashboard-card flex items-start justify-between gap-4 p-5">
               <div>
-                <p className="text-[12px] font-medium text-[#6B6B6B]">
-                  Pending actions
+                <p className="text-[12px] font-semibold text-[#64748B]">
+                  Menunggu Verifikasi PLP
                 </p>
-                <p className="mt-2 text-[28px] font-bold tracking-[-0.04em] tabular-nums">
+                <p className="mt-2 text-[28px] font-bold tracking-tight tabular-nums text-[#1E293B]">
                   {pendingEvents.length}
                 </p>
                 <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#FFF4D9] px-2.5 py-1 text-[11px] font-semibold text-[#705012]">
-                  Waiting for PLP approval
+                  Dalam proses verifikasi pengurus lab
                 </p>
               </div>
               <span className="flex size-10 items-center justify-center rounded-xl bg-[#FFF4D9] text-[#AE7C1D]">
@@ -1003,51 +848,50 @@ export function ReaksanDashboard({
             <div id="reservations" className="dashboard-card p-5 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <SectionTitle
-                  eyebrow="Stay coordinated"
                   title={
                     requestView === "upcoming"
-                      ? "Upcoming reservations"
-                      : "My requests"
+                      ? "Reservasi Terdekat"
+                      : "Permintaan Saya"
                   }
                   action={
                     <Link
                       href="/student/calendar"
-                      className="text-[12px] font-semibold text-[#6B6B6B] hover:text-[#212121]"
+                      className="text-[12px] font-semibold text-[#64748B] hover:text-[#1E293B]"
                     >
-                      Open My calendar
+                      Buka Kalender Mahasiswa
                     </Link>
                   }
                 />
                 <div
                   className="flex rounded-xl bg-[#F5F5F5] p-1"
                   role="tablist"
-                  aria-label="Dashboard activity view"
+                  aria-label="Tampilan aktivitas mahasiswa"
                 >
                   <button
                     className={cn(
-                      "min-h-9 rounded-lg px-3 text-[11px] font-semibold",
+                      "min-h-9 rounded-lg px-3 text-[11px] font-semibold transition",
                       requestView === "upcoming"
-                        ? "bg-white text-[#212121] shadow-sm"
-                        : "text-[#929292]",
+                        ? "bg-white text-[#212121] shadow-xs"
+                        : "text-[#929292] hover:text-[#212121]",
                     )}
                     onClick={() => setRequestView("upcoming")}
                     role="tab"
                     aria-selected={requestView === "upcoming"}
                   >
-                    Upcoming
+                    Jadwal Terdekat
                   </button>
                   <button
                     className={cn(
-                      "min-h-9 rounded-lg px-3 text-[11px] font-semibold",
+                      "min-h-9 rounded-lg px-3 text-[11px] font-semibold transition",
                       requestView === "requests"
-                        ? "bg-white text-[#212121] shadow-sm"
-                        : "text-[#929292]",
+                        ? "bg-white text-[#212121] shadow-xs"
+                        : "text-[#929292] hover:text-[#212121]",
                     )}
                     onClick={() => setRequestView("requests")}
                     role="tab"
                     aria-selected={requestView === "requests"}
                   >
-                    Requests
+                    Semua Pengajuan
                   </button>
                 </div>
               </div>
@@ -1061,9 +905,8 @@ export function ReaksanDashboard({
                     className="mt-6 divide-y divide-[#EEEEEE]"
                   >
                     {reservationRows.length === 0 ? (
-                      <p className="py-6 text-[12px] text-[#6B6B6B]">
-                        No approved reservation yet. Send a request from My
-                        calendar and it will show up here after PLP approval.
+                      <p className="py-6 text-[12px] text-[#64748B]">
+                        Belum ada reservasi aktif yang terkonfirmasi. Ajukan permintaan jadwal melalui Kalender Mahasiswa untuk memulai.
                       </p>
                     ) : (
                       reservationRows.map((reservation) => (
@@ -1098,13 +941,13 @@ export function ReaksanDashboard({
                               <p className="truncate text-[13px] font-semibold text-[#212121]">
                                 {reservation.title}
                               </p>
-                              <p className="mt-1 truncate text-[11px] text-[#6B6B6B]">
+                              <p className="mt-1 truncate text-[11px] text-[#64748B]">
                                 {reservation.detail}
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center justify-between gap-4 sm:justify-end">
-                            <p className="text-[11px] font-medium text-[#6B6B6B]">
+                            <p className="text-[11px] font-medium text-[#64748B]">
                               {reservation.time}
                             </p>
                             <StatusBadge
@@ -1112,7 +955,7 @@ export function ReaksanDashboard({
                                 reservation.tone as keyof typeof toneClasses
                               }
                             >
-                              Confirmed
+                              Terkonfirmasi
                             </StatusBadge>
                           </div>
                         </div>
@@ -1128,9 +971,8 @@ export function ReaksanDashboard({
                     className="mt-6 divide-y divide-[#EEEEEE]"
                   >
                     {requestRows.length === 0 ? (
-                      <p className="py-6 text-[12px] text-[#6B6B6B]">
-                        No request in My calendar yet. Drag across dates there
-                        to send one.
+                      <p className="py-6 text-[12px] text-[#64748B]">
+                        Belum ada permintaan di Kalender Mahasiswa. Buka kalender untuk memilih tanggal dan mengajukan perizinan.
                       </p>
                     ) : (
                       requestRows.map((request) => (
@@ -1151,7 +993,7 @@ export function ReaksanDashboard({
                               <p className="text-[13px] font-semibold text-[#212121]">
                                 {request.title}
                               </p>
-                              <p className="mt-1 text-[11px] text-[#6B6B6B]">
+                              <p className="mt-1 text-[11px] text-[#64748B]">
                                 {request.id} · {request.detail}
                               </p>
                             </div>
@@ -1171,47 +1013,59 @@ export function ReaksanDashboard({
 
             <div id="research" className="dashboard-card p-5 sm:p-6">
               <SectionTitle
-                eyebrow="Research context"
-                title="My research activity"
+                title="Aktivitas Penelitian & Riset"
                 action={
                   <Link
                     href="/student/calendar"
-                    className="text-[12px] font-semibold text-[#6B6B6B] hover:text-[#212121]"
+                    className="text-[12px] font-semibold text-[#64748B] hover:text-[#212121]"
                   >
-                    Open My calendar
+                    Buka Kalender
                   </Link>
                 }
               />
-              <div className="mt-5 rounded-xl border border-[#E1E1E1] bg-[#F5F5F5] p-4">
+              <div className="mt-5 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <span className="flex size-9 items-center justify-center rounded-lg bg-[#FEF1CC] text-[#AE7C1D]">
-                    <Sparkles className="size-4" aria-hidden="true" />
+                  <span className="flex size-9 items-center justify-center rounded-lg bg-[#FEF7E6] text-[#8D6500]">
+                    <GraduationCap className="size-4" aria-hidden="true" />
                   </span>
                   <span className="text-[11px] font-semibold text-[#048444]">
-                    Active
+                    Aktif
                   </span>
                 </div>
-                <h3 className="mt-4 text-[15px] font-semibold tracking-[-0.02em]">
-                  Synthesis compound X
+                <h3 className="mt-4 text-[15px] font-bold text-[#1E293B] tracking-tight">
+                  {myEvents[0]?.title ?? "Aktivitas Penelitian & Praktikum"}
                 </h3>
-                <p className="mt-1 text-[11px] leading-5 text-[#6B6B6B]">
-                  Thesis research · supervised by Dr. Budi
+                <p className="mt-1 text-[11px] leading-5 text-[#64748B]">
+                  {myEvents[0]?.supervisor
+                    ? `Penelitian · Pembimbing: ${myEvents[0].supervisor}`
+                    : (myEvents[0]?.purpose ?? "Penelitian laboratorium aktif")}
                 </p>
-                <div className="mt-5 flex items-center justify-between border-t border-[#E1E1E1] pt-3 text-[11px]">
-                  <span className="text-[#6B6B6B]">
-                    {myEvents.length} request
-                    {myEvents.length === 1 ? "" : "s"} in My calendar
+                <div className="mt-5 flex items-center justify-between border-t border-[#E2E8F0] pt-3 text-[11px]">
+                  <span className="text-[#64748B]">
+                    {myEvents.length} pengajuan terdaftar
                   </span>
-                  <span className="font-semibold text-[#212121]">
-                    18–30 Sep 2026
+                  <span className="font-semibold text-[#1E293B]">
+                    {(() => {
+                      const evt = myEvents.find((e) => e.status === "ACTIVE" || e.status === "APPROVED") ?? myEvents[0];
+                      if (!evt?.startAt) return "Oktober 2026";
+                      try {
+                        const s = new Date(evt.startAt);
+                        const e = new Date(evt.endAt);
+                        const sStr = new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "short" }).format(s);
+                        const eStr = new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "short", year: "numeric" }).format(e);
+                        return `${sStr} – ${eStr}`;
+                      } catch {
+                        return "Oktober 2026";
+                      }
+                    })()}
                   </span>
                 </div>
               </div>
               <Link
                 href="/student/calendar"
-                className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#E1E1E1] bg-white text-[12px] font-semibold text-[#212121] transition hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+                className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#E2E8F0] bg-white text-[12px] font-bold text-[#1E293B] transition hover:bg-[#F8FAFC] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
               >
-                Review my requests{" "}
+                Lihat Kalender Saya{" "}
                 <ChevronRight className="size-4" aria-hidden="true" />
               </Link>
             </div>
@@ -1220,60 +1074,57 @@ export function ReaksanDashboard({
           <section className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <div id="requests" className="dashboard-card p-5 sm:p-6">
               <SectionTitle
-                eyebrow="Next step"
-                title="Calendar request flow"
+                title="Alur Pengajuan Reservasi"
                 action={
-                  <span className="rounded-full bg-[#F1F0EC] px-2.5 py-1 text-[10px] font-semibold text-[#6B6B6B]">
-                    Preview
+                  <span className="rounded-full bg-[#F1F0EC] px-2.5 py-1 text-[10px] font-semibold text-[#64748B]">
+                    Panduan
                   </span>
                 }
               />
               <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
                 <div>
-                  <p className="text-[14px] font-semibold text-[#212121]">
-                    Block dates, pick resources, send one request.
+                  <p className="text-[14px] font-bold text-[#1E293B]">
+                    Pilih jadwal, tentukan instrumen, lalu kirim pengajuan.
                   </p>
-                  <p className="mt-1 max-w-[480px] text-[12px] leading-5 text-[#6B6B6B]">
-                    Requests wait in My calendar until PLP approves them, then
-                    they appear in the room schedule.
+                  <p className="mt-1 max-w-[480px] text-[12px] leading-5 text-[#64748B]">
+                    Pengajuan akan masuk ke antrean PLP untuk diverifikasi sebelum jadwal resmi ruangan diterbitkan.
                   </p>
                 </div>
                 <Link
                   href="/student/calendar"
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
                 >
-                  Open My calendar{" "}
+                  Buka Kalender{" "}
                   <ChevronRight className="size-4" aria-hidden="true" />
                 </Link>
               </div>
-              <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-medium text-[#6B6B6B]">
-                <span className="rounded-lg bg-[#F5F5F5] px-3 py-2">
-                  1. Block dates
+              <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-medium text-[#64748B]">
+                <span className="rounded-lg bg-[#F8FAFC] border border-slate-200/60 px-3 py-2">
+                  1. Pilih Tanggal
                 </span>
-                <span className="text-[#B7B7B7]" aria-hidden="true">
+                <span className="text-[#94A3B8] self-center" aria-hidden="true">
                   →
                 </span>
-                <span className="rounded-lg bg-[#F5F5F5] px-3 py-2">
-                  2. Resources
+                <span className="rounded-lg bg-[#F8FAFC] border border-slate-200/60 px-3 py-2">
+                  2. Pilih Instrumen & Bahan
                 </span>
-                <span className="text-[#B7B7B7]" aria-hidden="true">
+                <span className="text-[#94A3B8] self-center" aria-hidden="true">
                   →
                 </span>
-                <span className="rounded-lg bg-[#F5F5F5] px-3 py-2">
-                  3. Send
+                <span className="rounded-lg bg-[#F8FAFC] border border-slate-200/60 px-3 py-2">
+                  3. Verifikasi PLP
                 </span>
               </div>
             </div>
             <div id="incidents" className="dashboard-card p-5 sm:p-6">
               <SectionTitle
-                eyebrow="Keep the lab safe"
-                title="My incident reports"
+                title="Laporan Kendala Laboratorium"
                 action={
                   <Link
                     href="/student/incidents"
                     className="text-[11px] font-bold text-[#9E3636] hover:underline"
                   >
-                    View all
+                    Lihat Semua
                   </Link>
                 }
               />
@@ -1283,10 +1134,10 @@ export function ReaksanDashboard({
                     <ShieldAlert className="size-4" aria-hidden="true" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-[13px] font-semibold text-[#212121]">
+                    <p className="text-[13px] font-semibold text-[#1E293B]">
                       {latestIncident.title}
                     </p>
-                    <p className="mt-1 text-[11px] leading-5 text-[#6B6B6B]">
+                    <p className="mt-1 text-[11px] leading-5 text-[#64748B]">
                       {latestIncident.roomName ?? latestIncident.equipmentCode} ·{" "}
                       {latestIncident.status.replaceAll("_", " ").toLowerCase()}
                     </p>
@@ -1294,29 +1145,28 @@ export function ReaksanDashboard({
                       href="/student/incidents"
                       className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-[#9E3636] hover:underline"
                     >
-                      View incident detail{" "}
+                      Lihat Rincian Kendala{" "}
                       <ChevronRight className="size-3.5" aria-hidden="true" />
                     </Link>
                   </div>
                 </div>
               ) : (
-                <div className="mt-5 flex items-start gap-3 rounded-xl border border-[#E1E1E1] bg-[#FAFAF8] p-4">
+                <div className="mt-5 flex items-start gap-3 rounded-xl border border-[#E2E8F0] bg-[#FAFAF8] p-4">
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#E5F5ED] text-[#048444]">
                     <ShieldAlert className="size-4" aria-hidden="true" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-[13px] font-semibold text-[#212121]">
-                      Tidak ada incident terbuka
+                    <p className="text-[13px] font-semibold text-[#1E293B]">
+                      Tidak ada laporan kendala aktif
                     </p>
-                    <p className="mt-1 text-[11px] leading-5 text-[#6B6B6B]">
-                      Laporkan masalah peralatan atau room supaya tim lab bisa
-                      menindaklanjuti.
+                    <p className="mt-1 text-[11px] leading-5 text-[#64748B]">
+                      Laporkan segera jika menemukan kerusakan alat atau tumpahan bahan untuk menjaga keselamatan lab bersama.
                     </p>
                     <Link
                       href="/student/incidents/new"
                       className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-[#9E3636] hover:underline"
                     >
-                      Report incident{" "}
+                      Lapor Kendala Baru{" "}
                       <ChevronRight className="size-3.5" aria-hidden="true" />
                     </Link>
                   </div>
@@ -1328,8 +1178,6 @@ export function ReaksanDashboard({
           <div id="notifications" className="sr-only" aria-live="polite">
             Notifications are available from the header.
           </div>
-        </main>
-      </div>
     </div>
   );
 }

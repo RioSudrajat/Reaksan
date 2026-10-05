@@ -4,12 +4,15 @@ import { EmptyState, PageHeader, Panel } from "@/components/workspace";
 import { listLaboratories, listRoomsAdmin } from "@/services/admin.service";
 import { requirePermission } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Rooms" };
+export const metadata: Metadata = { title: "Data Master Ruangan · Admin Reaksan" };
 
-const toneOptions = ["yellow", "blue", "green", "cream", "rose"].map((tone) => ({
-  value: tone,
-  label: tone,
-}));
+const toneOptions = [
+  { value: "yellow", label: "Kuning (Yellow)" },
+  { value: "blue", label: "Biru (Blue)" },
+  { value: "green", label: "Hijau (Green)" },
+  { value: "cream", label: "Krim (Cream)" },
+  { value: "rose", label: "Merah Muda (Rose)" },
+];
 
 export default async function AdminRoomsPage() {
   await requirePermission({ rooms: ["manage-any"] });
@@ -25,42 +28,42 @@ export default async function AdminRoomsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Master data"
-        title="Rooms"
-        description="Room adalah lokasi fisik equipment dan material. Tone menjaga konsistensi peta laboratorium."
+        eyebrow="Data Master"
+        title="Master Ruangan Laboratorium"
+        description="Ruangan adalah lokasi fisik penempatan instrumen, glassware, dan bahan kimia. Tone warna menentukan visualisasi pada denah interaktif Reaksan."
       />
 
-      <Panel context="Tambah" title="Room baru" className="mb-5">
+      <Panel context="Formulir" title="Tambah Ruangan Baru" className="mb-5">
         <CrudForm
           endpoint="/api/admin/rooms"
           columns={3}
           fields={[
             {
               name: "laboratoryCode",
-              label: "Laboratory",
+              label: "Laboratorium Induk",
               type: "select",
               required: true,
               options: labOptions,
             },
-            { name: "code", label: "Kode", required: true, placeholder: "lab-organik" },
-            { name: "name", label: "Nama", required: true },
-            { name: "shortName", label: "Nama pendek", required: true },
-            { name: "floor", label: "Lantai", placeholder: "1" },
-            { name: "tone", label: "Tone", type: "select", options: toneOptions },
-            { name: "description", label: "Deskripsi", type: "textarea" },
-            { name: "active", label: "Aktif", type: "checkbox", defaultValue: true },
+            { name: "code", label: "Kode Ruangan", required: true, placeholder: "lab-organik" },
+            { name: "name", label: "Nama Ruangan", required: true, placeholder: "Laboratorium Kimia Organik" },
+            { name: "shortName", label: "Nama Singkat", required: true, placeholder: "Kimia Organik" },
+            { name: "floor", label: "Lantai Gedung", placeholder: "Lantai 1" },
+            { name: "tone", label: "Warna Denah", type: "select", options: toneOptions },
+            { name: "description", label: "Deskripsi", type: "textarea", placeholder: "Penjelasan fungsi ruangan dan kapasitas..." },
+            { name: "active", label: "Status Aktif", type: "checkbox", defaultValue: true },
           ]}
-          submitLabel="Tambah room"
-          successMessage="Room ditambahkan."
+          submitLabel="Simpan Ruangan"
+          successMessage="Ruangan berhasil ditambahkan."
         />
       </Panel>
 
-      <Panel context={`${rooms.length} room`} title="Daftar" padded={false}>
+      <Panel context={`${rooms.length} ruangan`} title="Daftar Ruangan Terdaftar" padded={false}>
         {rooms.length === 0 ? (
           <div className="p-5">
             <EmptyState
-              title="Belum ada room"
-              description="Tambahkan room pertama lewat form di atas."
+              title="Belum ada ruangan terdaftar"
+              description="Tambahkan ruangan pertama melalui formulir di atas."
             />
           </div>
         ) : (
@@ -128,8 +131,8 @@ export default async function AdminRoomsPage() {
                           defaultValue: room.active,
                         },
                       ]}
-                      submitLabel="Simpan perubahan"
-                      successMessage="Room diperbarui."
+                      submitLabel="Simpan Perubahan"
+                      successMessage="Data ruangan berhasil diperbarui."
                     />
                   </EditDisclosure>
                 </div>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PlpScheduleCalendar } from "@/components/plp/schedule-calendar";
+import { PlpScheduleSection } from "@/components/plp/schedule-calendar";
 import { ScheduleToolbar } from "@/components/plp/schedule-toolbar";
 import { DailyRunSheet } from "@/components/plp/daily-run-sheet";
 import { PageHeader } from "@/components/workspace";
@@ -76,39 +76,43 @@ export default async function PlpSchedulePage({
       ? allRooms
       : allRooms.filter((room) => roomCodes.includes(room.id));
 
+  const currentRoomName = rooms.find((r) => r.id === query.room)?.name;
+
   return (
     <>
-      <PageHeader
-        eyebrow="Operasional"
-        title="Jadwal & Agenda Lab"
-        description="Pantau penggunaan ruang laboratorium, agenda penelitian mahasiswa, dan persiapan alat-bahan operasional."
-        actions={
-          <div className="flex items-center gap-1 rounded-xl border border-[#E1E1E1] bg-[#FAFAFA] p-1 text-[12px] font-semibold">
-            <Link
-              href={`/plp/schedule?view=calendar${query.room ? `&room=${query.room}` : ""}`}
-              className={
-                "rounded-lg px-3 py-1.5 transition " +
-                (view === "calendar"
-                  ? "bg-white text-[#212121] shadow-xs"
-                  : "text-[#6B6B6B] hover:text-[#212121]")
-              }
-            >
-              Kalender Bulanan
-            </Link>
-            <Link
-              href={`/plp/schedule?view=runsheet&date=${date}${query.room ? `&room=${query.room}` : ""}`}
-              className={
-                "rounded-lg px-3 py-1.5 transition " +
-                (view === "runsheet"
-                  ? "bg-white text-[#212121] shadow-xs"
-                  : "text-[#6B6B6B] hover:text-[#212121]")
-              }
-            >
-              Daily Run Sheet
-            </Link>
-          </div>
-        }
-      />
+      <div className="print:hidden">
+        <PageHeader
+          eyebrow="Operasional"
+          title="Jadwal & Agenda Lab"
+          description="Pantau penggunaan ruang laboratorium, agenda penelitian mahasiswa, dan persiapan alat-bahan operasional."
+          actions={
+            <div className="flex items-center gap-1 rounded-xl border border-[#E5E7EB] bg-[#F8F9FA] p-1 text-[12px] font-semibold">
+              <Link
+                href={`/plp/schedule?view=calendar${query.room ? `&room=${query.room}` : ""}`}
+                className={
+                  "rounded-lg px-3 py-1.5 transition " +
+                  (view === "calendar"
+                    ? "bg-white text-[#121826] font-bold shadow-xs border border-[#E5E7EB]"
+                    : "text-[#64748B] hover:text-[#121826] hover:bg-white/60")
+                }
+              >
+                Kalender Bulanan
+              </Link>
+              <Link
+                href={`/plp/schedule?view=runsheet&date=${date}${query.room ? `&room=${query.room}` : ""}`}
+                className={
+                  "rounded-lg px-3 py-1.5 transition " +
+                  (view === "runsheet"
+                    ? "bg-white text-[#121826] font-bold shadow-xs border border-[#E5E7EB]"
+                    : "text-[#64748B] hover:text-[#121826] hover:bg-white/60")
+                }
+              >
+                Daily Run Sheet
+              </Link>
+            </div>
+          }
+        />
+      </div>
 
       {view === "runsheet" ? (
         <DailyRunSheet
@@ -118,9 +122,9 @@ export default async function PlpSchedulePage({
           currentRoom={query.room}
         />
       ) : (
-        <PlpScheduleCalendar
+        <PlpScheduleSection
           events={calendarEvents}
-          month={month}
+          initialMonth={month}
           toolbar={
             <ScheduleToolbar
               rooms={rooms}
@@ -129,6 +133,8 @@ export default async function PlpSchedulePage({
               basePath="/plp/schedule"
             />
           }
+          currentRoomCode={query.room}
+          currentRoomName={currentRoomName}
         />
       )}
     </>

@@ -81,7 +81,7 @@ Seed demo accounts for local development only:
 npm run db:seed:accounts
 ```
 
-That creates `admin`, `plp`, `lecturer`, `aslab`, `student1`, and `student2` accounts at `@reaksan.local`. The default development password is documented in `scripts/seed-accounts.mjs`; override it with `SEED_ACCOUNT_PASSWORD`.
+That creates `admin`, `plp`, `student1`, and `student2` accounts at `@reaksan.local`. The default development password is documented in `scripts/seed-accounts.mjs`; override it with `SEED_ACCOUNT_PASSWORD`.
 
 ### Test two roles in one browser
 
