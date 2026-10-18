@@ -5,7 +5,14 @@ import { assertNode, root, runNpm } from "./lib.mjs";
 try {
   assertNode();
   console.log("\nSetting up your starter…\n");
-  runNpm([existsSync(resolve(root, "package-lock.json")) ? "ci" : "install"]);
+  try {
+    runNpm([existsSync(resolve(root, "package-lock.json")) ? "ci" : "install"]);
+  } catch {
+    console.warn(
+      "\nnpm ci encountered cross-platform package-lock differences. Falling back to npm install…\n",
+    );
+    runNpm(["install"]);
+  }
   runNpm(["run", "predev"]);
   runNpm(["run", "doctor"]);
   console.log(
