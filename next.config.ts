@@ -14,8 +14,8 @@ const nextConfig: NextConfig = {
     ];
   },
   // Emits .next/standalone with a minimal server and only the traced runtime
-  // files. The Dockerfile ships that folder; npm start keeps working as before.
-  output: "standalone",
+  // files for Docker. On Vercel, serverless output is handled natively.
+  output: process.env.VERCEL ? undefined : "standalone",
 };
 
 export default nextConfig;
