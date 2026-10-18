@@ -1,5 +1,6 @@
 import { ApiError, withApiSession } from "@/lib/api";
 import { getObject } from "@/lib/storage";
+import { getCatalogSeedArtwork } from "@/lib/catalog-art";
 import { getMediaRecord } from "@/services/media.service";
 import { sanitizeFileName } from "@/validators/media";
 import { z } from "zod";
@@ -16,7 +17,10 @@ export async function GET(request: Request, context: Context) {
     const record = await getMediaRecord(id);
     if (!record)
       throw new ApiError(404, "NOT_FOUND", "Gambar tidak ditemukan.");
-    const bytes = await getObject(record.storageKey);
+    let bytes = await getObject(record.storageKey);
+    if (!bytes && record.storageKey.startsWith("seed/catalog/")) {
+      bytes = getCatalogSeedArtwork(record.storageKey);
+    }
     if (!bytes)
       throw new ApiError(404, "NOT_FOUND", "Berkas gambar tidak ditemukan.");
     return new Response(Buffer.from(bytes), {

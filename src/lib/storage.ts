@@ -14,7 +14,11 @@ export function currentStorageProvider(): StorageProvider {
 }
 
 function storageBucket() {
-  return process.env.STORAGE_BUCKET?.trim() || "reaksan";
+  return (
+    process.env.STORAGE_BUCKET?.trim() ||
+    process.env.S3_BUCKET?.trim() ||
+    "reaksan"
+  );
 }
 
 function assertSafeKey(key: string) {
