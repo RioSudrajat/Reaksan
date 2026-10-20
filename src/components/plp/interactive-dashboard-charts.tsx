@@ -110,7 +110,9 @@ export function InteractiveDonutGauge({
         {/* Center Dynamic Label */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none pointer-events-none transition-all duration-200 px-3">
           <span className="text-[26px] font-bold tracking-tight text-[#212121] tabular-nums leading-none">
-            {activeSegment ? formatNumber(activeSegment.value) : `${Math.round(percentage)}%`}
+            {activeSegment
+              ? formatNumber(activeSegment.value)
+              : `${Math.round(percentage)}%`}
           </span>
           <span className="mt-1 max-w-[95px] text-[10px] font-semibold text-[#6B6B6B] leading-tight truncate">
             {activeSegment ? activeSegment.label : label}
@@ -352,9 +354,7 @@ export function InteractiveAreaRunwayChart({
                   r={isHovered ? 6 : 4}
                   className={cn(
                     "stroke-white stroke-2 transition-all duration-150",
-                    isHovered
-                      ? "fill-[#F9B129]"
-                      : "fill-[#212121]",
+                    isHovered ? "fill-[#F9B129]" : "fill-[#212121]",
                   )}
                 />
 
@@ -419,7 +419,9 @@ export function InteractiveAreaRunwayChart({
 
         <div className="mt-2 flex items-center justify-between text-[11px] font-medium text-[#929292]">
           <span>Minggu 1 (Pekan Ini)</span>
-          <span className="text-[10px] text-[#6B6B6B]">Arahkan kursor pada titik untuk rincian tanggal</span>
+          <span className="text-[10px] text-[#6B6B6B]">
+            Arahkan kursor pada titik untuk rincian tanggal
+          </span>
           <span>Minggu 8</span>
         </div>
       </div>
@@ -531,7 +533,11 @@ export function InteractiveStackedBarChart({
                     ? "font-bold text-[#212121]"
                     : "font-normal text-[#6B6B6B]",
                 )}
-                title={bucket.sublabel ? `${bucket.label} (${bucket.sublabel})` : bucket.label}
+                title={
+                  bucket.sublabel
+                    ? `${bucket.label} (${bucket.sublabel})`
+                    : bucket.label
+                }
               >
                 {bucket.label}
               </span>

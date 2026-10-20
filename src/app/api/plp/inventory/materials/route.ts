@@ -38,11 +38,7 @@ export function POST(request: Request) {
     async (session) => {
       const input = plpMaterialCreateInputSchema.parse(await readJson(request));
       const { scope } = await scopeForSession(session);
-      const created = await createPlpMaterial(
-        session.user.id,
-        scope,
-        input,
-      );
+      const created = await createPlpMaterial(session.user.id, scope, input);
       return Response.json({ data: created }, { status: 201 });
     },
   );

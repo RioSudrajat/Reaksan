@@ -4,7 +4,9 @@ import { PageHeader, Panel } from "@/components/workspace";
 import { getAppSettings } from "@/services/settings.service";
 import { requirePermission } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Konfigurasi Sistem · Admin Reaksan" };
+export const metadata: Metadata = {
+  title: "Konfigurasi Sistem · Admin Reaksan",
+};
 
 const timezoneOptions = [
   { value: "Asia/Jakarta", label: "Asia/Jakarta (WIB)" },
@@ -70,19 +72,22 @@ export default async function AdminConfigurationPage() {
             fields={[
               {
                 name: "notification_policy.request_submitted",
-                label: "Kirim notifikasi ke PLP saat ada permohonan baru dari mahasiswa",
+                label:
+                  "Kirim notifikasi ke PLP saat ada permohonan baru dari mahasiswa",
                 type: "checkbox",
                 defaultValue: settings.notification_policy.request_submitted,
               },
               {
                 name: "notification_policy.request_decision",
-                label: "Kirim notifikasi keputusan review (disetujui/ditolak) ke mahasiswa",
+                label:
+                  "Kirim notifikasi keputusan review (disetujui/ditolak) ke mahasiswa",
                 type: "checkbox",
                 defaultValue: settings.notification_policy.request_decision,
               },
               {
                 name: "notification_policy.incident_reported",
-                label: "Kirim notifikasi laporan insiden laboratorium ke teknisi PLP",
+                label:
+                  "Kirim notifikasi laporan insiden laboratorium ke teknisi PLP",
                 type: "checkbox",
                 defaultValue: settings.notification_policy.incident_reported,
               },
@@ -91,7 +96,10 @@ export default async function AdminConfigurationPage() {
             successMessage="Kebijakan notifikasi berhasil diperbarui."
           />
           <p className="mt-4 rounded-xl bg-[#F5F5F5] p-3 text-[11px] leading-4 text-[#6B6B6B]">
-            Catatan: Pengaturan ini menjadi standar operasional Reaksan FMIPA Kimia Unpad. Notifikasi transaksional esensial (persetujuan peminjaman, pelaporan insiden, dan pengembalian bahan) tetap aktif demi kelancaran alur kerja.
+            Catatan: Pengaturan ini menjadi standar operasional Reaksan FMIPA
+            Kimia Unpad. Notifikasi transaksional esensial (persetujuan
+            peminjaman, pelaporan insiden, dan pengembalian bahan) tetap aktif
+            demi kelancaran alur kerja.
           </p>
         </Panel>
       </div>

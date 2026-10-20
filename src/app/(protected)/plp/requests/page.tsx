@@ -15,10 +15,7 @@ import {
 import { listRoomViews } from "@/services/catalog.service";
 import { listRequestPage } from "@/services/requests.service";
 import { requirePermission } from "@/lib/session";
-import {
-  getRoomScope,
-  scopeRoomCodes,
-} from "@/services/access-scope.service";
+import { getRoomScope, scopeRoomCodes } from "@/services/access-scope.service";
 import { listPlpRequestsSchema, requestStatusValues } from "@/validators/plp";
 
 export const metadata: Metadata = { title: "Request Review" };
@@ -31,7 +28,10 @@ function pick(params: SearchParams, key: string) {
   return str && str.trim().length > 0 ? str.trim() : undefined;
 }
 
-const PLP_STATUS_OPTIONS: { value: (typeof requestStatusValues)[number]; label: string }[] = [
+const PLP_STATUS_OPTIONS: {
+  value: (typeof requestStatusValues)[number];
+  label: string;
+}[] = [
   { value: "PENDING_PLP", label: "Menunggu PLP" },
   { value: "REQUEST_REVISION", label: "Perlu revisi" },
   { value: "APPROVED", label: "Disetujui" },
@@ -83,9 +83,14 @@ export default async function PlpRequestsPage({
     roomCodes === null
       ? allRooms
       : allRooms.filter((room) => roomCodes.includes(room.id));
-  const activeFilterCount = ["status", "room", "student", "activity", "from", "to"].filter(
-    (key) => Boolean(pick(params, key)),
-  ).length;
+  const activeFilterCount = [
+    "status",
+    "room",
+    "student",
+    "activity",
+    "from",
+    "to",
+  ].filter((key) => Boolean(pick(params, key))).length;
   const totalPages = Math.max(1, Math.ceil(result.meta.total / limit));
 
   return (
@@ -103,7 +108,11 @@ export default async function PlpRequestsPage({
         clearHref="/plp/requests"
       >
         <FilterField label="Status" className="w-full sm:w-40">
-          <select name="status" defaultValue={query.status ?? ""} className={controlClass}>
+          <select
+            name="status"
+            defaultValue={query.status ?? ""}
+            className={controlClass}
+          >
             <option value="">Semua status</option>
             {PLP_STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -113,7 +122,11 @@ export default async function PlpRequestsPage({
           </select>
         </FilterField>
         <FilterField label="Room" className="w-full sm:w-44">
-          <select name="room" defaultValue={query.room ?? ""} className={controlClass}>
+          <select
+            name="room"
+            defaultValue={query.room ?? ""}
+            className={controlClass}
+          >
             <option value="">Semua room</option>
             {rooms.map((room) => (
               <option key={room.id} value={room.id}>
@@ -132,10 +145,20 @@ export default async function PlpRequestsPage({
           />
         </FilterField>
         <FilterField label="Dari" className="w-full sm:w-40">
-          <input type="date" name="from" defaultValue={query.from ?? ""} className={controlClass} />
+          <input
+            type="date"
+            name="from"
+            defaultValue={query.from ?? ""}
+            className={controlClass}
+          />
         </FilterField>
         <FilterField label="Sampai" className="w-full sm:w-40">
-          <input type="date" name="to" defaultValue={query.to ?? ""} className={controlClass} />
+          <input
+            type="date"
+            name="to"
+            defaultValue={query.to ?? ""}
+            className={controlClass}
+          />
         </FilterField>
       </FilterBar>
 
@@ -204,13 +227,27 @@ export default async function PlpRequestsPage({
                 </caption>
                 <thead>
                   <tr className="border-b border-[#E5E7EB] text-[11px] uppercase tracking-[0.08em] text-[#94A3B8]">
-                    <th scope="col" className="px-4 py-3 font-semibold">Request</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Mahasiswa</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Room</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Jadwal</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Resource</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Status</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Aksi</th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Request
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Mahasiswa
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Room
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Jadwal
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Resource
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Status
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Aksi
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

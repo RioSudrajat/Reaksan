@@ -64,71 +64,575 @@ const ROOMS = [
 ];
 
 const EQUIPMENT_TYPES = [
-  ["Laboratory Oven", "Pemanasan", "BORROWABLE", "INSTRUMENT", "Pengeringan dan pemanasan terkontrol.", "oven", "cream"],
-  ["Muffle Furnace", "Pemanasan", "USAGE_ONLY", "INSTRUMENT", "Pengabuan suhu tinggi.", "furnace", "rose"],
-  ["Spectrophotometer", "Analisis", "USAGE_ONLY", "INSTRUMENT", "Analisis presisi UV-Vis.", "spectrophotometer", "blue"],
-  ["pH Meter", "Pengukuran", "USAGE_ONLY", "INSTRUMENT", "Pengukuran pH bench.", "ph-meter", "green"],
-  ["Analytical Balance", "Pengukuran", "USAGE_ONLY", "INSTRUMENT", "Penimbangan presisi.", "balance", "cream"],
-  ["Centrifuge", "Separasi", "USAGE_ONLY", "INSTRUMENT", "Pemisahan sampel.", "centrifuge", "blue"],
-  ["Hot Plate Stirrer", "Pemanasan", "BORROWABLE", "INSTRUMENT", "Pemanasan dengan pengadukan magnetik.", "hot-plate", "yellow"],
-  ["Vacuum Oven", "Pemanasan", "BORROWABLE", "INSTRUMENT", "Pengeringan tekanan rendah.", "vacuum-oven", "cream"],
-  ["Drying Cabinet", "Penyimpanan", "USAGE_ONLY", "INSTRUMENT", "Penyimpanan hangat untuk gelas kimia.", "drying-cabinet", "cream"],
-  ["Desiccator Cabinet", "Penyimpanan", "USAGE_ONLY", "INSTRUMENT", "Penyimpanan bebas kelembapan.", "desiccator", "green"],
-  ["Viscometer", "Pengukuran", "USAGE_ONLY", "INSTRUMENT", "Pengukuran viskositas cairan.", "viscometer", "blue"],
-  ["Melting Point Apparatus", "Analisis", "USAGE_ONLY", "INSTRUMENT", "Penentuan titik lebur sampel.", "melting-point", "rose"],
-  ["Incubator", "Inkubasi", "USAGE_ONLY", "INSTRUMENT", "Inkubasi sampel pada suhu tetap.", "incubator", "green"],
-  ["Autoclave", "Sterilisasi", "USAGE_ONLY", "INSTRUMENT", "Sterilisasi uap bertekanan.", "autoclave", "blue"],
-  ["Water Bath", "Pemanasan", "BORROWABLE", "INSTRUMENT", "Pemanasan air presisi.", "water-bath", "yellow"],
-  ["Vortex Mixer", "Pencampuran", "BORROWABLE", "INSTRUMENT", "Pencampuran cepat tabung sampel.", "vortex-mixer", "yellow"],
-  ["Furnace Nabertherm", "Pemanasan", "USAGE_ONLY", "INSTRUMENT", "Muffle furnace suhu tinggi Nabertherm untuk pengabuan dan kalsinasi sampel.", "furnace-nabertherm", "rose"],
-  ["Furnace Thermoline", "Pemanasan", "USAGE_ONLY", "INSTRUMENT", "Furnace laboratorium Thermoline untuk pemanasan termal presisi hingga 1100°C.", "furnace-thermoline", "rose"],
-  ["Oven Memmert", "Pemanasan", "BORROWABLE", "INSTRUMENT", "Universal oven Memmert untuk pengeringan, pemanasan, dan sterilisasi kering terkontrol.", "oven-memmert", "cream"],
-  ["Oven Carbolite", "Pemanasan", "BORROWABLE", "INSTRUMENT", "Heavy duty laboratory oven Carbolite untuk perlakuan panas dan pengeringan bahan.", "oven-carbolite", "cream"],
-  ["Timbangan", "Pengukuran", "USAGE_ONLY", "INSTRUMENT", "Timbangan analitik presisi untuk pengukuran massa bahan kimia dan sampel fisik.", "balance", "cream"],
-  ["Sentrifugator", "Separasi", "USAGE_ONLY", "INSTRUMENT", "Sentrifugator laboratorium untuk pemisahan fasa dan pengendapan partikel sampel.", "centrifuge", "blue"],
-  ["Shaker", "Pencampuran", "BORROWABLE", "INSTRUMENT", "Orbital shaker laboratorium untuk pengocokan larutan dan homogenisasi campuran.", "shaker", "blue"],
-  ["Shakerbath", "Pemanasan", "BORROWABLE", "INSTRUMENT", "Shaking water bath untuk inkubasi terkontrol dengan pengocokan konstan.", "shakerbath", "yellow"],
-  ["Spektrofotometer Genesys", "Analisis", "USAGE_ONLY", "INSTRUMENT", "Spektrofotometer UV-Vis Genesys untuk analisis absorbansi dan transmitansi larutan.", "spectrophotometer-genesys", "blue"],
-  ["Pompa Vacum", "Pengukuran", "BORROWABLE", "INSTRUMENT", "Pompa vakum laboratorium diafragma untuk filtrasi vakum dan desikasi.", "pompa-vacum", "green"],
-  ["Microwave", "Pemanasan", "BORROWABLE", "INSTRUMENT", "Microwave laboratorium untuk pemanasan cepat dan digesti sampel.", "microwave", "yellow"],
-  ["BTS", "Pemanasan", "USAGE_ONLY", "INSTRUMENT", "Bath Thermostat System (BTS) untuk sirkulasi air suhu konstan presisi.", "bts", "blue"],
-  ["pH meter", "Pengukuran", "USAGE_ONLY", "INSTRUMENT", "Benchtop pH meter digital untuk pengukuran derajat keasaman larutan.", "ph-meter", "green"],
-  ["Turbidimeter", "Analisis", "USAGE_ONLY", "INSTRUMENT", "Turbidimeter benchtop untuk pengukuran kekeruhan cairan dan suspensi (NTU).", "turbidimeter", "blue"],
-  ["Hotplate Stirer", "Pemanasan", "BORROWABLE", "INSTRUMENT", "Hotplate magnetic stirrer laboratorium untuk pemanasan dan pengadukan simultan.", "hot-plate", "yellow"],
-  ["Stirer JOANLAB", "Pencampuran", "BORROWABLE", "INSTRUMENT", "Magnetic stirrer JOANLAB dengan kontrol digital kecepatan tinggi.", "stirer-joanlab", "blue"],
-  ["Heatingmantle Stirrer Electromantle 250mL", "Pemanasan", "BORROWABLE", "INSTRUMENT", "Heating mantle 250 mL dengan magnetic stirrer terintegrasi merk Electromantle.", "heatingmantle-electromantle", "rose"],
-  ["Heatingmantle 250mL BOLAB", "Pemanasan", "BORROWABLE", "INSTRUMENT", "Heating mantle standar kapasitas labu 250 mL merk BOLAB.", "heatingmantle-bolab", "cream"],
-  ["Sonikator", "Separasi", "USAGE_ONLY", "INSTRUMENT", "Ultrasonic bath sonicator untuk pembersihan alat, degasifikasi larutan, dan dispersi partikel.", "sonicator", "blue"],
+  [
+    "Laboratory Oven",
+    "Pemanasan",
+    "BORROWABLE",
+    "INSTRUMENT",
+    "Pengeringan dan pemanasan terkontrol.",
+    "oven",
+    "cream",
+  ],
+  [
+    "Muffle Furnace",
+    "Pemanasan",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Pengabuan suhu tinggi.",
+    "furnace",
+    "rose",
+  ],
+  [
+    "Spectrophotometer",
+    "Analisis",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Analisis presisi UV-Vis.",
+    "spectrophotometer",
+    "blue",
+  ],
+  [
+    "pH Meter",
+    "Pengukuran",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Pengukuran pH bench.",
+    "ph-meter",
+    "green",
+  ],
+  [
+    "Analytical Balance",
+    "Pengukuran",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Penimbangan presisi.",
+    "balance",
+    "cream",
+  ],
+  [
+    "Centrifuge",
+    "Separasi",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Pemisahan sampel.",
+    "centrifuge",
+    "blue",
+  ],
+  [
+    "Hot Plate Stirrer",
+    "Pemanasan",
+    "BORROWABLE",
+    "INSTRUMENT",
+    "Pemanasan dengan pengadukan magnetik.",
+    "hot-plate",
+    "yellow",
+  ],
+  [
+    "Vacuum Oven",
+    "Pemanasan",
+    "BORROWABLE",
+    "INSTRUMENT",
+    "Pengeringan tekanan rendah.",
+    "vacuum-oven",
+    "cream",
+  ],
+  [
+    "Drying Cabinet",
+    "Penyimpanan",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Penyimpanan hangat untuk gelas kimia.",
+    "drying-cabinet",
+    "cream",
+  ],
+  [
+    "Desiccator Cabinet",
+    "Penyimpanan",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Penyimpanan bebas kelembapan.",
+    "desiccator",
+    "green",
+  ],
+  [
+    "Viscometer",
+    "Pengukuran",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Pengukuran viskositas cairan.",
+    "viscometer",
+    "blue",
+  ],
+  [
+    "Melting Point Apparatus",
+    "Analisis",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Penentuan titik lebur sampel.",
+    "melting-point",
+    "rose",
+  ],
+  [
+    "Incubator",
+    "Inkubasi",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Inkubasi sampel pada suhu tetap.",
+    "incubator",
+    "green",
+  ],
+  [
+    "Autoclave",
+    "Sterilisasi",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Sterilisasi uap bertekanan.",
+    "autoclave",
+    "blue",
+  ],
+  [
+    "Water Bath",
+    "Pemanasan",
+    "BORROWABLE",
+    "INSTRUMENT",
+    "Pemanasan air presisi.",
+    "water-bath",
+    "yellow",
+  ],
+  [
+    "Vortex Mixer",
+    "Pencampuran",
+    "BORROWABLE",
+    "INSTRUMENT",
+    "Pencampuran cepat tabung sampel.",
+    "vortex-mixer",
+    "yellow",
+  ],
+  [
+    "Furnace Nabertherm",
+    "Pemanasan",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Muffle furnace suhu tinggi Nabertherm untuk pengabuan dan kalsinasi sampel.",
+    "furnace-nabertherm",
+    "rose",
+  ],
+  [
+    "Furnace Thermoline",
+    "Pemanasan",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Furnace laboratorium Thermoline untuk pemanasan termal presisi hingga 1100°C.",
+    "furnace-thermoline",
+    "rose",
+  ],
+  [
+    "Oven Memmert",
+    "Pemanasan",
+    "BORROWABLE",
+    "INSTRUMENT",
+    "Universal oven Memmert untuk pengeringan, pemanasan, dan sterilisasi kering terkontrol.",
+    "oven-memmert",
+    "cream",
+  ],
+  [
+    "Oven Carbolite",
+    "Pemanasan",
+    "BORROWABLE",
+    "INSTRUMENT",
+    "Heavy duty laboratory oven Carbolite untuk perlakuan panas dan pengeringan bahan.",
+    "oven-carbolite",
+    "cream",
+  ],
+  [
+    "Timbangan",
+    "Pengukuran",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Timbangan analitik presisi untuk pengukuran massa bahan kimia dan sampel fisik.",
+    "balance",
+    "cream",
+  ],
+  [
+    "Sentrifugator",
+    "Separasi",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Sentrifugator laboratorium untuk pemisahan fasa dan pengendapan partikel sampel.",
+    "centrifuge",
+    "blue",
+  ],
+  [
+    "Shaker",
+    "Pencampuran",
+    "BORROWABLE",
+    "INSTRUMENT",
+    "Orbital shaker laboratorium untuk pengocokan larutan dan homogenisasi campuran.",
+    "shaker",
+    "blue",
+  ],
+  [
+    "Shakerbath",
+    "Pemanasan",
+    "BORROWABLE",
+    "INSTRUMENT",
+    "Shaking water bath untuk inkubasi terkontrol dengan pengocokan konstan.",
+    "shakerbath",
+    "yellow",
+  ],
+  [
+    "Spektrofotometer Genesys",
+    "Analisis",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Spektrofotometer UV-Vis Genesys untuk analisis absorbansi dan transmitansi larutan.",
+    "spectrophotometer-genesys",
+    "blue",
+  ],
+  [
+    "Pompa Vacum",
+    "Pengukuran",
+    "BORROWABLE",
+    "INSTRUMENT",
+    "Pompa vakum laboratorium diafragma untuk filtrasi vakum dan desikasi.",
+    "pompa-vacum",
+    "green",
+  ],
+  [
+    "Microwave",
+    "Pemanasan",
+    "BORROWABLE",
+    "INSTRUMENT",
+    "Microwave laboratorium untuk pemanasan cepat dan digesti sampel.",
+    "microwave",
+    "yellow",
+  ],
+  [
+    "BTS",
+    "Pemanasan",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Bath Thermostat System (BTS) untuk sirkulasi air suhu konstan presisi.",
+    "bts",
+    "blue",
+  ],
+  [
+    "pH meter",
+    "Pengukuran",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Benchtop pH meter digital untuk pengukuran derajat keasaman larutan.",
+    "ph-meter",
+    "green",
+  ],
+  [
+    "Turbidimeter",
+    "Analisis",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Turbidimeter benchtop untuk pengukuran kekeruhan cairan dan suspensi (NTU).",
+    "turbidimeter",
+    "blue",
+  ],
+  [
+    "Hotplate Stirer",
+    "Pemanasan",
+    "BORROWABLE",
+    "INSTRUMENT",
+    "Hotplate magnetic stirrer laboratorium untuk pemanasan dan pengadukan simultan.",
+    "hot-plate",
+    "yellow",
+  ],
+  [
+    "Stirer JOANLAB",
+    "Pencampuran",
+    "BORROWABLE",
+    "INSTRUMENT",
+    "Magnetic stirrer JOANLAB dengan kontrol digital kecepatan tinggi.",
+    "stirer-joanlab",
+    "blue",
+  ],
+  [
+    "Heatingmantle Stirrer Electromantle 250mL",
+    "Pemanasan",
+    "BORROWABLE",
+    "INSTRUMENT",
+    "Heating mantle 250 mL dengan magnetic stirrer terintegrasi merk Electromantle.",
+    "heatingmantle-electromantle",
+    "rose",
+  ],
+  [
+    "Heatingmantle 250mL BOLAB",
+    "Pemanasan",
+    "BORROWABLE",
+    "INSTRUMENT",
+    "Heating mantle standar kapasitas labu 250 mL merk BOLAB.",
+    "heatingmantle-bolab",
+    "cream",
+  ],
+  [
+    "Sonikator",
+    "Separasi",
+    "USAGE_ONLY",
+    "INSTRUMENT",
+    "Ultrasonic bath sonicator untuk pembersihan alat, degasifikasi larutan, dan dispersi partikel.",
+    "sonicator",
+    "blue",
+  ],
 
   // Alat Praktikum & Gelas Kimia (Glassware & Lab Tools)
-  ["Beker Glass 100 mL", "Gelas Kimia", "BORROWABLE", "TOOL", "Gelas beker 100 mL borosilikat untuk preparasi larutan.", "beaker", "blue"],
-  ["Beker Glass 250 mL", "Gelas Kimia", "BORROWABLE", "TOOL", "Gelas beker 250 mL standar praktikum meja.", "beaker", "blue"],
-  ["Erlenmeyer 100 mL", "Gelas Kimia", "BORROWABLE", "TOOL", "Labu erlenmeyer 100 mL untuk titrasi dan penampungan filtrat.", "erlenmeyer", "cream"],
-  ["Erlenmeyer 250 mL", "Gelas Kimia", "BORROWABLE", "TOOL", "Labu erlenmeyer 250 mL standar titrasi meja praktikum.", "erlenmeyer", "cream"],
-  ["Labu Ukur 100 mL", "Gelas Kimia", "BORROWABLE", "TOOL", "Labu ukur volumetrik 100 mL kelas A dengan tutup asah.", "volumetric-flask", "green"],
-  ["Labu Ukur 50 mL", "Gelas Kimia", "BORROWABLE", "TOOL", "Labu volumetrik 50 mL kelas A kalibrasi presisi dengan stopper.", "volumetric-flask", "green"],
-  ["Buret Asam 50 mL", "Gelas Kimia", "BORROWABLE", "TOOL", "Buret asam 50 mL kran PTFE presisi untuk titrasi kuantitatif.", "buret", "blue"],
-  ["Buret Basa 50 mL", "Gelas Kimia", "BORROWABLE", "TOOL", "Buret basa 50 mL dilengkapi kran karet dan manik kaca.", "buret", "blue"],
-  ["Pipet Ukur 10 mL", "Gelas Kimia", "BORROWABLE", "TOOL", "Pipet ukur kaca 10 mL pembagian skala 0.1 mL.", "measuring-cylinder", "cream"],
-  ["Pipet Gondok 25 mL", "Gelas Kimia", "BORROWABLE", "TOOL", "Pipet volumetri 1 tanda batas 25 mL kelas A toleransi 0.03 mL.", "measuring-cylinder", "cream"],
-  ["Corong Kaca 75 mm", "Peralatan Penunjang", "BORROWABLE", "TOOL", "Corong kaca diameter 75 mm untuk penyaringan larutan.", "glass-tool", "yellow"],
-  ["Spatula Stainless Steel", "Peralatan Penunjang", "BORROWABLE", "TOOL", "Spatula sendok dan pipih stainless steel tahan karat 15 cm.", "glass-tool", "cream"],
-  ["Kaca Arloji 80 mm", "Gelas Kimia", "BORROWABLE", "TOOL", "Kaca arloji diameter 80 mm penimbangan padatan dan penutup beker.", "glass-tool", "blue"],
-  ["Statif dan Klem", "Peralatan Penunjang", "BORROWABLE", "TOOL", "Set statif besi cor dan klem buret ganda penjepit kokoh.", "glass-tool", "rose"],
-  ["Labu Alas Bulat 250 mL", "Gelas Kimia", "BORROWABLE", "TOOL", "Labu leher dua borosilikat untuk sintesis refluks dan destilasi.", "volumetric-flask", "cream"],
-  ["Kondensor Liebig 300 mm", "Gelas Kimia", "BORROWABLE", "TOOL", "Pendingin lurus Liebig 300 mm sambungan asah 24/29.", "measuring-cylinder", "blue"],
-  ["Corong Pisah 250 mL", "Gelas Kimia", "BORROWABLE", "TOOL", "Corong pemisah bentuk pir 250 mL kran PTFE untuk ekstraksi.", "volumetric-flask", "green"],
-  ["Corong Buchner Keramik 80 mm", "Peralatan Penunjang", "BORROWABLE", "TOOL", "Corong porselen Buchner diameter 80 mm filtrasi hisap vakum.", "glass-tool", "cream"],
-  ["Cawan Porselen 50 mL", "Peralatan Penunjang", "BORROWABLE", "TOOL", "Cawan penguapan porselen tahan panas 1000°C kapasitas 50 mL.", "glass-tool", "rose"],
-  ["Krus Porselen & Tutup 30 mL", "Peralatan Penunjang", "BORROWABLE", "TOOL", "Krusibel pemijaran porselen bentuk sedang dengan tutup 30 mL.", "glass-tool", "cream"],
-  ["Tang Krus (Crucible Tongs)", "Peralatan Penunjang", "BORROWABLE", "TOOL", "Penjepit krusibel stainless steel ujung melengkung 20 cm.", "glass-tool", "cream"],
-  ["Mikropipet 100-1000 uL", "Peralatan Penunjang", "BORROWABLE", "TOOL", "Mikropipet single channel variabel volume 100-1000 uL.", "measuring-cylinder", "blue"],
-  ["Tabung Reaksi & Rak 16 mm", "Gelas Kimia", "BORROWABLE", "TOOL", "Set 12 tabung reaksi borosilikat 16x150 mm dan rak kayu.", "measuring-cylinder", "yellow"],
-  ["Kuvet Kuarsa 10 mm", "Gelas Kimia", "BORROWABLE", "TOOL", "Kuvet spektrofotometer kuarsa pathlength 10 mm rentang UV-Vis.", "measuring-cylinder", "cream"],
-  ["Piknometer Kaca 25 mL", "Gelas Kimia", "BORROWABLE", "TOOL", "Piknometer Gay-Lussac 25 mL termometer terintegrasi.", "volumetric-flask", "blue"],
-  ["Viskometer Ostwald", "Gelas Kimia", "BORROWABLE", "TOOL", "Viskometer kapiler Ostwald kaca borosilikat standar.", "measuring-cylinder", "green"],
-  ["Kalorimeter Sederhana", "Peralatan Penunjang", "BORROWABLE", "TOOL", "Kalorimeter cangkir insulasi ganda lengkap dengan pengaduk.", "beaker", "rose"],
-  ["Termometer Lab 0-150°C", "Peralatan Penunjang", "BORROWABLE", "TOOL", "Termometer raksa celup sebagian rentang 0 sampai 150 derajat Celsius.", "measuring-cylinder", "yellow"],
+  [
+    "Beker Glass 100 mL",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Gelas beker 100 mL borosilikat untuk preparasi larutan.",
+    "beaker",
+    "blue",
+  ],
+  [
+    "Beker Glass 250 mL",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Gelas beker 250 mL standar praktikum meja.",
+    "beaker",
+    "blue",
+  ],
+  [
+    "Erlenmeyer 100 mL",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Labu erlenmeyer 100 mL untuk titrasi dan penampungan filtrat.",
+    "erlenmeyer",
+    "cream",
+  ],
+  [
+    "Erlenmeyer 250 mL",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Labu erlenmeyer 250 mL standar titrasi meja praktikum.",
+    "erlenmeyer",
+    "cream",
+  ],
+  [
+    "Labu Ukur 100 mL",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Labu ukur volumetrik 100 mL kelas A dengan tutup asah.",
+    "volumetric-flask",
+    "green",
+  ],
+  [
+    "Labu Ukur 50 mL",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Labu volumetrik 50 mL kelas A kalibrasi presisi dengan stopper.",
+    "volumetric-flask",
+    "green",
+  ],
+  [
+    "Buret Asam 50 mL",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Buret asam 50 mL kran PTFE presisi untuk titrasi kuantitatif.",
+    "buret",
+    "blue",
+  ],
+  [
+    "Buret Basa 50 mL",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Buret basa 50 mL dilengkapi kran karet dan manik kaca.",
+    "buret",
+    "blue",
+  ],
+  [
+    "Pipet Ukur 10 mL",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Pipet ukur kaca 10 mL pembagian skala 0.1 mL.",
+    "measuring-cylinder",
+    "cream",
+  ],
+  [
+    "Pipet Gondok 25 mL",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Pipet volumetri 1 tanda batas 25 mL kelas A toleransi 0.03 mL.",
+    "measuring-cylinder",
+    "cream",
+  ],
+  [
+    "Corong Kaca 75 mm",
+    "Peralatan Penunjang",
+    "BORROWABLE",
+    "TOOL",
+    "Corong kaca diameter 75 mm untuk penyaringan larutan.",
+    "glass-tool",
+    "yellow",
+  ],
+  [
+    "Spatula Stainless Steel",
+    "Peralatan Penunjang",
+    "BORROWABLE",
+    "TOOL",
+    "Spatula sendok dan pipih stainless steel tahan karat 15 cm.",
+    "glass-tool",
+    "cream",
+  ],
+  [
+    "Kaca Arloji 80 mm",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Kaca arloji diameter 80 mm penimbangan padatan dan penutup beker.",
+    "glass-tool",
+    "blue",
+  ],
+  [
+    "Statif dan Klem",
+    "Peralatan Penunjang",
+    "BORROWABLE",
+    "TOOL",
+    "Set statif besi cor dan klem buret ganda penjepit kokoh.",
+    "glass-tool",
+    "rose",
+  ],
+  [
+    "Labu Alas Bulat 250 mL",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Labu leher dua borosilikat untuk sintesis refluks dan destilasi.",
+    "volumetric-flask",
+    "cream",
+  ],
+  [
+    "Kondensor Liebig 300 mm",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Pendingin lurus Liebig 300 mm sambungan asah 24/29.",
+    "measuring-cylinder",
+    "blue",
+  ],
+  [
+    "Corong Pisah 250 mL",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Corong pemisah bentuk pir 250 mL kran PTFE untuk ekstraksi.",
+    "volumetric-flask",
+    "green",
+  ],
+  [
+    "Corong Buchner Keramik 80 mm",
+    "Peralatan Penunjang",
+    "BORROWABLE",
+    "TOOL",
+    "Corong porselen Buchner diameter 80 mm filtrasi hisap vakum.",
+    "glass-tool",
+    "cream",
+  ],
+  [
+    "Cawan Porselen 50 mL",
+    "Peralatan Penunjang",
+    "BORROWABLE",
+    "TOOL",
+    "Cawan penguapan porselen tahan panas 1000°C kapasitas 50 mL.",
+    "glass-tool",
+    "rose",
+  ],
+  [
+    "Krus Porselen & Tutup 30 mL",
+    "Peralatan Penunjang",
+    "BORROWABLE",
+    "TOOL",
+    "Krusibel pemijaran porselen bentuk sedang dengan tutup 30 mL.",
+    "glass-tool",
+    "cream",
+  ],
+  [
+    "Tang Krus (Crucible Tongs)",
+    "Peralatan Penunjang",
+    "BORROWABLE",
+    "TOOL",
+    "Penjepit krusibel stainless steel ujung melengkung 20 cm.",
+    "glass-tool",
+    "cream",
+  ],
+  [
+    "Mikropipet 100-1000 uL",
+    "Peralatan Penunjang",
+    "BORROWABLE",
+    "TOOL",
+    "Mikropipet single channel variabel volume 100-1000 uL.",
+    "measuring-cylinder",
+    "blue",
+  ],
+  [
+    "Tabung Reaksi & Rak 16 mm",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Set 12 tabung reaksi borosilikat 16x150 mm dan rak kayu.",
+    "measuring-cylinder",
+    "yellow",
+  ],
+  [
+    "Kuvet Kuarsa 10 mm",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Kuvet spektrofotometer kuarsa pathlength 10 mm rentang UV-Vis.",
+    "measuring-cylinder",
+    "cream",
+  ],
+  [
+    "Piknometer Kaca 25 mL",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Piknometer Gay-Lussac 25 mL termometer terintegrasi.",
+    "volumetric-flask",
+    "blue",
+  ],
+  [
+    "Viskometer Ostwald",
+    "Gelas Kimia",
+    "BORROWABLE",
+    "TOOL",
+    "Viskometer kapiler Ostwald kaca borosilikat standar.",
+    "measuring-cylinder",
+    "green",
+  ],
+  [
+    "Kalorimeter Sederhana",
+    "Peralatan Penunjang",
+    "BORROWABLE",
+    "TOOL",
+    "Kalorimeter cangkir insulasi ganda lengkap dengan pengaduk.",
+    "beaker",
+    "rose",
+  ],
+  [
+    "Termometer Lab 0-150°C",
+    "Peralatan Penunjang",
+    "BORROWABLE",
+    "TOOL",
+    "Termometer raksa celup sebagian rentang 0 sampai 150 derajat Celsius.",
+    "measuring-cylinder",
+    "yellow",
+  ],
 ];
 
 const ASSETS = [
@@ -137,88 +641,394 @@ const ASSETS = [
   ["OVN-001", "Laboratory Oven", "lab-organik", "GOOD", "300°C · forced air"],
   ["HTP-001", "Hot Plate Stirrer", "lab-organik", "GOOD", "340°C · magnetic"],
   ["VCM-001", "Vacuum Oven", "lab-organik", "GOOD", "200°C · vacuum"],
-  ["HME-001", "Heatingmantle Stirrer Electromantle 250mL", "lab-organik", "GOOD", "250 mL · 450°C stirrer"],
-  ["HMB-001", "Heatingmantle 250mL BOLAB", "lab-organik", "GOOD", "250 mL · mantle BOLAB"],
-  ["MPA-001", "Melting Point Apparatus", "lab-organik", "GOOD", "Digital melting point · 300°C"],
-  ["PMV-001", "Pompa Vacum", "lab-organik", "GOOD", "Diaphragm · oil-free vacuum"],
+  [
+    "HME-001",
+    "Heatingmantle Stirrer Electromantle 250mL",
+    "lab-organik",
+    "GOOD",
+    "250 mL · 450°C stirrer",
+  ],
+  [
+    "HMB-001",
+    "Heatingmantle 250mL BOLAB",
+    "lab-organik",
+    "GOOD",
+    "250 mL · mantle BOLAB",
+  ],
+  [
+    "MPA-001",
+    "Melting Point Apparatus",
+    "lab-organik",
+    "GOOD",
+    "Digital melting point · 300°C",
+  ],
+  [
+    "PMV-001",
+    "Pompa Vacum",
+    "lab-organik",
+    "GOOD",
+    "Diaphragm · oil-free vacuum",
+  ],
   // Alat Meja & Lemari
-  ["LBR-ORG-01", "Labu Alas Bulat 250 mL", "lab-organik", "GOOD", "250 mL · leher dua borosilikat"],
-  ["KND-ORG-01", "Kondensor Liebig 300 mm", "lab-organik", "GOOD", "300 mm · pendingin refluks"],
-  ["CPS-ORG-01", "Corong Pisah 250 mL", "lab-organik", "GOOD", "250 mL · kran PTFE ekstraksi"],
-  ["BCN-ORG-01", "Corong Buchner Keramik 80 mm", "lab-organik", "GOOD", "80 mm · porselen filtrasi vakum"],
-  ["BKG-ORG-01", "Beker Glass 250 mL", "lab-organik", "GOOD", "250 mL · borosilikat"],
-  ["ERL-ORG-01", "Erlenmeyer 250 mL", "lab-organik", "GOOD", "250 mL · titrasi"],
-  ["COR-ORG-01", "Corong Kaca 75 mm", "lab-organik", "GOOD", "75 mm · tangkai panjang"],
-  ["SPT-ORG-01", "Spatula Stainless Steel", "lab-organik", "GOOD", "Stainless steel · 15 cm"],
+  [
+    "LBR-ORG-01",
+    "Labu Alas Bulat 250 mL",
+    "lab-organik",
+    "GOOD",
+    "250 mL · leher dua borosilikat",
+  ],
+  [
+    "KND-ORG-01",
+    "Kondensor Liebig 300 mm",
+    "lab-organik",
+    "GOOD",
+    "300 mm · pendingin refluks",
+  ],
+  [
+    "CPS-ORG-01",
+    "Corong Pisah 250 mL",
+    "lab-organik",
+    "GOOD",
+    "250 mL · kran PTFE ekstraksi",
+  ],
+  [
+    "BCN-ORG-01",
+    "Corong Buchner Keramik 80 mm",
+    "lab-organik",
+    "GOOD",
+    "80 mm · porselen filtrasi vakum",
+  ],
+  [
+    "BKG-ORG-01",
+    "Beker Glass 250 mL",
+    "lab-organik",
+    "GOOD",
+    "250 mL · borosilikat",
+  ],
+  [
+    "ERL-ORG-01",
+    "Erlenmeyer 250 mL",
+    "lab-organik",
+    "GOOD",
+    "250 mL · titrasi",
+  ],
+  [
+    "COR-ORG-01",
+    "Corong Kaca 75 mm",
+    "lab-organik",
+    "GOOD",
+    "75 mm · tangkai panjang",
+  ],
+  [
+    "SPT-ORG-01",
+    "Spatula Stainless Steel",
+    "lab-organik",
+    "GOOD",
+    "Stainless steel · 15 cm",
+  ],
 
   // === LAB ANORGANIK ===
   // Instrumen
   ["MUF-001", "Muffle Furnace", "lab-anorganik", "GOOD", "1100°C · ashing"],
-  ["FNB-001", "Furnace Nabertherm", "lab-anorganik", "GOOD", "1200°C · digital muffle"],
-  ["FTL-001", "Furnace Thermoline", "lab-anorganik", "GOOD", "1100°C · box chamber"],
-  ["DES-001", "Desiccator Cabinet", "lab-anorganik", "GOOD", "Silica gel · 3 shelves"],
+  [
+    "FNB-001",
+    "Furnace Nabertherm",
+    "lab-anorganik",
+    "GOOD",
+    "1200°C · digital muffle",
+  ],
+  [
+    "FTL-001",
+    "Furnace Thermoline",
+    "lab-anorganik",
+    "GOOD",
+    "1100°C · box chamber",
+  ],
+  [
+    "DES-001",
+    "Desiccator Cabinet",
+    "lab-anorganik",
+    "GOOD",
+    "Silica gel · 3 shelves",
+  ],
   ["WTB-001", "Water Bath", "lab-anorganik", "GOOD", "80°C · digital"],
-  ["MCW-001", "Microwave", "lab-anorganik", "GOOD", "800W · digestion microwave"],
+  [
+    "MCW-001",
+    "Microwave",
+    "lab-anorganik",
+    "GOOD",
+    "800W · digestion microwave",
+  ],
   // Alat Meja & Lemari
-  ["CWN-ANO-01", "Cawan Porselen 50 mL", "lab-anorganik", "GOOD", "50 mL · porselen tahan api"],
-  ["KRS-ANO-01", "Krus Porselen & Tutup 30 mL", "lab-anorganik", "GOOD", "30 mL · pemijaran gravimetri"],
-  ["TNG-ANO-01", "Tang Krus (Crucible Tongs)", "lab-anorganik", "GOOD", "Stainless steel 20 cm"],
-  ["BUR-ANO-01", "Buret Asam 50 mL", "lab-anorganik", "GOOD", "50 mL · kran PTFE"],
-  ["STF-ANO-01", "Statif dan Klem", "lab-anorganik", "GOOD", "Statif besi + klem buret"],
-  ["BKG-ANO-01", "Beker Glass 100 mL", "lab-anorganik", "GOOD", "100 mL · borosilikat"],
-  ["ERL-ANO-01", "Erlenmeyer 250 mL", "lab-anorganik", "GOOD", "250 mL · titrasi"],
+  [
+    "CWN-ANO-01",
+    "Cawan Porselen 50 mL",
+    "lab-anorganik",
+    "GOOD",
+    "50 mL · porselen tahan api",
+  ],
+  [
+    "KRS-ANO-01",
+    "Krus Porselen & Tutup 30 mL",
+    "lab-anorganik",
+    "GOOD",
+    "30 mL · pemijaran gravimetri",
+  ],
+  [
+    "TNG-ANO-01",
+    "Tang Krus (Crucible Tongs)",
+    "lab-anorganik",
+    "GOOD",
+    "Stainless steel 20 cm",
+  ],
+  [
+    "BUR-ANO-01",
+    "Buret Asam 50 mL",
+    "lab-anorganik",
+    "GOOD",
+    "50 mL · kran PTFE",
+  ],
+  [
+    "STF-ANO-01",
+    "Statif dan Klem",
+    "lab-anorganik",
+    "GOOD",
+    "Statif besi + klem buret",
+  ],
+  [
+    "BKG-ANO-01",
+    "Beker Glass 100 mL",
+    "lab-anorganik",
+    "GOOD",
+    "100 mL · borosilikat",
+  ],
+  [
+    "ERL-ANO-01",
+    "Erlenmeyer 250 mL",
+    "lab-anorganik",
+    "GOOD",
+    "250 mL · titrasi",
+  ],
 
   // === LAB BIOKIMIA ===
   // Instrumen
   ["CEN-001", "Centrifuge", "lab-biokimia", "GOOD", "6000 rpm · 8 tubes"],
-  ["CEN-002", "Sentrifugator", "lab-biokimia", "GOOD", "12000 rpm · mikro sentrifugasi"],
+  [
+    "CEN-002",
+    "Sentrifugator",
+    "lab-biokimia",
+    "GOOD",
+    "12000 rpm · mikro sentrifugasi",
+  ],
   ["INC-001", "Incubator", "lab-biokimia", "GOOD", "37°C · 2 shelves"],
   ["AUT-001", "Autoclave", "lab-biokimia", "GOOD", "121°C · 50 L"],
   ["VOR-001", "Vortex Mixer", "lab-biokimia", "GOOD", "3000 rpm"],
-  ["SHB-001", "Shakerbath", "lab-biokimia", "GOOD", "100°C · shaking water bath"],
+  [
+    "SHB-001",
+    "Shakerbath",
+    "lab-biokimia",
+    "GOOD",
+    "100°C · shaking water bath",
+  ],
   // Alat Meja & Lemari
-  ["MPT-BIO-01", "Mikropipet 100-1000 uL", "lab-biokimia", "GOOD", "100-1000 uL · mikro presisi"],
-  ["TBG-BIO-01", "Tabung Reaksi & Rak 16 mm", "lab-biokimia", "GOOD", "12 tabung + rak kayu"],
-  ["KVT-BIO-01", "Kuvet Kuarsa 10 mm", "lab-biokimia", "GOOD", "10 mm · kuarsa UV-Vis"],
-  ["BKG-BIO-01", "Beker Glass 250 mL", "lab-biokimia", "GOOD", "250 mL · borosilikat"],
-  ["PPT-BIO-01", "Pipet Ukur 10 mL", "lab-biokimia", "GOOD", "10 mL · skala 0.1 mL"],
+  [
+    "MPT-BIO-01",
+    "Mikropipet 100-1000 uL",
+    "lab-biokimia",
+    "GOOD",
+    "100-1000 uL · mikro presisi",
+  ],
+  [
+    "TBG-BIO-01",
+    "Tabung Reaksi & Rak 16 mm",
+    "lab-biokimia",
+    "GOOD",
+    "12 tabung + rak kayu",
+  ],
+  [
+    "KVT-BIO-01",
+    "Kuvet Kuarsa 10 mm",
+    "lab-biokimia",
+    "GOOD",
+    "10 mm · kuarsa UV-Vis",
+  ],
+  [
+    "BKG-BIO-01",
+    "Beker Glass 250 mL",
+    "lab-biokimia",
+    "GOOD",
+    "250 mL · borosilikat",
+  ],
+  [
+    "PPT-BIO-01",
+    "Pipet Ukur 10 mL",
+    "lab-biokimia",
+    "GOOD",
+    "10 mL · skala 0.1 mL",
+  ],
   ["KCA-BIO-01", "Kaca Arloji 80 mm", "lab-biokimia", "GOOD", "Diameter 80 mm"],
 
   // === LAB ANALITIK ===
   // Instrumen
-  ["SPC-001", "Spectrophotometer", "lab-analitik", "GOOD", "UV-Vis · precision"],
-  ["SPG-001", "Spektrofotometer Genesys", "lab-analitik", "GOOD", "UV-Vis · Genesys precision"],
-  ["BAL-002", "Analytical Balance", "lab-analitik", "GOOD", "0.1 mg · 220 g max"],
-  ["TMB-001", "Timbangan", "lab-analitik", "GOOD", "0.1 mg · precision balance"],
+  [
+    "SPC-001",
+    "Spectrophotometer",
+    "lab-analitik",
+    "GOOD",
+    "UV-Vis · precision",
+  ],
+  [
+    "SPG-001",
+    "Spektrofotometer Genesys",
+    "lab-analitik",
+    "GOOD",
+    "UV-Vis · Genesys precision",
+  ],
+  [
+    "BAL-002",
+    "Analytical Balance",
+    "lab-analitik",
+    "GOOD",
+    "0.1 mg · 220 g max",
+  ],
+  [
+    "TMB-001",
+    "Timbangan",
+    "lab-analitik",
+    "GOOD",
+    "0.1 mg · precision balance",
+  ],
   ["PHM-001", "pH Meter", "lab-analitik", "GOOD", "0.01 pH · bench"],
-  ["TRB-001", "Turbidimeter", "lab-analitik", "GOOD", "0-1000 NTU · digital bench"],
-  ["SNK-001", "Sonikator", "lab-analitik", "GOOD", "40 kHz · ultrasonic cleaning bath"],
+  [
+    "TRB-001",
+    "Turbidimeter",
+    "lab-analitik",
+    "GOOD",
+    "0-1000 NTU · digital bench",
+  ],
+  [
+    "SNK-001",
+    "Sonikator",
+    "lab-analitik",
+    "GOOD",
+    "40 kHz · ultrasonic cleaning bath",
+  ],
   // Alat Meja & Lemari
-  ["LBU-ANA-01", "Labu Ukur 100 mL", "lab-analitik", "GOOD", "100 mL · Kelas A"],
+  [
+    "LBU-ANA-01",
+    "Labu Ukur 100 mL",
+    "lab-analitik",
+    "GOOD",
+    "100 mL · Kelas A",
+  ],
   ["LBU-ANA-02", "Labu Ukur 50 mL", "lab-analitik", "GOOD", "50 mL · Kelas A"],
-  ["BUR-ANA-01", "Buret Asam 50 mL", "lab-analitik", "GOOD", "50 mL · kran PTFE presisi"],
-  ["BUR-ANA-02", "Buret Basa 50 mL", "lab-analitik", "GOOD", "50 mL · kran karet manik kaca"],
-  ["PPG-ANA-01", "Pipet Gondok 25 mL", "lab-analitik", "GOOD", "25 mL · volumetri Kelas A"],
-  ["PPT-ANA-01", "Pipet Ukur 10 mL", "lab-analitik", "GOOD", "10 mL · skala 0.1 mL"],
+  [
+    "BUR-ANA-01",
+    "Buret Asam 50 mL",
+    "lab-analitik",
+    "GOOD",
+    "50 mL · kran PTFE presisi",
+  ],
+  [
+    "BUR-ANA-02",
+    "Buret Basa 50 mL",
+    "lab-analitik",
+    "GOOD",
+    "50 mL · kran karet manik kaca",
+  ],
+  [
+    "PPG-ANA-01",
+    "Pipet Gondok 25 mL",
+    "lab-analitik",
+    "GOOD",
+    "25 mL · volumetri Kelas A",
+  ],
+  [
+    "PPT-ANA-01",
+    "Pipet Ukur 10 mL",
+    "lab-analitik",
+    "GOOD",
+    "10 mL · skala 0.1 mL",
+  ],
 
   // === LAB FISIK ===
   // Instrumen
   ["OVM-001", "Oven Memmert", "lab-fisik", "GOOD", "300°C · digital universal"],
-  ["OVC-001", "Oven Carbolite", "lab-fisik", "GOOD", "250°C · forced convection"],
-  ["VIS-001", "Viscometer", "lab-fisik", "GOOD", "Rotational · digital viscometer"],
+  [
+    "OVC-001",
+    "Oven Carbolite",
+    "lab-fisik",
+    "GOOD",
+    "250°C · forced convection",
+  ],
+  [
+    "VIS-001",
+    "Viscometer",
+    "lab-fisik",
+    "GOOD",
+    "Rotational · digital viscometer",
+  ],
   ["BTS-001", "BTS", "lab-fisik", "GOOD", "Bath Thermostat System"],
   ["SHK-001", "Shaker", "lab-fisik", "GOOD", "300 rpm · orbital platform"],
-  ["STJ-001", "Stirer JOANLAB", "lab-fisik", "GOOD", "2000 rpm · digital stir plate"],
-  ["HPS-002", "Hotplate Stirer", "lab-fisik", "GOOD", "350°C · magnetic stirrer"],
+  [
+    "STJ-001",
+    "Stirer JOANLAB",
+    "lab-fisik",
+    "GOOD",
+    "2000 rpm · digital stir plate",
+  ],
+  [
+    "HPS-002",
+    "Hotplate Stirer",
+    "lab-fisik",
+    "GOOD",
+    "350°C · magnetic stirrer",
+  ],
   ["PHM-002", "pH meter", "lab-fisik", "GOOD", "Benchtop digital · probe set"],
   // Alat Meja & Lemari
-  ["PKN-FIS-01", "Piknometer Kaca 25 mL", "lab-fisik", "GOOD", "250 mL · Gay-Lussac termometer"],
-  ["VOS-FIS-01", "Viskometer Ostwald", "lab-fisik", "GOOD", "Kapiler Ostwald borosilikat"],
-  ["KLR-FIS-01", "Kalorimeter Sederhana", "lab-fisik", "GOOD", "Insulasi ganda + pengaduk"],
-  ["TRM-FIS-01", "Termometer Lab 0-150°C", "lab-fisik", "GOOD", "0-150°C · celup sebagian"],
-  ["BKG-FIS-01", "Beker Glass 250 mL", "lab-fisik", "GOOD", "250 mL · borosilikat"],
+  [
+    "PKN-FIS-01",
+    "Piknometer Kaca 25 mL",
+    "lab-fisik",
+    "GOOD",
+    "250 mL · Gay-Lussac termometer",
+  ],
+  [
+    "VOS-FIS-01",
+    "Viskometer Ostwald",
+    "lab-fisik",
+    "GOOD",
+    "Kapiler Ostwald borosilikat",
+  ],
+  [
+    "KLR-FIS-01",
+    "Kalorimeter Sederhana",
+    "lab-fisik",
+    "GOOD",
+    "Insulasi ganda + pengaduk",
+  ],
+  [
+    "TRM-FIS-01",
+    "Termometer Lab 0-150°C",
+    "lab-fisik",
+    "GOOD",
+    "0-150°C · celup sebagian",
+  ],
+  [
+    "BKG-FIS-01",
+    "Beker Glass 250 mL",
+    "lab-fisik",
+    "GOOD",
+    "250 mL · borosilikat",
+  ],
   ["ERL-FIS-01", "Erlenmeyer 100 mL", "lab-fisik", "GOOD", "100 mL · titrasi"],
-  ["SPT-FIS-01", "Spatula Stainless Steel", "lab-fisik", "GOOD", "Stainless steel · 15 cm"],
+  [
+    "SPT-FIS-01",
+    "Spatula Stainless Steel",
+    "lab-fisik",
+    "GOOD",
+    "Stainless steel · 15 cm",
+  ],
 ];
 
 const MAINTENANCE_NOTES = {
@@ -230,82 +1040,422 @@ const MAINTENANCE_NOTES = {
 
 const UNIT_LABELS = {
   // Lab Organik
-  "OVN-001": { prefix: "Unit", spec: "300°C", count: 4, location: "Gudang Instrumen Organik" },
-  "HTP-001": { prefix: "Unit", spec: "340°C", count: 6, location: "Meja Praktikum Sintesis" },
-  "VCM-001": { prefix: "Unit", spec: "vacuum", count: 2, location: "Meja Instrumen Vakum" },
-  "HME-001": { prefix: "Unit", spec: "250 mL", count: 4, location: "Meja Praktikum Refluks" },
-  "HMB-001": { prefix: "Unit", spec: "250 mL", count: 4, location: "Meja Praktikum Refluks" },
-  "MPA-001": { prefix: "Unit", spec: "300°C", count: 2, location: "Meja Uji Titik Leleh" },
-  "PMV-001": { prefix: "Unit", spec: "diaphragm", count: 3, location: "Lemari Asam Organik" },
-  "LBR-ORG-01": { prefix: "Labu", spec: "250 mL", count: 8, location: "Rak Labu Meja Sintesis" },
-  "KND-ORG-01": { prefix: "Kondensor", spec: "300 mm", count: 6, location: "Lemari Kaca Alat Gelas" },
-  "CPS-ORG-01": { prefix: "Corong", spec: "250 mL", count: 6, location: "Rak Gantung Meja 1" },
-  "BCN-ORG-01": { prefix: "Corong", spec: "80 mm", count: 4, location: "Laci Meja Praktikan 1" },
-  "BKG-ORG-01": { prefix: "Gelas", spec: "250 mL", count: 8, location: "Meja Praktikum 1-4" },
-  "ERL-ORG-01": { prefix: "Labu", spec: "250 mL", count: 8, location: "Meja Praktikum 1-4" },
-  "COR-ORG-01": { prefix: "Corong", spec: "75 mm", count: 6, location: "Rak Gantung Meja 1" },
-  "SPT-ORG-01": { prefix: "Spatula", spec: "15 cm", count: 8, location: "Laci Meja Praktikan 1" },
+  "OVN-001": {
+    prefix: "Unit",
+    spec: "300°C",
+    count: 4,
+    location: "Gudang Instrumen Organik",
+  },
+  "HTP-001": {
+    prefix: "Unit",
+    spec: "340°C",
+    count: 6,
+    location: "Meja Praktikum Sintesis",
+  },
+  "VCM-001": {
+    prefix: "Unit",
+    spec: "vacuum",
+    count: 2,
+    location: "Meja Instrumen Vakum",
+  },
+  "HME-001": {
+    prefix: "Unit",
+    spec: "250 mL",
+    count: 4,
+    location: "Meja Praktikum Refluks",
+  },
+  "HMB-001": {
+    prefix: "Unit",
+    spec: "250 mL",
+    count: 4,
+    location: "Meja Praktikum Refluks",
+  },
+  "MPA-001": {
+    prefix: "Unit",
+    spec: "300°C",
+    count: 2,
+    location: "Meja Uji Titik Leleh",
+  },
+  "PMV-001": {
+    prefix: "Unit",
+    spec: "diaphragm",
+    count: 3,
+    location: "Lemari Asam Organik",
+  },
+  "LBR-ORG-01": {
+    prefix: "Labu",
+    spec: "250 mL",
+    count: 8,
+    location: "Rak Labu Meja Sintesis",
+  },
+  "KND-ORG-01": {
+    prefix: "Kondensor",
+    spec: "300 mm",
+    count: 6,
+    location: "Lemari Kaca Alat Gelas",
+  },
+  "CPS-ORG-01": {
+    prefix: "Corong",
+    spec: "250 mL",
+    count: 6,
+    location: "Rak Gantung Meja 1",
+  },
+  "BCN-ORG-01": {
+    prefix: "Corong",
+    spec: "80 mm",
+    count: 4,
+    location: "Laci Meja Praktikan 1",
+  },
+  "BKG-ORG-01": {
+    prefix: "Gelas",
+    spec: "250 mL",
+    count: 8,
+    location: "Meja Praktikum 1-4",
+  },
+  "ERL-ORG-01": {
+    prefix: "Labu",
+    spec: "250 mL",
+    count: 8,
+    location: "Meja Praktikum 1-4",
+  },
+  "COR-ORG-01": {
+    prefix: "Corong",
+    spec: "75 mm",
+    count: 6,
+    location: "Rak Gantung Meja 1",
+  },
+  "SPT-ORG-01": {
+    prefix: "Spatula",
+    spec: "15 cm",
+    count: 8,
+    location: "Laci Meja Praktikan 1",
+  },
 
   // Lab Anorganik
-  "MUF-001": { prefix: "Unit", spec: "1100°C", count: 2, location: "Ruang Furnace Khusus" },
-  "FNB-001": { prefix: "Unit", spec: "1200°C", count: 2, location: "Ruang Furnace Khusus" },
-  "FTL-001": { prefix: "Unit", spec: "1100°C", count: 2, location: "Ruang Furnace Khusus" },
-  "DES-001": { prefix: "Shelf", spec: "silica", count: 3, location: "Ruang Desikator" },
-  "WTB-001": { prefix: "Unit", spec: "80°C", count: 4, location: "Meja Pemanas Air" },
-  "MCW-001": { prefix: "Unit", spec: "800W", count: 2, location: "Lemari Asam Digesti" },
-  "CWN-ANO-01": { prefix: "Cawan", spec: "50 mL", count: 8, location: "Rak Porselen Meja 1" },
-  "KRS-ANO-01": { prefix: "Krus", spec: "30 mL", count: 8, location: "Rak Krusibel Pemijaran" },
-  "TNG-ANO-01": { prefix: "Tang", spec: "20 cm", count: 6, location: "Meja Praktikum Furnace" },
-  "BUR-ANO-01": { prefix: "Buret", spec: "50 mL", count: 6, location: "Rak Buret Meja 2" },
-  "STF-ANO-01": { prefix: "Statif", spec: "Klem", count: 6, location: "Meja Praktikum Titrasi" },
-  "BKG-ANO-01": { prefix: "Gelas", spec: "100 mL", count: 8, location: "Meja Praktikum 1-4" },
-  "ERL-ANO-01": { prefix: "Labu", spec: "250 mL", count: 8, location: "Meja Praktikum 1-4" },
+  "MUF-001": {
+    prefix: "Unit",
+    spec: "1100°C",
+    count: 2,
+    location: "Ruang Furnace Khusus",
+  },
+  "FNB-001": {
+    prefix: "Unit",
+    spec: "1200°C",
+    count: 2,
+    location: "Ruang Furnace Khusus",
+  },
+  "FTL-001": {
+    prefix: "Unit",
+    spec: "1100°C",
+    count: 2,
+    location: "Ruang Furnace Khusus",
+  },
+  "DES-001": {
+    prefix: "Shelf",
+    spec: "silica",
+    count: 3,
+    location: "Ruang Desikator",
+  },
+  "WTB-001": {
+    prefix: "Unit",
+    spec: "80°C",
+    count: 4,
+    location: "Meja Pemanas Air",
+  },
+  "MCW-001": {
+    prefix: "Unit",
+    spec: "800W",
+    count: 2,
+    location: "Lemari Asam Digesti",
+  },
+  "CWN-ANO-01": {
+    prefix: "Cawan",
+    spec: "50 mL",
+    count: 8,
+    location: "Rak Porselen Meja 1",
+  },
+  "KRS-ANO-01": {
+    prefix: "Krus",
+    spec: "30 mL",
+    count: 8,
+    location: "Rak Krusibel Pemijaran",
+  },
+  "TNG-ANO-01": {
+    prefix: "Tang",
+    spec: "20 cm",
+    count: 6,
+    location: "Meja Praktikum Furnace",
+  },
+  "BUR-ANO-01": {
+    prefix: "Buret",
+    spec: "50 mL",
+    count: 6,
+    location: "Rak Buret Meja 2",
+  },
+  "STF-ANO-01": {
+    prefix: "Statif",
+    spec: "Klem",
+    count: 6,
+    location: "Meja Praktikum Titrasi",
+  },
+  "BKG-ANO-01": {
+    prefix: "Gelas",
+    spec: "100 mL",
+    count: 8,
+    location: "Meja Praktikum 1-4",
+  },
+  "ERL-ANO-01": {
+    prefix: "Labu",
+    spec: "250 mL",
+    count: 8,
+    location: "Meja Praktikum 1-4",
+  },
 
   // Lab Biokimia
-  "CEN-001": { prefix: "Unit", spec: "6000 rpm", count: 4, location: "Meja Sentrifugasi" },
-  "CEN-002": { prefix: "Unit", spec: "12000 rpm", count: 2, location: "Meja Sentrifugasi Presisi" },
-  "INC-001": { prefix: "Unit", spec: "37°C", count: 3, location: "Ruang Kultur Inkubasi" },
-  "AUT-001": { prefix: "Unit", spec: "121°C", count: 2, location: "Ruang Sterilisasi Autoklaf" },
-  "VOR-001": { prefix: "Unit", spec: "3000 rpm", count: 4, location: "Meja Preparasi Sampel" },
-  "SHB-001": { prefix: "Unit", spec: "100°C", count: 2, location: "Meja Inkubasi Pengocok" },
-  "MPT-BIO-01": { prefix: "Pipet", spec: "100-1000 uL", count: 8, location: "Rak Stand Mikropipet" },
-  "TBG-BIO-01": { prefix: "Rak", spec: "12 tabung", count: 8, location: "Meja Praktikum Biokimia 1-4" },
-  "KVT-BIO-01": { prefix: "Kuvet", spec: "10 mm", count: 6, location: "Kotak Penyimpanan Kuvet" },
-  "BKG-BIO-01": { prefix: "Gelas", spec: "250 mL", count: 8, location: "Meja Praktikum 1-4" },
-  "PPT-BIO-01": { prefix: "Pipet", spec: "10 mL", count: 8, location: "Rak Pipet Meja Biokimia" },
-  "KCA-BIO-01": { prefix: "Kaca", spec: "80 mm", count: 8, location: "Laci Meja Praktikan 2" },
+  "CEN-001": {
+    prefix: "Unit",
+    spec: "6000 rpm",
+    count: 4,
+    location: "Meja Sentrifugasi",
+  },
+  "CEN-002": {
+    prefix: "Unit",
+    spec: "12000 rpm",
+    count: 2,
+    location: "Meja Sentrifugasi Presisi",
+  },
+  "INC-001": {
+    prefix: "Unit",
+    spec: "37°C",
+    count: 3,
+    location: "Ruang Kultur Inkubasi",
+  },
+  "AUT-001": {
+    prefix: "Unit",
+    spec: "121°C",
+    count: 2,
+    location: "Ruang Sterilisasi Autoklaf",
+  },
+  "VOR-001": {
+    prefix: "Unit",
+    spec: "3000 rpm",
+    count: 4,
+    location: "Meja Preparasi Sampel",
+  },
+  "SHB-001": {
+    prefix: "Unit",
+    spec: "100°C",
+    count: 2,
+    location: "Meja Inkubasi Pengocok",
+  },
+  "MPT-BIO-01": {
+    prefix: "Pipet",
+    spec: "100-1000 uL",
+    count: 8,
+    location: "Rak Stand Mikropipet",
+  },
+  "TBG-BIO-01": {
+    prefix: "Rak",
+    spec: "12 tabung",
+    count: 8,
+    location: "Meja Praktikum Biokimia 1-4",
+  },
+  "KVT-BIO-01": {
+    prefix: "Kuvet",
+    spec: "10 mm",
+    count: 6,
+    location: "Kotak Penyimpanan Kuvet",
+  },
+  "BKG-BIO-01": {
+    prefix: "Gelas",
+    spec: "250 mL",
+    count: 8,
+    location: "Meja Praktikum 1-4",
+  },
+  "PPT-BIO-01": {
+    prefix: "Pipet",
+    spec: "10 mL",
+    count: 8,
+    location: "Rak Pipet Meja Biokimia",
+  },
+  "KCA-BIO-01": {
+    prefix: "Kaca",
+    spec: "80 mm",
+    count: 8,
+    location: "Laci Meja Praktikan 2",
+  },
 
   // Lab Analitik
-  "SPC-001": { prefix: "Station", spec: "UV-Vis", count: 3, location: "Ruang Instrumentasi Spektro" },
-  "SPG-001": { prefix: "Station", spec: "Genesys", count: 2, location: "Ruang Instrumentasi Spektro" },
-  "BAL-002": { prefix: "Balance", spec: "0.1 mg", count: 4, location: "Meja Anti-Getar Neraca" },
-  "TMB-001": { prefix: "Balance", spec: "0.1 mg", count: 3, location: "Meja Anti-Getar Neraca" },
-  "PHM-001": { prefix: "Meter", spec: "bench", count: 4, location: "Meja Uji Potensiometri" },
-  "TRB-001": { prefix: "Unit", spec: "0-1000 NTU", count: 2, location: "Meja Turbidimetri" },
-  "SNK-001": { prefix: "Unit", spec: "40 kHz", count: 2, location: "Meja Preparasi HPLC" },
-  "LBU-ANA-01": { prefix: "Labu", spec: "100 mL", count: 8, location: "Lemari Kaca Labu Ukur" },
-  "LBU-ANA-02": { prefix: "Labu", spec: "50 mL", count: 8, location: "Lemari Kaca Labu Ukur" },
-  "BUR-ANA-01": { prefix: "Buret", spec: "50 mL", count: 8, location: "Meja Analisis Kuantitatif" },
-  "BUR-ANA-02": { prefix: "Buret", spec: "50 mL", count: 6, location: "Meja Analisis Kuantitatif" },
-  "PPG-ANA-01": { prefix: "Pipet", spec: "25 mL", count: 8, location: "Rak Pipet Gondok Presisi" },
-  "PPT-ANA-01": { prefix: "Pipet", spec: "10 mL", count: 8, location: "Rak Pipet Presisi" },
+  "SPC-001": {
+    prefix: "Station",
+    spec: "UV-Vis",
+    count: 3,
+    location: "Ruang Instrumentasi Spektro",
+  },
+  "SPG-001": {
+    prefix: "Station",
+    spec: "Genesys",
+    count: 2,
+    location: "Ruang Instrumentasi Spektro",
+  },
+  "BAL-002": {
+    prefix: "Balance",
+    spec: "0.1 mg",
+    count: 4,
+    location: "Meja Anti-Getar Neraca",
+  },
+  "TMB-001": {
+    prefix: "Balance",
+    spec: "0.1 mg",
+    count: 3,
+    location: "Meja Anti-Getar Neraca",
+  },
+  "PHM-001": {
+    prefix: "Meter",
+    spec: "bench",
+    count: 4,
+    location: "Meja Uji Potensiometri",
+  },
+  "TRB-001": {
+    prefix: "Unit",
+    spec: "0-1000 NTU",
+    count: 2,
+    location: "Meja Turbidimetri",
+  },
+  "SNK-001": {
+    prefix: "Unit",
+    spec: "40 kHz",
+    count: 2,
+    location: "Meja Preparasi HPLC",
+  },
+  "LBU-ANA-01": {
+    prefix: "Labu",
+    spec: "100 mL",
+    count: 8,
+    location: "Lemari Kaca Labu Ukur",
+  },
+  "LBU-ANA-02": {
+    prefix: "Labu",
+    spec: "50 mL",
+    count: 8,
+    location: "Lemari Kaca Labu Ukur",
+  },
+  "BUR-ANA-01": {
+    prefix: "Buret",
+    spec: "50 mL",
+    count: 8,
+    location: "Meja Analisis Kuantitatif",
+  },
+  "BUR-ANA-02": {
+    prefix: "Buret",
+    spec: "50 mL",
+    count: 6,
+    location: "Meja Analisis Kuantitatif",
+  },
+  "PPG-ANA-01": {
+    prefix: "Pipet",
+    spec: "25 mL",
+    count: 8,
+    location: "Rak Pipet Gondok Presisi",
+  },
+  "PPT-ANA-01": {
+    prefix: "Pipet",
+    spec: "10 mL",
+    count: 8,
+    location: "Rak Pipet Presisi",
+  },
 
   // Lab Fisik
-  "OVM-001": { prefix: "Unit", spec: "300°C", count: 3, location: "Meja Termal Fisik" },
-  "OVC-001": { prefix: "Unit", spec: "250°C", count: 2, location: "Meja Termal Fisik" },
-  "VIS-001": { prefix: "Unit", spec: "rotational", count: 3, location: "Meja Viskometri Fluida" },
-  "BTS-001": { prefix: "Unit", spec: "constant temp", count: 2, location: "Meja Sirkulasi Termostat" },
-  "SHK-001": { prefix: "Unit", spec: "300 rpm", count: 2, location: "Meja Kinetika Pelarutan" },
-  "STJ-001": { prefix: "Unit", spec: "2000 rpm", count: 2, location: "Meja Praktikum Fisika 1" },
-  "HPS-002": { prefix: "Unit", spec: "350°C", count: 3, location: "Meja Praktikum Fisika 2" },
-  "PHM-002": { prefix: "Meter", spec: "bench", count: 3, location: "Meja Elektrokimia" },
-  "PKN-FIS-01": { prefix: "Piknometer", spec: "25 mL", count: 8, location: "Lemari Kaca Densitas" },
-  "VOS-FIS-01": { prefix: "Viskometer", spec: "Ostwald", count: 8, location: "Rak Viskometer Kapiler" },
-  "KLR-FIS-01": { prefix: "Kalorimeter", spec: "insulasi", count: 6, location: "Meja Praktikum Termodinamika" },
-  "TRM-FIS-01": { prefix: "Termometer", spec: "0-150°C", count: 8, location: "Kotak Termometer Rak 1" },
-  "BKG-FIS-01": { prefix: "Gelas", spec: "250 mL", count: 8, location: "Meja Praktikum Fisika 1" },
-  "ERL-FIS-01": { prefix: "Labu", spec: "100 mL", count: 6, location: "Meja Praktikum Fisika 2" },
-  "SPT-FIS-01": { prefix: "Spatula", spec: "15 cm", count: 6, location: "Laci Meja 1" },
+  "OVM-001": {
+    prefix: "Unit",
+    spec: "300°C",
+    count: 3,
+    location: "Meja Termal Fisik",
+  },
+  "OVC-001": {
+    prefix: "Unit",
+    spec: "250°C",
+    count: 2,
+    location: "Meja Termal Fisik",
+  },
+  "VIS-001": {
+    prefix: "Unit",
+    spec: "rotational",
+    count: 3,
+    location: "Meja Viskometri Fluida",
+  },
+  "BTS-001": {
+    prefix: "Unit",
+    spec: "constant temp",
+    count: 2,
+    location: "Meja Sirkulasi Termostat",
+  },
+  "SHK-001": {
+    prefix: "Unit",
+    spec: "300 rpm",
+    count: 2,
+    location: "Meja Kinetika Pelarutan",
+  },
+  "STJ-001": {
+    prefix: "Unit",
+    spec: "2000 rpm",
+    count: 2,
+    location: "Meja Praktikum Fisika 1",
+  },
+  "HPS-002": {
+    prefix: "Unit",
+    spec: "350°C",
+    count: 3,
+    location: "Meja Praktikum Fisika 2",
+  },
+  "PHM-002": {
+    prefix: "Meter",
+    spec: "bench",
+    count: 3,
+    location: "Meja Elektrokimia",
+  },
+  "PKN-FIS-01": {
+    prefix: "Piknometer",
+    spec: "25 mL",
+    count: 8,
+    location: "Lemari Kaca Densitas",
+  },
+  "VOS-FIS-01": {
+    prefix: "Viskometer",
+    spec: "Ostwald",
+    count: 8,
+    location: "Rak Viskometer Kapiler",
+  },
+  "KLR-FIS-01": {
+    prefix: "Kalorimeter",
+    spec: "insulasi",
+    count: 6,
+    location: "Meja Praktikum Termodinamika",
+  },
+  "TRM-FIS-01": {
+    prefix: "Termometer",
+    spec: "0-150°C",
+    count: 8,
+    location: "Kotak Termometer Rak 1",
+  },
+  "BKG-FIS-01": {
+    prefix: "Gelas",
+    spec: "250 mL",
+    count: 8,
+    location: "Meja Praktikum Fisika 1",
+  },
+  "ERL-FIS-01": {
+    prefix: "Labu",
+    spec: "100 mL",
+    count: 6,
+    location: "Meja Praktikum Fisika 2",
+  },
+  "SPT-FIS-01": {
+    prefix: "Spatula",
+    spec: "15 cm",
+    count: 6,
+    location: "Laci Meja 1",
+  },
 };
 
 const MATERIALS = [
@@ -319,8 +1469,18 @@ const MATERIALS = [
     palette: "solvent",
     rule: { min: 50, increment: 50, max: 1000 },
     placements: [
-      { room: "lab-organik", lot: "ETH-2609-A", quantity: 8000, expiry: "2027-03-31" },
-      { room: "lab-anorganik", lot: "ETH-2609-B", quantity: 4000, expiry: "2027-03-31" },
+      {
+        room: "lab-organik",
+        lot: "ETH-2609-A",
+        quantity: 8000,
+        expiry: "2027-03-31",
+      },
+      {
+        room: "lab-anorganik",
+        lot: "ETH-2609-B",
+        quantity: 4000,
+        expiry: "2027-03-31",
+      },
     ],
   },
   {
@@ -333,8 +1493,18 @@ const MATERIALS = [
     palette: "solvent",
     rule: { min: 50, increment: 50, max: 1000 },
     placements: [
-      { room: "lab-organik", lot: "ACE-2607-A", quantity: 3000, expiry: "2027-01-31" },
-      { room: "lab-analitik", lot: "ACE-2607-B", quantity: 2000, expiry: "2027-01-31" },
+      {
+        room: "lab-organik",
+        lot: "ACE-2607-A",
+        quantity: 3000,
+        expiry: "2027-01-31",
+      },
+      {
+        room: "lab-analitik",
+        lot: "ACE-2607-B",
+        quantity: 2000,
+        expiry: "2027-01-31",
+      },
     ],
   },
   {
@@ -347,7 +1517,12 @@ const MATERIALS = [
     palette: "solvent",
     rule: { min: 50, increment: 50, max: 1000 },
     placements: [
-      { room: "lab-organik", lot: "HEX-2605", quantity: 2500, expiry: "2027-05-31" },
+      {
+        room: "lab-organik",
+        lot: "HEX-2605",
+        quantity: 2500,
+        expiry: "2027-05-31",
+      },
     ],
   },
   {
@@ -360,7 +1535,12 @@ const MATERIALS = [
     palette: "reagent",
     rule: { min: 10, increment: 10, max: 500 },
     placements: [
-      { room: "lab-anorganik", lot: "NAOH-2608", quantity: 5000, expiry: "2028-08-31" },
+      {
+        room: "lab-anorganik",
+        lot: "NAOH-2608",
+        quantity: 5000,
+        expiry: "2028-08-31",
+      },
     ],
   },
   {
@@ -373,7 +1553,12 @@ const MATERIALS = [
     palette: "reagent",
     rule: { min: 25, increment: 25, max: 1000 },
     placements: [
-      { room: "lab-anorganik", lot: "HCL-2610", quantity: 6000, expiry: "2027-06-30" },
+      {
+        room: "lab-anorganik",
+        lot: "HCL-2610",
+        quantity: 6000,
+        expiry: "2027-06-30",
+      },
     ],
   },
   {
@@ -386,7 +1571,12 @@ const MATERIALS = [
     palette: "reagent",
     rule: { min: 10, increment: 10, max: 500 },
     placements: [
-      { room: "lab-anorganik", lot: "NACL-2609", quantity: 4000, expiry: "2029-01-31" },
+      {
+        room: "lab-anorganik",
+        lot: "NACL-2609",
+        quantity: 4000,
+        expiry: "2029-01-31",
+      },
     ],
   },
   {
@@ -399,10 +1589,30 @@ const MATERIALS = [
     palette: "general",
     rule: { min: 100, increment: 100, max: 5000 },
     placements: [
-      { room: "lab-organik", lot: "AQUA-2611-O", quantity: 20000, expiry: null },
-      { room: "lab-anorganik", lot: "AQUA-2611-A", quantity: 20000, expiry: null },
-      { room: "lab-biokimia", lot: "AQUA-2611-B", quantity: 15000, expiry: null },
-      { room: "lab-analitik", lot: "AQUA-2611-N", quantity: 20000, expiry: null },
+      {
+        room: "lab-organik",
+        lot: "AQUA-2611-O",
+        quantity: 20000,
+        expiry: null,
+      },
+      {
+        room: "lab-anorganik",
+        lot: "AQUA-2611-A",
+        quantity: 20000,
+        expiry: null,
+      },
+      {
+        room: "lab-biokimia",
+        lot: "AQUA-2611-B",
+        quantity: 15000,
+        expiry: null,
+      },
+      {
+        room: "lab-analitik",
+        lot: "AQUA-2611-N",
+        quantity: 20000,
+        expiry: null,
+      },
       { room: "lab-fisik", lot: "AQUA-2611-F", quantity: 15000, expiry: null },
     ],
   },
@@ -416,7 +1626,12 @@ const MATERIALS = [
     palette: "biomolecule",
     rule: { min: 25, increment: 25, max: 500 },
     placements: [
-      { room: "lab-biokimia", lot: "BUF-2611", quantity: 2000, expiry: "2026-12-31" },
+      {
+        room: "lab-biokimia",
+        lot: "BUF-2611",
+        quantity: 2000,
+        expiry: "2026-12-31",
+      },
     ],
   },
   {
@@ -429,7 +1644,12 @@ const MATERIALS = [
     palette: "biomolecule",
     rule: { min: 5, increment: 5, max: 250 },
     placements: [
-      { room: "lab-biokimia", lot: "GLU-2610", quantity: 1500, expiry: "2028-03-31" },
+      {
+        room: "lab-biokimia",
+        lot: "GLU-2610",
+        quantity: 1500,
+        expiry: "2028-03-31",
+      },
     ],
   },
   {
@@ -442,7 +1662,12 @@ const MATERIALS = [
     palette: "biomolecule",
     rule: { min: 25, increment: 25, max: 500 },
     placements: [
-      { room: "lab-biokimia", lot: "BIU-2611", quantity: 1000, expiry: "2026-11-30" },
+      {
+        room: "lab-biokimia",
+        lot: "BIU-2611",
+        quantity: 1000,
+        expiry: "2026-11-30",
+      },
     ],
   },
   {
@@ -455,7 +1680,12 @@ const MATERIALS = [
     palette: "solvent",
     rule: { min: 50, increment: 50, max: 1000 },
     placements: [
-      { room: "lab-analitik", lot: "MEOH-2609", quantity: 3000, expiry: "2027-09-30" },
+      {
+        room: "lab-analitik",
+        lot: "MEOH-2609",
+        quantity: 3000,
+        expiry: "2027-09-30",
+      },
     ],
   },
   {
@@ -468,7 +1698,12 @@ const MATERIALS = [
     palette: "solvent",
     rule: { min: 50, increment: 50, max: 1000 },
     placements: [
-      { room: "lab-analitik", lot: "ACN-2610", quantity: 2500, expiry: "2027-10-31" },
+      {
+        room: "lab-analitik",
+        lot: "ACN-2610",
+        quantity: 2500,
+        expiry: "2027-10-31",
+      },
     ],
   },
   {
@@ -481,7 +1716,12 @@ const MATERIALS = [
     palette: "reagent",
     rule: { min: 5, increment: 5, max: 250 },
     placements: [
-      { room: "lab-analitik", lot: "K2CR2O7-2608", quantity: 800, expiry: "2029-02-28" },
+      {
+        room: "lab-analitik",
+        lot: "K2CR2O7-2608",
+        quantity: 800,
+        expiry: "2029-02-28",
+      },
     ],
   },
   {
@@ -507,7 +1747,12 @@ const MATERIALS = [
     palette: "standard",
     rule: { min: 25, increment: 25, max: 500 },
     placements: [
-      { room: "lab-fisik", lot: "VISCO-2609", quantity: 1200, expiry: "2028-06-30" },
+      {
+        room: "lab-fisik",
+        lot: "VISCO-2609",
+        quantity: 1200,
+        expiry: "2028-06-30",
+      },
     ],
   },
   {
@@ -520,8 +1765,18 @@ const MATERIALS = [
     palette: "standard",
     rule: { min: 25, increment: 25, max: 500 },
     placements: [
-      { room: "lab-fisik", lot: "PH7-2611-F", quantity: 1000, expiry: "2027-04-30" },
-      { room: "lab-analitik", lot: "PH7-2611-N", quantity: 1000, expiry: "2027-04-30" },
+      {
+        room: "lab-fisik",
+        lot: "PH7-2611-F",
+        quantity: 1000,
+        expiry: "2027-04-30",
+      },
+      {
+        room: "lab-analitik",
+        lot: "PH7-2611-N",
+        quantity: 1000,
+        expiry: "2027-04-30",
+      },
     ],
   },
   // Organik
@@ -535,7 +1790,12 @@ const MATERIALS = [
     palette: "solvent",
     rule: { min: 50, increment: 50, max: 1000 },
     placements: [
-      { room: "lab-organik", lot: "ETA-2608", quantity: 5000, expiry: "2027-08-31" },
+      {
+        room: "lab-organik",
+        lot: "ETA-2608",
+        quantity: 5000,
+        expiry: "2027-08-31",
+      },
     ],
   },
   {
@@ -543,12 +1803,18 @@ const MATERIALS = [
     name: "Chloroform",
     category: "Pelarut",
     unit: "mL",
-    description: "Kloroform p.a. untuk isolasi dan ekstraksi senyawa bahan alam.",
+    description:
+      "Kloroform p.a. untuk isolasi dan ekstraksi senyawa bahan alam.",
     kind: "bottle",
     palette: "solvent",
     rule: { min: 25, increment: 25, max: 500 },
     placements: [
-      { room: "lab-organik", lot: "CHL-2606", quantity: 3000, expiry: "2027-04-30" },
+      {
+        room: "lab-organik",
+        lot: "CHL-2606",
+        quantity: 3000,
+        expiry: "2027-04-30",
+      },
     ],
   },
   {
@@ -556,12 +1822,18 @@ const MATERIALS = [
     name: "Glacial acetic acid",
     category: "Reagen",
     unit: "mL",
-    description: "Asam asetat glasial 99.8% untuk sintesis ester dan asetilasi.",
+    description:
+      "Asam asetat glasial 99.8% untuk sintesis ester dan asetilasi.",
     kind: "bottle",
     palette: "reagent",
     rule: { min: 25, increment: 25, max: 500 },
     placements: [
-      { room: "lab-organik", lot: "GAA-2610", quantity: 3500, expiry: "2028-02-28" },
+      {
+        room: "lab-organik",
+        lot: "GAA-2610",
+        quantity: 3500,
+        expiry: "2028-02-28",
+      },
     ],
   },
   // Anorganik
@@ -570,12 +1842,18 @@ const MATERIALS = [
     name: "Sulfuric acid 98%",
     category: "Reagen",
     unit: "mL",
-    description: "Asam sulfat pekat teknis & p.a. untuk destruksi dan katalis asam pekat.",
+    description:
+      "Asam sulfat pekat teknis & p.a. untuk destruksi dan katalis asam pekat.",
     kind: "bottle",
     palette: "reagent",
     rule: { min: 25, increment: 25, max: 500 },
     placements: [
-      { room: "lab-anorganik", lot: "H2SO4-2611", quantity: 5000, expiry: "2028-11-30" },
+      {
+        room: "lab-anorganik",
+        lot: "H2SO4-2611",
+        quantity: 5000,
+        expiry: "2028-11-30",
+      },
     ],
   },
   {
@@ -583,12 +1861,18 @@ const MATERIALS = [
     name: "Nitric acid 65%",
     category: "Reagen",
     unit: "mL",
-    description: "Asam nitrat p.a. untuk pelarutan sampel logam dan destruksi basah.",
+    description:
+      "Asam nitrat p.a. untuk pelarutan sampel logam dan destruksi basah.",
     kind: "bottle",
     palette: "reagent",
     rule: { min: 25, increment: 25, max: 500 },
     placements: [
-      { room: "lab-anorganik", lot: "HNO3-2609", quantity: 4000, expiry: "2028-05-31" },
+      {
+        room: "lab-anorganik",
+        lot: "HNO3-2609",
+        quantity: 4000,
+        expiry: "2028-05-31",
+      },
     ],
   },
   {
@@ -596,12 +1880,18 @@ const MATERIALS = [
     name: "Tembaga(II) sulfat pentahidrat",
     category: "Reagen",
     unit: "g",
-    description: "Kristal CuSO4.5H2O biru untuk sintesis senyawa kompleks koordinasi.",
+    description:
+      "Kristal CuSO4.5H2O biru untuk sintesis senyawa kompleks koordinasi.",
     kind: "jar",
     palette: "reagent",
     rule: { min: 10, increment: 10, max: 500 },
     placements: [
-      { room: "lab-anorganik", lot: "CUSO4-2608", quantity: 2000, expiry: "2029-07-31" },
+      {
+        room: "lab-anorganik",
+        lot: "CUSO4-2608",
+        quantity: 2000,
+        expiry: "2029-07-31",
+      },
     ],
   },
   // Biokimia
@@ -615,7 +1905,12 @@ const MATERIALS = [
     palette: "biomolecule",
     rule: { min: 1, increment: 1, max: 50 },
     placements: [
-      { room: "lab-biokimia", lot: "BSA-2611", quantity: 250, expiry: "2027-10-31" },
+      {
+        room: "lab-biokimia",
+        lot: "BSA-2611",
+        quantity: 250,
+        expiry: "2027-10-31",
+      },
     ],
   },
   {
@@ -623,12 +1918,18 @@ const MATERIALS = [
     name: "Reagen Bradford",
     category: "Biomolekul",
     unit: "mL",
-    description: "Larutan pewarna Coomassie Brilliant Blue G-250 untuk uji Bradford.",
+    description:
+      "Larutan pewarna Coomassie Brilliant Blue G-250 untuk uji Bradford.",
     kind: "bottle",
     palette: "biomolecule",
     rule: { min: 20, increment: 20, max: 500 },
     placements: [
-      { room: "lab-biokimia", lot: "BRD-2610", quantity: 1500, expiry: "2027-02-28" },
+      {
+        room: "lab-biokimia",
+        lot: "BRD-2610",
+        quantity: 1500,
+        expiry: "2027-02-28",
+      },
     ],
   },
   {
@@ -636,12 +1937,18 @@ const MATERIALS = [
     name: "Nutrient Agar",
     category: "Biomolekul",
     unit: "g",
-    description: "Media pertumbuhan padat untuk kultur bakteri dan mikroorganisme.",
+    description:
+      "Media pertumbuhan padat untuk kultur bakteri dan mikroorganisme.",
     kind: "jar",
     palette: "biomolecule",
     rule: { min: 10, increment: 10, max: 500 },
     placements: [
-      { room: "lab-biokimia", lot: "NUA-2609", quantity: 2000, expiry: "2028-12-31" },
+      {
+        room: "lab-biokimia",
+        lot: "NUA-2609",
+        quantity: 2000,
+        expiry: "2028-12-31",
+      },
     ],
   },
   // Analitik
@@ -655,7 +1962,12 @@ const MATERIALS = [
     palette: "standard",
     rule: { min: 10, increment: 10, max: 250 },
     placements: [
-      { room: "lab-analitik", lot: "PP-2610", quantity: 1000, expiry: "2028-09-30" },
+      {
+        room: "lab-analitik",
+        lot: "PP-2610",
+        quantity: 1000,
+        expiry: "2028-09-30",
+      },
     ],
   },
   {
@@ -663,12 +1975,18 @@ const MATERIALS = [
     name: "Asam oksalat dihidrat",
     category: "Standar",
     unit: "g",
-    description: "Standar primer kemurnian tinggi untuk standarisasi larutan NaOH.",
+    description:
+      "Standar primer kemurnian tinggi untuk standarisasi larutan NaOH.",
     kind: "jar",
     palette: "standard",
     rule: { min: 5, increment: 5, max: 200 },
     placements: [
-      { room: "lab-analitik", lot: "OXA-2608", quantity: 1000, expiry: "2029-04-30" },
+      {
+        room: "lab-analitik",
+        lot: "OXA-2608",
+        quantity: 1000,
+        expiry: "2029-04-30",
+      },
     ],
   },
   {
@@ -676,12 +1994,18 @@ const MATERIALS = [
     name: "EDTA dinatrium garam",
     category: "Reagen",
     unit: "g",
-    description: "Garam Na2EDTA untuk titrasi kompleksometri penentuan kesadahan air.",
+    description:
+      "Garam Na2EDTA untuk titrasi kompleksometri penentuan kesadahan air.",
     kind: "jar",
     palette: "reagent",
     rule: { min: 10, increment: 10, max: 500 },
     placements: [
-      { room: "lab-analitik", lot: "EDTA-2607", quantity: 1500, expiry: "2029-01-31" },
+      {
+        room: "lab-analitik",
+        lot: "EDTA-2607",
+        quantity: 1500,
+        expiry: "2029-01-31",
+      },
     ],
   },
   // Fisik
@@ -690,12 +2014,18 @@ const MATERIALS = [
     name: "Gliserol 99%",
     category: "Umum",
     unit: "mL",
-    description: "Cairan kental murni untuk kalibrasi viskometer dan penentuan indeks bias.",
+    description:
+      "Cairan kental murni untuk kalibrasi viskometer dan penentuan indeks bias.",
     kind: "bottle",
     palette: "general",
     rule: { min: 50, increment: 50, max: 1000 },
     placements: [
-      { room: "lab-fisik", lot: "GLY-2609", quantity: 3000, expiry: "2028-03-31" },
+      {
+        room: "lab-fisik",
+        lot: "GLY-2609",
+        quantity: 3000,
+        expiry: "2028-03-31",
+      },
     ],
   },
   {
@@ -703,12 +2033,18 @@ const MATERIALS = [
     name: "Sukrosa kristal murni",
     category: "Umum",
     unit: "g",
-    description: "Sukrosa murni untuk larutan bertingkat densitas dan uji kalorimetri.",
+    description:
+      "Sukrosa murni untuk larutan bertingkat densitas dan uji kalorimetri.",
     kind: "jar",
     palette: "general",
     rule: { min: 25, increment: 25, max: 1000 },
     placements: [
-      { room: "lab-fisik", lot: "SUC-2610", quantity: 2500, expiry: "2029-06-30" },
+      {
+        room: "lab-fisik",
+        lot: "SUC-2610",
+        quantity: 2500,
+        expiry: "2029-06-30",
+      },
     ],
   },
   {
@@ -716,12 +2052,18 @@ const MATERIALS = [
     name: "Minyak parafin cair",
     category: "Standar",
     unit: "mL",
-    description: "Parafin cair untuk penangas minyak dan studi fluida viskositas tinggi.",
+    description:
+      "Parafin cair untuk penangas minyak dan studi fluida viskositas tinggi.",
     kind: "bottle",
     palette: "standard",
     rule: { min: 50, increment: 50, max: 1000 },
     placements: [
-      { room: "lab-fisik", lot: "PAR-2608", quantity: 2000, expiry: "2028-10-31" },
+      {
+        room: "lab-fisik",
+        lot: "PAR-2608",
+        quantity: 2000,
+        expiry: "2028-10-31",
+      },
     ],
   },
 ];
@@ -791,7 +2133,9 @@ async function writeArtwork(client, slug, svgSource) {
 }
 
 async function clearArtwork(client) {
-  await client.query("DELETE FROM media WHERE storage_key LIKE 'seed/catalog/%'");
+  await client.query(
+    "DELETE FROM media WHERE storage_key LIKE 'seed/catalog/%'",
+  );
   await clearSeededImageFiles();
 }
 
@@ -803,7 +2147,13 @@ async function upsertRoom(client, labId, room) {
   if (existing.rowCount > 0) {
     await client.query(
       "UPDATE room SET name = $2, short_name = $3, description = $4, tone = $5, active = true WHERE id = $1",
-      [existing.rows[0].id, room.name, room.shortName, room.description, room.tone],
+      [
+        existing.rows[0].id,
+        room.name,
+        room.shortName,
+        room.description,
+        room.tone,
+      ],
     );
     return existing.rows[0].id;
   }
@@ -814,8 +2164,15 @@ async function upsertRoom(client, labId, room) {
   return inserted.rows[0].id;
 }
 
-async function upsertEquipmentType(client, [name, category, usageType, classification, description, shape, tone]) {
-  const art = await writeArtwork(client, `equipment-${shape}`, equipmentArt(shape, tone));
+async function upsertEquipmentType(
+  client,
+  [name, category, usageType, classification, description, shape, tone],
+) {
+  const art = await writeArtwork(
+    client,
+    `equipment-${shape}`,
+    equipmentArt(shape, tone),
+  );
   const isTool = classification === "TOOL";
   const tableName = isTool ? "tool_type" : "instrument_type";
 
@@ -837,7 +2194,12 @@ async function upsertEquipmentType(client, [name, category, usageType, classific
   return { id: inserted.rows[0].id, classification };
 }
 
-async function upsertAsset(client, roomIds, typeMap, [code, typeName, room, condition, notes]) {
+async function upsertAsset(
+  client,
+  roomIds,
+  typeMap,
+  [code, typeName, room, condition, notes],
+) {
   const typeMeta = typeMap[typeName];
   const isTool = typeMeta.classification === "TOOL";
   const tableName = isTool ? "tool_asset" : "instrument_asset";
@@ -861,7 +2223,15 @@ async function upsertAsset(client, roomIds, typeMap, [code, typeName, room, cond
   return { id: inserted.rows[0].id, classification: typeMeta.classification };
 }
 
-async function upsertUnit(client, assetMeta, code, label, notes, storageLocation, qrCode) {
+async function upsertUnit(
+  client,
+  assetMeta,
+  code,
+  label,
+  notes,
+  storageLocation,
+  qrCode,
+) {
   const isTool = assetMeta.classification === "TOOL";
   const tableName = isTool ? "tool_unit" : "instrument_unit";
   const assetCol = isTool ? "tool_asset_id" : "instrument_asset_id";
@@ -873,13 +2243,28 @@ async function upsertUnit(client, assetMeta, code, label, notes, storageLocation
   if (existing.rowCount > 0) {
     await client.query(
       `UPDATE ${tableName} SET ${assetCol} = $2, label = $3, notes = $4, storage_location = COALESCE($5, storage_location), qr_code = COALESCE(qr_code, $6), active = true WHERE id = $1`,
-      [existing.rows[0].id, assetMeta.id, label, notes ?? null, storageLocation ?? null, qrCode ?? null],
+      [
+        existing.rows[0].id,
+        assetMeta.id,
+        label,
+        notes ?? null,
+        storageLocation ?? null,
+        qrCode ?? null,
+      ],
     );
     return;
   }
   await client.query(
     `INSERT INTO ${tableName} (${assetCol}, code, label, status, notes, storage_location, qr_code, active) VALUES ($1, $2, $3, $4, $5, $6, $7, true)`,
-    [assetMeta.id, code, label, notes ? "MAINTENANCE" : "AVAILABLE", notes ?? null, storageLocation ?? null, qrCode ?? null],
+    [
+      assetMeta.id,
+      code,
+      label,
+      notes ? "MAINTENANCE" : "AVAILABLE",
+      notes ?? null,
+      storageLocation ?? null,
+      qrCode ?? null,
+    ],
   );
 }
 
@@ -890,19 +2275,34 @@ async function upsertMaterial(client, material) {
     materialArt(material.kind, materialPalette[material.palette]),
   );
   let materialId;
-  const existing = await client.query("SELECT id FROM material WHERE code = $1", [
-    material.code,
-  ]);
+  const existing = await client.query(
+    "SELECT id FROM material WHERE code = $1",
+    [material.code],
+  );
   if (existing.rowCount > 0) {
     materialId = existing.rows[0].id;
     await client.query(
       "UPDATE material SET name = $2, category = $3, base_unit = $4, description = $5, image_media_id = $6, active = true WHERE id = $1",
-      [materialId, material.name, material.category, material.unit, material.description, art],
+      [
+        materialId,
+        material.name,
+        material.category,
+        material.unit,
+        material.description,
+        art,
+      ],
     );
   } else {
     const inserted = await client.query(
       "INSERT INTO material (code, name, category, base_unit, description, image_media_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
-      [material.code, material.name, material.category, material.unit, material.description, art],
+      [
+        material.code,
+        material.name,
+        material.category,
+        material.unit,
+        material.description,
+        art,
+      ],
     );
     materialId = inserted.rows[0].id;
   }
@@ -910,13 +2310,26 @@ async function upsertMaterial(client, material) {
     `INSERT INTO material_dispensing_rule (material_id, minimum_quantity, dispensing_increment, maximum_quantity, unit)
      VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (material_id) DO UPDATE SET minimum_quantity = $2, dispensing_increment = $3, maximum_quantity = $4, unit = $5`,
-    [materialId, material.rule.min, material.rule.increment, material.rule.max, material.unit],
+    [
+      materialId,
+      material.rule.min,
+      material.rule.increment,
+      material.rule.max,
+      material.unit,
+    ],
   );
   return materialId;
 }
 
-async function upsertBatch(client, materialId, roomId, placement, defaultStorage) {
-  const storageLocation = placement.storage ?? defaultStorage ?? "Gudang Reagen";
+async function upsertBatch(
+  client,
+  materialId,
+  roomId,
+  placement,
+  defaultStorage,
+) {
+  const storageLocation =
+    placement.storage ?? defaultStorage ?? "Gudang Reagen";
   const qrCode = `RK-MAT-${placement.lot}`;
   const existing = await client.query(
     "SELECT id FROM material_batch WHERE material_id = $1 AND lot_number = $2",
@@ -931,7 +2344,15 @@ async function upsertBatch(client, materialId, roomId, placement, defaultStorage
   }
   await client.query(
     "INSERT INTO material_batch (material_id, room_id, lot_number, quantity, expiry_date, storage_location, qr_code, active) VALUES ($1, $2, $3, $4, $5, $6, $7, true)",
-    [materialId, roomId, placement.lot, placement.quantity, placement.expiry, storageLocation, qrCode],
+    [
+      materialId,
+      roomId,
+      placement.lot,
+      placement.quantity,
+      placement.expiry,
+      storageLocation,
+      qrCode,
+    ],
   );
 }
 
@@ -957,10 +2378,12 @@ try {
   const labId = lab.rows[0].id;
 
   const roomIds = {};
-  for (const room of ROOMS) roomIds[room.code] = await upsertRoom(client, labId, room);
+  for (const room of ROOMS)
+    roomIds[room.code] = await upsertRoom(client, labId, room);
 
   const typeIds = {};
-  for (const type of EQUIPMENT_TYPES) typeIds[type[0]] = await upsertEquipmentType(client, type);
+  for (const type of EQUIPMENT_TYPES)
+    typeIds[type[0]] = await upsertEquipmentType(client, type);
 
   const currentAssetCodes = ASSETS.map((a) => a[0]);
   await client.query(
@@ -1007,16 +2430,31 @@ try {
 
   for (const material of MATERIALS) {
     const materialId = await upsertMaterial(client, material);
-    const defaultStorage = material.category === "Pelarut" ? "Lemari Asam / B3" : "Gudang Reagen Rak A";
+    const defaultStorage =
+      material.category === "Pelarut"
+        ? "Lemari Asam / B3"
+        : "Gudang Reagen Rak A";
     for (const placement of material.placements) {
-      await upsertBatch(client, materialId, roomIds[placement.room], placement, defaultStorage);
+      await upsertBatch(
+        client,
+        materialId,
+        roomIds[placement.room],
+        placement,
+        defaultStorage,
+      );
     }
   }
 
   // Ensure all units and batches have non-null QR codes
-  await client.query("UPDATE instrument_unit SET qr_code = 'RK-INS-' || code WHERE qr_code IS NULL");
-  await client.query("UPDATE tool_unit SET qr_code = 'RK-TOL-' || code WHERE qr_code IS NULL");
-  await client.query("UPDATE material_batch SET qr_code = 'RK-MAT-' || COALESCE(lot_number, SUBSTRING(id::text, 1, 8)) WHERE qr_code IS NULL");
+  await client.query(
+    "UPDATE instrument_unit SET qr_code = 'RK-INS-' || code WHERE qr_code IS NULL",
+  );
+  await client.query(
+    "UPDATE tool_unit SET qr_code = 'RK-TOL-' || code WHERE qr_code IS NULL",
+  );
+  await client.query(
+    "UPDATE material_batch SET qr_code = 'RK-MAT-' || COALESCE(lot_number, SUBSTRING(id::text, 1, 8)) WHERE qr_code IS NULL",
+  );
 
   await client.query("COMMIT");
   console.log(

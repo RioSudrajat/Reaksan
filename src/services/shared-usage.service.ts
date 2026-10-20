@@ -145,24 +145,32 @@ async function loadSharedRows(
   if (options.primaryUserId)
     conditions.push(eq(reservation.primaryUserId, options.primaryUserId));
   if (options.reservationId)
-    conditions.push(eq(sharedUsageRequest.reservationId, options.reservationId));
+    conditions.push(
+      eq(sharedUsageRequest.reservationId, options.reservationId),
+    );
   if (options.statuses)
     conditions.push(inArray(sharedUsageRequest.status, options.statuses));
   const rows = await exec
     .select(sharedSelection)
     .from(sharedUsageRequest)
-    .innerJoin(reservation, eq(reservation.id, sharedUsageRequest.reservationId))
-    .innerJoin(user, eq(user.id, sharedUsageRequest.requesterId))
     .innerJoin(
-      resourceRequest,
-      eq(resourceRequest.id, reservation.requestId),
+      reservation,
+      eq(reservation.id, sharedUsageRequest.reservationId),
     )
-    .innerJoin(instrumentUnit, eq(instrumentUnit.id, reservation.instrumentUnitId))
+    .innerJoin(user, eq(user.id, sharedUsageRequest.requesterId))
+    .innerJoin(resourceRequest, eq(resourceRequest.id, reservation.requestId))
+    .innerJoin(
+      instrumentUnit,
+      eq(instrumentUnit.id, reservation.instrumentUnitId),
+    )
     .innerJoin(
       instrumentAsset,
       eq(instrumentAsset.id, reservation.instrumentAssetId),
     )
-    .innerJoin(instrumentType, eq(instrumentType.id, instrumentAsset.instrumentTypeId))
+    .innerJoin(
+      instrumentType,
+      eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+    )
     .innerJoin(room, eq(room.id, instrumentAsset.roomId))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(sharedUsageRequest.createdAt))
@@ -184,11 +192,12 @@ export async function listSharedUsageRequests(
   options: Parameters<typeof loadSharedRows>[1],
 ) {
   const rows = await loadSharedRows(exec, options);
-  const names = await primaryNames(
-    exec,
-    [...new Set(rows.map((row) => row.primaryUserId))],
+  const names = await primaryNames(exec, [
+    ...new Set(rows.map((row) => row.primaryUserId)),
+  ]);
+  return rows.map((row) =>
+    toDto(row, names.get(row.primaryUserId) ?? "Primary user"),
   );
-  return rows.map((row) => toDto(row, names.get(row.primaryUserId) ?? "Primary user"));
 }
 
 export async function loadSharedUsagePage(
@@ -219,12 +228,18 @@ export async function loadSharedUsagePage(
     .from(reservation)
     .innerJoin(user, eq(user.id, reservation.primaryUserId))
     .innerJoin(resourceRequest, eq(resourceRequest.id, reservation.requestId))
-    .innerJoin(instrumentUnit, eq(instrumentUnit.id, reservation.instrumentUnitId))
+    .innerJoin(
+      instrumentUnit,
+      eq(instrumentUnit.id, reservation.instrumentUnitId),
+    )
     .innerJoin(
       instrumentAsset,
       eq(instrumentAsset.id, reservation.instrumentAssetId),
     )
-    .innerJoin(instrumentType, eq(instrumentType.id, instrumentAsset.instrumentTypeId))
+    .innerJoin(
+      instrumentType,
+      eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+    )
     .innerJoin(room, eq(room.id, instrumentAsset.roomId))
     .where(
       and(
@@ -317,8 +332,7 @@ export async function createSharedUsageRequest(
       .where(eq(reservation.id, input.reservationId))
       .limit(1)
       .for("update");
-    if (!row)
-      throw new ApiError(404, "NOT_FOUND", "Reservation not found.");
+    if (!row) throw new ApiError(404, "NOT_FOUND", "Reservation not found.");
     if (!["RESERVED", "ACTIVE"].includes(row.status))
       throw new ApiError(
         409,
@@ -440,7 +454,10 @@ export async function respondSharedUsage(
         requestCode: resourceRequest.code,
       })
       .from(sharedUsageRequest)
-      .innerJoin(reservation, eq(reservation.id, sharedUsageRequest.reservationId))
+      .innerJoin(
+        reservation,
+        eq(reservation.id, sharedUsageRequest.reservationId),
+      )
       .innerJoin(
         instrumentUnit,
         eq(instrumentUnit.id, reservation.instrumentUnitId),
@@ -452,11 +469,7 @@ export async function respondSharedUsage(
     if (!row || row.primaryUserId !== userId)
       throw new ApiError(404, "NOT_FOUND", "Shared usage request not found.");
     if (row.status !== "PENDING")
-      throw new ApiError(
-        409,
-        "INVALID_STATE",
-        "Permintaan ini sudah dijawab.",
-      );
+      throw new ApiError(409, "INVALID_STATE", "Permintaan ini sudah dijawab.");
     if (!["RESERVED", "ACTIVE"].includes(row.reservationStatus))
       throw new ApiError(
         409,
@@ -486,13 +499,9 @@ export async function respondSharedUsage(
     await createNotification(tx, {
       recipientId: row.requesterId,
       type:
-        action === "accept"
-          ? "SHARED_USAGE_ACCEPTED"
-          : "SHARED_USAGE_DECLINED",
+        action === "accept" ? "SHARED_USAGE_ACCEPTED" : "SHARED_USAGE_DECLINED",
       title:
-        action === "accept"
-          ? "Shared usage diterima"
-          : "Shared usage ditolak",
+        action === "accept" ? "Shared usage diterima" : "Shared usage ditolak",
       message:
         action === "accept"
           ? `${row.unitCode} bisa kamu pakai sesuai interval yang disetujui.`
@@ -511,7 +520,9 @@ export async function respondSharedUsage(
     const nameRows = await primaryNames(tx, [userId]);
     const rows = await loadSharedRows(tx, { reservationId: row.reservationId });
     const updated = rows.find((item) => item.id === id);
-    return updated ? toDto(updated, nameRows.get(userId) ?? "Primary user") : null;
+    return updated
+      ? toDto(updated, nameRows.get(userId) ?? "Primary user")
+      : null;
   });
 }
 
@@ -526,14 +537,21 @@ export async function cancelSharedUsage(userId: string, id: string) {
         primaryUserId: reservation.primaryUserId,
       })
       .from(sharedUsageRequest)
-      .innerJoin(reservation, eq(reservation.id, sharedUsageRequest.reservationId))
+      .innerJoin(
+        reservation,
+        eq(reservation.id, sharedUsageRequest.reservationId),
+      )
       .where(eq(sharedUsageRequest.id, id))
       .limit(1)
       .for("update");
     if (!row || row.requesterId !== userId)
       throw new ApiError(404, "NOT_FOUND", "Shared usage request not found.");
     if (row.status !== "PENDING")
-      throw new ApiError(409, "INVALID_STATE", "Permintaan ini sudah diproses.");
+      throw new ApiError(
+        409,
+        "INVALID_STATE",
+        "Permintaan ini sudah diproses.",
+      );
     await tx
       .update(sharedUsageRequest)
       .set({ status: "CANCELLED", respondedAt: new Date() })
@@ -598,12 +616,18 @@ async function loadConfirmedSharedUsage(
     .innerJoin(sharedUser, eq(sharedUser.id, sharedUsage.userId))
     .innerJoin(primaryUser, eq(primaryUser.id, reservation.primaryUserId))
     .innerJoin(resourceRequest, eq(resourceRequest.id, reservation.requestId))
-    .innerJoin(instrumentUnit, eq(instrumentUnit.id, reservation.instrumentUnitId))
+    .innerJoin(
+      instrumentUnit,
+      eq(instrumentUnit.id, reservation.instrumentUnitId),
+    )
     .innerJoin(
       instrumentAsset,
       eq(instrumentAsset.id, reservation.instrumentAssetId),
     )
-    .innerJoin(instrumentType, eq(instrumentType.id, instrumentAsset.instrumentTypeId))
+    .innerJoin(
+      instrumentType,
+      eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+    )
     .innerJoin(room, eq(room.id, instrumentAsset.roomId))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(asc(sharedUsage.startAt))

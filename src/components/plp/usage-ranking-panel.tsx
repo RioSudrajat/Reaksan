@@ -27,14 +27,18 @@ export function UsageRankingPanel({
   // Sort instruments and tools based on selected metric
   const sortedInstruments = [...data.instruments].sort((a, b) =>
     metricMode === "days"
-      ? b.totalDaysBorrowed - a.totalDaysBorrowed || b.totalRequests - a.totalRequests
-      : b.totalRequests - a.totalRequests || b.totalDaysBorrowed - a.totalDaysBorrowed,
+      ? b.totalDaysBorrowed - a.totalDaysBorrowed ||
+        b.totalRequests - a.totalRequests
+      : b.totalRequests - a.totalRequests ||
+        b.totalDaysBorrowed - a.totalDaysBorrowed,
   );
 
   const sortedTools = [...data.tools].sort((a, b) =>
     metricMode === "days"
-      ? b.totalDaysBorrowed - a.totalDaysBorrowed || b.totalRequests - a.totalRequests
-      : b.totalRequests - a.totalRequests || b.totalDaysBorrowed - a.totalDaysBorrowed,
+      ? b.totalDaysBorrowed - a.totalDaysBorrowed ||
+        b.totalRequests - a.totalRequests
+      : b.totalRequests - a.totalRequests ||
+        b.totalDaysBorrowed - a.totalDaysBorrowed,
   );
 
   // Materials are ranked by request count
@@ -75,7 +79,8 @@ export function UsageRankingPanel({
             </span>
           </div>
           <p className="mt-0.5 text-[12px] text-[#6B6B6B]">
-            Intensitas pemanfaatan fasilitas lab dihitung dari durasi peminjaman dan frekuensi permohonan.
+            Intensitas pemanfaatan fasilitas lab dihitung dari durasi peminjaman
+            dan frekuensi permohonan.
           </p>
         </div>
 
@@ -348,11 +353,14 @@ export function UsageRankingPanel({
                             permohonan
                           </span>
                         </span>
-                        {item.totalQuantity !== undefined && item.totalQuantity > 0 && item.unit && (
-                          <span className="block text-[10px] text-[#6B6B6B] tabular-nums">
-                            {item.totalQuantity.toLocaleString("id-ID")} {item.unit}
-                          </span>
-                        )}
+                        {item.totalQuantity !== undefined &&
+                          item.totalQuantity > 0 &&
+                          item.unit && (
+                            <span className="block text-[10px] text-[#6B6B6B] tabular-nums">
+                              {item.totalQuantity.toLocaleString("id-ID")}{" "}
+                              {item.unit}
+                            </span>
+                          )}
                       </div>
                     </div>
 

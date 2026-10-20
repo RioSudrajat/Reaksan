@@ -344,6 +344,7 @@ The PLP dashboard is a triage workspace:
 The dominant panel should be the queue that needs attention. The right rail can show schedule and incident summaries. A map is useful as a secondary locator, not the main PLP action surface.
 
 ### 8.3 Admin
+
 - Admin: configuration, users, roles, rooms, equipment types, assignments, and audit access.
 
 MVP difokuskan secara ketat pada 3 role: Mahasiswa (Student), PLP, dan Admin. Reuse the same shell and component language, but do not show admin-density tables to students.

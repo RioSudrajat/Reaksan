@@ -26,10 +26,7 @@ import { AddMaterialDialog } from "@/components/plp/add-material-dialog";
 import { DeleteConfirmButton } from "@/components/plp/delete-confirm-button";
 import { AutoSubmitSelect } from "@/components/auto-submit-select";
 import { requirePermission } from "@/lib/session";
-import {
-  getRoomScope,
-  scopeRoomCodes,
-} from "@/services/access-scope.service";
+import { getRoomScope, scopeRoomCodes } from "@/services/access-scope.service";
 import { inventoryQuerySchema } from "@/validators/plp";
 
 export const metadata: Metadata = { title: "Material Inventory" };
@@ -164,10 +161,12 @@ export default async function PlpMaterialInventoryPage({
           ]}
           footnote={
             <>
-              Hanya batch aktif dengan quantity lebih dari nol. Batch dengan expiry
-              lebih dari 8 minggu ke depan tidak digambar di bar, hanya dihitung di
-              legenda. Tindak lanjut stok lewat{" "}
-              <ChartLink href="/plp/inventory/opname">sesi hitung stok</ChartLink>{" "}
+              Hanya batch aktif dengan quantity lebih dari nol. Batch dengan
+              expiry lebih dari 8 minggu ke depan tidak digambar di bar, hanya
+              dihitung di legenda. Tindak lanjut stok lewat{" "}
+              <ChartLink href="/plp/inventory/opname">
+                sesi hitung stok
+              </ChartLink>{" "}
               atau adjustment batch di admin workspace.
             </>
           }
@@ -263,7 +262,7 @@ export default async function PlpMaterialInventoryPage({
             <ul className="divide-y divide-[#EEEEEE] md:hidden">
               {result.data.map((material) => {
                 const availableBatchesCount = material.batches.filter(
-                  (b) => b.active && !b.expired && b.quantity > b.reserved
+                  (b) => b.active && !b.expired && b.quantity > b.reserved,
                 ).length;
                 const totalBatchesCount = material.batches.length;
 
@@ -289,20 +288,27 @@ export default async function PlpMaterialInventoryPage({
                               {material.name}
                             </p>
                             <p className="mt-0.5 text-[11px] text-[#929292]">
-                              {material.code} · {material.category ?? "Material"}{" "}
-                              · {material.roomName}
+                              {material.code} ·{" "}
+                              {material.category ?? "Material"} ·{" "}
+                              {material.roomName}
                             </p>
                             <p className="mt-0.5 text-[10px]">
                               {material.activeRequests > 0 ? (
                                 <span className="inline-flex items-center font-medium text-[#8D6500] bg-[#FEF7E6] px-1.5 py-0.5 rounded border border-[#FDE68A]/70">
-                                  {material.activeRequests} permohonan aktif ({material.totalRequestedQuantity} {material.unit})
+                                  {material.activeRequests} permohonan aktif (
+                                  {material.totalRequestedQuantity}{" "}
+                                  {material.unit})
                                 </span>
                               ) : material.totalRequests > 0 ? (
                                 <span className="text-[#64748B]">
-                                  {material.totalRequests} permohonan terkait ({material.totalRequestedQuantity} {material.unit})
+                                  {material.totalRequests} permohonan terkait (
+                                  {material.totalRequestedQuantity}{" "}
+                                  {material.unit})
                                 </span>
                               ) : (
-                                <span className="text-[#94A3B8]">Belum ada permohonan</span>
+                                <span className="text-[#94A3B8]">
+                                  Belum ada permohonan
+                                </span>
                               )}
                             </p>
                           </div>
@@ -321,12 +327,20 @@ export default async function PlpMaterialInventoryPage({
                       </div>
                       <div className="mt-2 space-y-0.5 text-[12px] text-[#121826] [font-variant-numeric:tabular-nums]">
                         <div>
-                          <span className={material.available > 0 ? "font-bold text-[#16A34A]" : "font-bold text-[#DC2626]"}>
-                            Tersedia {material.available}/{material.totalCapacity} {material.unit}
+                          <span
+                            className={
+                              material.available > 0
+                                ? "font-bold text-[#16A34A]"
+                                : "font-bold text-[#DC2626]"
+                            }
+                          >
+                            Tersedia {material.available}/
+                            {material.totalCapacity} {material.unit}
                           </span>
                           {material.reserved > 0 && material.issued > 0 ? (
                             <span className="text-[11px] text-[#8D6500] ml-1.5 font-normal">
-                              ({material.reserved} reserved · {material.issued} terpakai)
+                              ({material.reserved} reserved · {material.issued}{" "}
+                              terpakai)
                             </span>
                           ) : material.reserved > 0 ? (
                             <span className="text-[11px] text-[#8D6500] ml-1.5 font-normal">
@@ -344,9 +358,14 @@ export default async function PlpMaterialInventoryPage({
                         </div>
                         <p className="text-[11px] text-[#64748B]">
                           {totalBatchesCount === 0 ? (
-                            <span className="text-[#DC2626]">Belum ada batch</span>
+                            <span className="text-[#DC2626]">
+                              Belum ada batch
+                            </span>
                           ) : (
-                            <span>Tersedia {availableBatchesCount}/{totalBatchesCount} batch</span>
+                            <span>
+                              Tersedia {availableBatchesCount}/
+                              {totalBatchesCount} batch
+                            </span>
                           )}
                           {material.expiry
                             ? ` · Expiry terdekat ${formatDate(material.expiry)}`
@@ -361,22 +380,38 @@ export default async function PlpMaterialInventoryPage({
 
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full border-collapse text-left">
-                <caption className="sr-only">Inventori material dan stok</caption>
+                <caption className="sr-only">
+                  Inventori material dan stok
+                </caption>
                 <thead>
                   <tr className="border-b border-[#E5E7EB] bg-[#F8F9FA] text-[11px] uppercase tracking-[0.08em] text-[#64748B]">
-                    <th scope="col" className="px-4 py-3 font-semibold">Material</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Ketersediaan Stok</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Dispensing rule</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Batch</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Expiry</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Status</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Aksi</th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Material
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Ketersediaan Stok
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Dispensing rule
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Batch
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Expiry
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Status
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Aksi
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {result.data.map((material) => {
                     const availableBatchesCount = material.batches.filter(
-                      (b) => b.active && !b.expired && b.quantity > b.reserved
+                      (b) => b.active && !b.expired && b.quantity > b.reserved,
                     ).length;
                     const totalBatchesCount = material.batches.length;
 
@@ -397,20 +432,27 @@ export default async function PlpMaterialInventoryPage({
                                 {material.name}
                               </p>
                               <p className="mt-0.5 text-[11px] text-[#64748B]">
-                                {material.code} · {material.category ?? "Material"}{" "}
-                                · {material.roomName}
+                                {material.code} ·{" "}
+                                {material.category ?? "Material"} ·{" "}
+                                {material.roomName}
                               </p>
                               <p className="mt-0.5 text-[10px]">
                                 {material.activeRequests > 0 ? (
                                   <span className="inline-flex items-center font-medium text-[#8D6500] bg-[#FEF7E6] px-1.5 py-0.5 rounded border border-[#FDE68A]/70">
-                                    {material.activeRequests} permohonan aktif ({material.totalRequestedQuantity} {material.unit})
+                                    {material.activeRequests} permohonan aktif (
+                                    {material.totalRequestedQuantity}{" "}
+                                    {material.unit})
                                   </span>
                                 ) : material.totalRequests > 0 ? (
                                   <span className="text-[#64748B]">
-                                    {material.totalRequests} permohonan terkait ({material.totalRequestedQuantity} {material.unit})
+                                    {material.totalRequests} permohonan terkait
+                                    ({material.totalRequestedQuantity}{" "}
+                                    {material.unit})
                                   </span>
                                 ) : (
-                                  <span className="text-[#94A3B8]">Belum ada permohonan</span>
+                                  <span className="text-[#94A3B8]">
+                                    Belum ada permohonan
+                                  </span>
                                 )}
                               </p>
                             </div>
@@ -418,22 +460,32 @@ export default async function PlpMaterialInventoryPage({
                         </th>
                         <td className="px-4 py-3 text-[12px] text-[#121826] [font-variant-numeric:tabular-nums]">
                           <div className="font-mono font-bold">
-                            <span className={material.available > 0 ? "text-[#16A34A]" : "text-[#DC2626]"}>
-                              Tersedia {material.available}/{material.totalCapacity} {material.unit}
+                            <span
+                              className={
+                                material.available > 0
+                                  ? "text-[#16A34A]"
+                                  : "text-[#DC2626]"
+                              }
+                            >
+                              Tersedia {material.available}/
+                              {material.totalCapacity} {material.unit}
                             </span>
                           </div>
                           <p className="text-[10px] text-[#64748B] leading-tight mt-0.5">
                             {material.reserved > 0 && material.issued > 0 ? (
                               <span className="text-[#8D6500]">
-                                {material.reserved} {material.unit} reserved · {material.issued} {material.unit} terpakai
+                                {material.reserved} {material.unit} reserved ·{" "}
+                                {material.issued} {material.unit} terpakai
                               </span>
                             ) : material.reserved > 0 ? (
                               <span className="text-[#8D6500]">
-                                {material.reserved} {material.unit} dialokasikan/reserved
+                                {material.reserved} {material.unit}{" "}
+                                dialokasikan/reserved
                               </span>
                             ) : material.issued > 0 ? (
                               <span className="text-[#4B5563]">
-                                {material.issued} {material.unit} telah digunakan/diambil
+                                {material.issued} {material.unit} telah
+                                digunakan/diambil
                               </span>
                             ) : material.totalCapacity === 0 ? (
                               <span className="text-[#DC2626]">
@@ -449,8 +501,15 @@ export default async function PlpMaterialInventoryPage({
                         </td>
                         <td className="px-4 py-3 text-[12px] text-[#121826] [font-variant-numeric:tabular-nums]">
                           <div className="font-mono font-semibold">
-                            <span className={availableBatchesCount > 0 ? "text-[#16A34A]" : "text-[#DC2626]"}>
-                              Tersedia {availableBatchesCount}/{totalBatchesCount} batch
+                            <span
+                              className={
+                                availableBatchesCount > 0
+                                  ? "text-[#16A34A]"
+                                  : "text-[#DC2626]"
+                              }
+                            >
+                              Tersedia {availableBatchesCount}/
+                              {totalBatchesCount} batch
                             </span>
                           </div>
                           {totalBatchesCount === 0 ? (
@@ -459,7 +518,8 @@ export default async function PlpMaterialInventoryPage({
                             </p>
                           ) : totalBatchesCount - availableBatchesCount > 0 ? (
                             <p className="text-[10px] text-[#DC2626] leading-tight mt-0.5">
-                              {totalBatchesCount - availableBatchesCount} batch kadaluarsa/habis
+                              {totalBatchesCount - availableBatchesCount} batch
+                              kadaluarsa/habis
                             </p>
                           ) : (
                             <p className="text-[10px] text-[#64748B] leading-tight mt-0.5">

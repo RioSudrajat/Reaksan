@@ -39,7 +39,11 @@ import type {
   ScheduleEvent,
   SharedUsagePageView,
 } from "@/components/schedule-data";
-import { SectionTitle, Sidebar, StatusBadge } from "@/components/reaksan-dashboard";
+import {
+  SectionTitle,
+  Sidebar,
+  StatusBadge,
+} from "@/components/reaksan-dashboard";
 
 const incidentStatusLabel: Record<string, string> = {
   REPORTED: "Dilaporkan",
@@ -117,9 +121,7 @@ function FlowShell({
 }) {
   return (
     <LabCatalogProvider value={catalog}>
-      <div className="space-y-6">
-        {children}
-      </div>
+      <div className="space-y-6">{children}</div>
     </LabCatalogProvider>
   );
 }
@@ -237,7 +239,10 @@ function StudentDayOverviewCard({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <span
-                        className={cn("size-2 rounded-full", displayDotClasses[display])}
+                        className={cn(
+                          "size-2 rounded-full",
+                          displayDotClasses[display],
+                        )}
                         aria-hidden="true"
                       />
                       <span
@@ -303,7 +308,8 @@ export function RoomDetailPage({
   month: { year: number; month: number };
   userName: string;
 }) {
-  const room = catalog.rooms.find((item) => item.id === roomId) ?? catalog.rooms[0];
+  const room =
+    catalog.rooms.find((item) => item.id === roomId) ?? catalog.rooms[0];
   const roomAssets = catalog.equipment.filter(
     (asset) => asset.roomId === room?.id,
   );
@@ -363,7 +369,8 @@ export function RoomDetailPage({
             {room.name}
           </h2>
           <p className="mt-2 max-w-[620px] text-[13px] leading-5 text-[#64748B]">
-            {room.description} Informasi unit instrumen yang tersedia, sedang digunakan, serta agenda kegiatan lab.
+            {room.description} Informasi unit instrumen yang tersedia, sedang
+            digunakan, serta agenda kegiatan lab.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -426,7 +433,8 @@ export function RoomDetailPage({
               Jadwal Reservasi & Penggunaan Terkonfirmasi
             </h3>
             <p className="mt-2 max-w-[680px] text-[12px] leading-5 text-[#64748B]">
-              Hanya menampilkan reservasi yang telah disetujui PLP. Pengajuan baru dapat dibuat dengan memilih tanggal pada kalender di bawah.
+              Hanya menampilkan reservasi yang telah disetujui PLP. Pengajuan
+              baru dapat dibuat dengan memilih tanggal pada kalender di bawah.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -477,7 +485,9 @@ export function RoomDetailPage({
               }
               const availableUnit = selectedUnitId
                 ? selectedAsset?.units.find((u) => u.id === selectedUnitId)
-                : selectedAsset?.units.find((unit) => unit.status === "Available");
+                : selectedAsset?.units.find(
+                    (unit) => unit.status === "Available",
+                  );
 
               const formDefaults = {
                 roomCode: room.id,
@@ -579,11 +589,16 @@ export function RoomDetailPage({
                         {asset.name}
                       </strong>
                       <span className="mt-1 block text-[11px] text-[#64748B]">
-                        {asset.id} · {availableCount} dari {units.length} unit siap digunakan
+                        {asset.id} · {availableCount} dari {units.length} unit
+                        siap digunakan
                       </span>
                     </button>
                     <StatusBadge tone={asset.tone}>
-                      {asset.status === "Available" ? "Tersedia" : asset.status === "Maintenance" ? "Perbaikan" : asset.status}
+                      {asset.status === "Available"
+                        ? "Tersedia"
+                        : asset.status === "Maintenance"
+                          ? "Perbaikan"
+                          : asset.status}
                     </StatusBadge>
                     <button
                       type="button"
@@ -638,7 +653,8 @@ export function RoomDetailPage({
                                     : unit.condition
                                       ? unit.condition.replace(/_/g, " ")
                                       : "Dalam perbaikan"
-                                  : (unit.holder ?? "Siap untuk pengajuan baru")}
+                                  : (unit.holder ??
+                                    "Siap untuk pengajuan baru")}
                               </span>
                             </span>
                             <span
@@ -652,7 +668,11 @@ export function RoomDetailPage({
                                   "text-[#38529B]",
                               )}
                             >
-                              {unit.status === "Available" ? "Tersedia" : unit.status === "Maintenance" ? "Perbaikan" : unit.status}
+                              {unit.status === "Available"
+                                ? "Tersedia"
+                                : unit.status === "Maintenance"
+                                  ? "Perbaikan"
+                                  : unit.status}
                             </span>
                           </button>
                         );
@@ -765,7 +785,9 @@ export function EquipmentDetailPage({
       activeKey="dashboard"
       catalog={catalog}
     >
-      <BackLink href={asset ? `/student/laboratory/rooms/${asset.roomId}` : "/student"} />
+      <BackLink
+        href={asset ? `/student/laboratory/rooms/${asset.roomId}` : "/student"}
+      />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.6fr)]">
         <div>
           <section className="dashboard-card p-5 sm:p-6">
@@ -788,7 +810,11 @@ export function EquipmentDetailPage({
                   size={64}
                 />
                 <StatusBadge tone={asset.tone}>
-                  {asset.status === "Available" ? "Tersedia" : asset.status === "Maintenance" ? "Perbaikan" : asset.status}
+                  {asset.status === "Available"
+                    ? "Tersedia"
+                    : asset.status === "Maintenance"
+                      ? "Perbaikan"
+                      : asset.status}
                 </StatusBadge>
               </div>
             </div>
@@ -806,8 +832,12 @@ export function EquipmentDetailPage({
           <section className="mt-4 dashboard-card p-5 sm:p-6">
             <div className="flex items-center justify-between gap-3 border-b border-[#EEEEEE] pb-4">
               <div>
-                <h3 className="text-[16px] font-bold text-[#1E293B]">Unit Terdaftar</h3>
-                <p className="text-[11px] text-[#64748B] mt-0.5">Status operasional tiap unit instrumen</p>
+                <h3 className="text-[16px] font-bold text-[#1E293B]">
+                  Unit Terdaftar
+                </h3>
+                <p className="text-[11px] text-[#64748B] mt-0.5">
+                  Status operasional tiap unit instrumen
+                </p>
               </div>
               <StatusBadge tone={asset.tone}>
                 {asset.availableUnits} unit siap
@@ -854,14 +884,18 @@ export function EquipmentDetailPage({
               ))}
             </ul>
             <p className="mt-4 rounded-xl bg-[#F8FAFC] p-4 text-[11px] leading-5 text-[#64748B]">
-              Data ketersediaan ini sinkron secara langsung dengan denah lab, kalender penjadwalan, dan formulir permohonan.
+              Data ketersediaan ini sinkron secara langsung dengan denah lab,
+              kalender penjadwalan, dan formulir permohonan.
             </p>
           </section>
         </div>
         <aside className="dashboard-card p-5 sm:p-6">
-          <h3 className="text-[16px] font-bold text-[#1E293B]">Perencanaan Jadwal</h3>
+          <h3 className="text-[16px] font-bold text-[#1E293B]">
+            Perencanaan Jadwal
+          </h3>
           <p className="mt-2 text-[12px] leading-5 text-[#64748B]">
-            Pilih rentang tanggal pada agenda ruangan, lalu cantumkan instrumen ini saat mengisi formulir permohonan.
+            Pilih rentang tanggal pada agenda ruangan, lalu cantumkan instrumen
+            ini saat mengisi formulir permohonan.
           </p>
           <Link
             href={`/student/laboratory/rooms/${asset.roomId}`}
@@ -929,7 +963,11 @@ export function MaterialDetailPage({
       activeKey="dashboard"
       catalog={catalog}
     >
-      <BackLink href={material ? `/student/laboratory/rooms/${material.roomId}` : "/student"} />
+      <BackLink
+        href={
+          material ? `/student/laboratory/rooms/${material.roomId}` : "/student"
+        }
+      />
       <section className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]">
@@ -939,7 +977,8 @@ export function MaterialDetailPage({
             {material.name}
           </h2>
           <p className="mt-2 text-[13px] text-[#64748B]">
-            Tersimpan di {material.room}. Data stok dipisahkan antara stok fisik, alokasi reservasi, dan jumlah yang siap diajukan.
+            Tersimpan di {material.room}. Data stok dipisahkan antara stok
+            fisik, alokasi reservasi, dan jumlah yang siap diajukan.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -969,13 +1008,16 @@ export function MaterialDetailPage({
       </div>
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
         <section className="dashboard-card p-5 sm:p-6">
-          <h3 className="text-[16px] font-bold text-[#1E293B]">Ketentuan Pengambilan</h3>
+          <h3 className="text-[16px] font-bold text-[#1E293B]">
+            Ketentuan Pengambilan
+          </h3>
           <div className="mt-4 rounded-xl bg-[#FEF1CC] p-4">
             <p className="text-[12px] font-semibold text-[#705012]">
               {material.rule}
             </p>
             <p className="mt-1 text-[11px] leading-5 text-[#705012]">
-              Aturan ini dikonfigurasi laboratorium dan divalidasi server saat pengajuan dikirim.
+              Aturan ini dikonfigurasi laboratorium dan divalidasi server saat
+              pengajuan dikirim.
             </p>
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
@@ -996,9 +1038,13 @@ export function MaterialDetailPage({
           </Link>
         </section>
         <aside className="dashboard-card p-5 sm:p-6">
-          <h3 className="text-[16px] font-bold text-[#1E293B]">Catatan Inventaris & Batch</h3>
+          <h3 className="text-[16px] font-bold text-[#1E293B]">
+            Catatan Inventaris & Batch
+          </h3>
           <p className="mt-2 text-[12px] leading-5 text-[#64748B]">
-            Stok siap pakai merupakan stok fisik dikurangi reservasi aktif yang telah disetujui. Pengambilan fisik akan memotong stok saat bahan diserahkan oleh PLP.
+            Stok siap pakai merupakan stok fisik dikurangi reservasi aktif yang
+            telah disetujui. Pengambilan fisik akan memotong stok saat bahan
+            diserahkan oleh PLP.
           </p>
           <div className="mt-5 flex items-center gap-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]/60 p-3">
             <PackageSearch
@@ -1019,13 +1065,7 @@ export function MaterialDetailPage({
   );
 }
 
-function InfoTile({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
+function InfoTile({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]/60 p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#94A3B8]">
@@ -1083,7 +1123,9 @@ function SharedUsageRequestCard({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [startAt, setStartAt] = useState(toLocalInputValue(reservation.startAt));
+  const [startAt, setStartAt] = useState(
+    toLocalInputValue(reservation.startAt),
+  );
   const [endAt, setEndAt] = useState(toLocalInputValue(reservation.endAt));
   const [purpose, setPurpose] = useState("");
   const [pending, setPending] = useState(false);
@@ -1141,7 +1183,8 @@ function SharedUsageRequestCard({
       )}
       {sent ? (
         <p className="mt-4 rounded-xl bg-[#F4FCF7] p-3 text-[11px] leading-5 text-[#03683A]">
-          Permintaan terkirim. Menunggu konfirmasi dari {reservation.primaryUserName}.
+          Permintaan terkirim. Menunggu konfirmasi dari{" "}
+          {reservation.primaryUserName}.
         </p>
       ) : open ? (
         <form
@@ -1261,7 +1304,9 @@ export function SharedUsagePage({
           Pengajuan Sesi Bersama (Shared Usage)
         </h2>
         <p className="mt-2 max-w-[720px] text-[13px] leading-5 text-[#64748B]">
-          Ajukan izin untuk bergabung dalam slot waktu reservasi yang telah disetujui tanpa menimbulkan bentrok jadwal. Sesi bersama memerlukan persetujuan dari mahasiswa pemegang reservasi utama.
+          Ajukan izin untuk bergabung dalam slot waktu reservasi yang telah
+          disetujui tanpa menimbulkan bentrok jadwal. Sesi bersama memerlukan
+          persetujuan dari mahasiswa pemegang reservasi utama.
         </p>
       </section>
 
@@ -1271,7 +1316,9 @@ export function SharedUsagePage({
             <h3 className="text-[16px] font-bold text-[#1E293B]">
               Permintaan Masuk ({data.incoming.length})
             </h3>
-            <p className="text-[11px] text-[#64748B] mt-0.5">Permintaan mahasiswa lain untuk berbagi sesi reservasi Anda</p>
+            <p className="text-[11px] text-[#64748B] mt-0.5">
+              Permintaan mahasiswa lain untuk berbagi sesi reservasi Anda
+            </p>
           </div>
           <ul className="space-y-3">
             {data.incoming.map((item) => (
@@ -1286,7 +1333,9 @@ export function SharedUsagePage({
           <h3 className="text-[16px] font-bold text-[#1E293B]">
             Reservasi yang Tersedia
           </h3>
-          <p className="text-[11px] text-[#64748B] mt-0.5">Reservasi aktif mahasiswa lain yang dapat diajukan sesi bersama</p>
+          <p className="text-[11px] text-[#64748B] mt-0.5">
+            Reservasi aktif mahasiswa lain yang dapat diajukan sesi bersama
+          </p>
         </div>
         {data.available.length === 0 ? (
           <div className="mt-4">
@@ -1313,7 +1362,9 @@ export function SharedUsagePage({
             <h3 className="text-[16px] font-bold text-[#1E293B]">
               Permintaan Saya
             </h3>
-            <p className="text-[11px] text-[#64748B] mt-0.5">Riwayat pengajuan sesi bersama yang Anda kirimkan</p>
+            <p className="text-[11px] text-[#64748B] mt-0.5">
+              Riwayat pengajuan sesi bersama yang Anda kirimkan
+            </p>
           </div>
           <span className="text-[11px] font-semibold text-[#64748B]">
             {data.outgoing.length} pengajuan
@@ -1529,9 +1580,13 @@ export function IncidentFormPage({
           <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#048444]">
             Laporan Kendala Berhasil Dicatat
           </p>
-          <h2 className="mt-2 text-[20px] font-bold text-[#1E293B]">{submitted}</h2>
+          <h2 className="mt-2 text-[20px] font-bold text-[#1E293B]">
+            {submitted}
+          </h2>
           <p className="mt-2 max-w-[560px] text-[12px] leading-5 text-[#64748B]">
-            Status operasional instrumen tidak otomatis berubah. PLP akan melakukan verifikasi teknis dan mencatat hasilnya pada timeline kendala.
+            Status operasional instrumen tidak otomatis berubah. PLP akan
+            melakukan verifikasi teknis dan mencatat hasilnya pada timeline
+            kendala.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
@@ -1594,9 +1649,13 @@ export function IncidentFormPage({
             }
           }}
         >
-          <h3 className="text-[18px] font-bold text-[#1E293B]">Apa kendala yang terjadi?</h3>
+          <h3 className="text-[18px] font-bold text-[#1E293B]">
+            Apa kendala yang terjadi?
+          </h3>
           <p className="mt-1 text-[12px] leading-5 text-[#64748B]">
-            Laporan Anda akan ditinjau oleh petugas teknis (PLP). Pelaporan kendala oleh mahasiswa tidak otomatis mengubah status operasional instrumen hingga dikonfirmasi.
+            Laporan Anda akan ditinjau oleh petugas teknis (PLP). Pelaporan
+            kendala oleh mahasiswa tidak otomatis mengubah status operasional
+            instrumen hingga dikonfirmasi.
           </p>
           {error && (
             <p
@@ -1644,7 +1703,11 @@ export function IncidentFormPage({
                 onChange={(event) => setTitle(event.target.value)}
                 required
                 minLength={3}
-                placeholder={selectedAsset ? `Kendala pada ${selectedAsset.name}` : "Ringkasan masalah yang terjadi"}
+                placeholder={
+                  selectedAsset
+                    ? `Kendala pada ${selectedAsset.name}`
+                    : "Ringkasan masalah yang terjadi"
+                }
                 className="mt-2 h-11 w-full rounded-xl border border-[#E2E8F0] px-3 text-[12px] text-[#1E293B] outline-none focus:border-[#F9B129]"
               />
             </label>
@@ -1655,10 +1718,18 @@ export function IncidentFormPage({
                 onChange={(event) => setSeverity(event.target.value)}
                 className="mt-2 h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3 text-[12px] text-[#1E293B] outline-none focus:border-[#F9B129]"
               >
-                <option value="LOW">Rendah (tidak mengganggu fungsi utama)</option>
-                <option value="MEDIUM">Sedang (mengganggu sebagian operasional)</option>
-                <option value="HIGH">Tinggi (alat tidak dapat digunakan)</option>
-                <option value="CRITICAL">Kritis (kondisi darurat / bahaya keselamatan)</option>
+                <option value="LOW">
+                  Rendah (tidak mengganggu fungsi utama)
+                </option>
+                <option value="MEDIUM">
+                  Sedang (mengganggu sebagian operasional)
+                </option>
+                <option value="HIGH">
+                  Tinggi (alat tidak dapat digunakan)
+                </option>
+                <option value="CRITICAL">
+                  Kritis (kondisi darurat / bahaya keselamatan)
+                </option>
               </select>
             </label>
             <label className="block text-[12px] font-semibold text-[#1E293B]">
@@ -1692,16 +1763,21 @@ export function IncidentFormPage({
           </button>
         </form>
         <aside className="dashboard-card h-fit p-5 sm:p-6">
-          <h3 className="text-[16px] font-bold text-[#1E293B]">Prosedur Keselamatan Kerja</h3>
+          <h3 className="text-[16px] font-bold text-[#1E293B]">
+            Prosedur Keselamatan Kerja
+          </h3>
           <p className="mt-2 text-[12px] leading-5 text-[#64748B]">
-            Jika terjadi bahaya langsung (asap, kebocoran zat kimia berbahaya, sengatan listrik), segera hentikan penggunaan instrumen, evakuasi area, dan beritahu staf PLP terdekat.
+            Jika terjadi bahaya langsung (asap, kebocoran zat kimia berbahaya,
+            sengatan listrik), segera hentikan penggunaan instrumen, evakuasi
+            area, dan beritahu staf PLP terdekat.
           </p>
           <div className="mt-5 flex gap-2 rounded-xl bg-[#FDE9E9] p-3 text-[11px] leading-5 text-[#9E3636]">
             <ShieldAlert
               className="mt-0.5 size-4 shrink-0"
               aria-hidden="true"
             />
-            Informasi keselamatan kerja wajib diperhatikan oleh seluruh pengguna fasilitas lab kimia.
+            Informasi keselamatan kerja wajib diperhatikan oleh seluruh pengguna
+            fasilitas lab kimia.
           </div>
         </aside>
       </div>
@@ -1816,20 +1892,22 @@ export function IncidentDetailPage({
             </div>
           )}
           <div className="mt-6 border-t border-[#EEEEEE] pt-5">
-            <h3 className="text-[16px] font-bold text-[#1E293B]">Kronologi Penanganan</h3>
+            <h3 className="text-[16px] font-bold text-[#1E293B]">
+              Kronologi Penanganan
+            </h3>
             <div className="mt-5 space-y-4">
               {timeline.map((step) => (
                 <div className="flex gap-3" key={step.label}>
                   <span
                     className={cn(
                       "mt-1 size-2.5 rounded-full",
-                      step.tone === "current"
-                        ? "bg-[#F45959]"
-                        : "bg-[#048444]",
+                      step.tone === "current" ? "bg-[#F45959]" : "bg-[#048444]",
                     )}
                   />
                   <div>
-                    <p className="text-[12px] font-semibold text-[#1E293B]">{step.label}</p>
+                    <p className="text-[12px] font-semibold text-[#1E293B]">
+                      {step.label}
+                    </p>
                     <p className="mt-1 text-[11px] text-[#64748B]">
                       {step.detail}
                     </p>
@@ -1863,8 +1941,12 @@ export function IncidentDetailPage({
             Laporkan Kendala Lain
           </Link>
           <div className="mt-5 flex gap-2 rounded-xl bg-[#FFF4D9] p-3 text-[11px] leading-5 text-[#705012]">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            Laporan mahasiswa menjadi dasar bagi PLP untuk inspeksi. Perubahan status resmi instrumen diperbarui setelah verifikasi teknis.
+            <AlertTriangle
+              className="mt-0.5 size-4 shrink-0"
+              aria-hidden="true"
+            />
+            Laporan mahasiswa menjadi dasar bagi PLP untuk inspeksi. Perubahan
+            status resmi instrumen diperbarui setelah verifikasi teknis.
           </div>
         </aside>
       </div>

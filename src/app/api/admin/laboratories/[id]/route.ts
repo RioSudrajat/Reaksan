@@ -11,7 +11,10 @@ export function PATCH(request: Request, context: Context) {
     request,
     { labs: ["manage-any"] },
     async (session) => {
-      const id = z.string().uuid().parse((await context.params).id);
+      const id = z
+        .string()
+        .uuid()
+        .parse((await context.params).id);
       const input = laboratoryUpdateSchema.parse(await readJson(request));
       return Response.json({
         data: await updateLaboratory(session.user.id, id, input),

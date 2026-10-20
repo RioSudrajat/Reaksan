@@ -39,12 +39,7 @@ export function MaintenanceUnitsPanel({
   const panelContext = context ?? `${units.length} unit`;
 
   return (
-    <Panel
-      context={panelContext}
-      title={title}
-      padded={false}
-      className="mt-6"
-    >
+    <Panel context={panelContext} title={title} padded={false} className="mt-6">
       {units.length === 0 ? (
         <div className="p-5">
           <EmptyState
@@ -59,7 +54,9 @@ export function MaintenanceUnitsPanel({
               Perhatian Operasional
             </p>
             <p className="mt-0.5 text-[11px] text-[#6B6B6B]">
-              Unit-unit berikut sedang dalam perbaikan, kalibrasi, atau pemeriksaan. Unit tidak dapat dipinjam/direservasi hingga statusnya diubah kembali menjadi <strong>AVAILABLE</strong>.
+              Unit-unit berikut sedang dalam perbaikan, kalibrasi, atau
+              pemeriksaan. Unit tidak dapat dipinjam/direservasi hingga
+              statusnya diubah kembali menjadi <strong>AVAILABLE</strong>.
             </p>
           </div>
           <ul className="divide-y divide-[#EEEEEE]">
@@ -116,7 +113,13 @@ export function MaintenanceUnitsPanel({
                           {unit.condition.replaceAll("_", " ")}
                         </span>
                         {unit.notes && (
-                          <> · <span className="italic text-[#4A4A4A]">&quot;{unit.notes}&quot;</span></>
+                          <>
+                            {" "}
+                            ·{" "}
+                            <span className="italic text-[#4A4A4A]">
+                              &quot;{unit.notes}&quot;
+                            </span>
+                          </>
                         )}
                         {unit.updatedAt && (
                           <span className="text-[#929292]">

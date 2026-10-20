@@ -1,5 +1,15 @@
 import "server-only";
-import { and, asc, desc, eq, gte, inArray, isNotNull, lte, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  lte,
+  sql,
+} from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { ApiError } from "@/lib/api";
 import { db } from "@/db";
@@ -274,8 +284,12 @@ export async function exportIssueReturn(
     .select({
       requestCode: resourceRequest.code,
       studentName: issuedTo.name,
-      unitCode: sql<string | null>`coalesce(${instrumentUnit.code}, ${toolUnit.code})`,
-      assetCode: sql<string | null>`coalesce(${instrumentAsset.assetCode}, ${toolAsset.assetCode})`,
+      unitCode: sql<
+        string | null
+      >`coalesce(${instrumentUnit.code}, ${toolUnit.code})`,
+      assetCode: sql<
+        string | null
+      >`coalesce(${instrumentAsset.assetCode}, ${toolAsset.assetCode})`,
       materialName: material.name,
       lotNumber: materialBatch.lotNumber,
       quantity: issueTransaction.quantity,
@@ -299,14 +313,8 @@ export async function exportIssueReturn(
       instrumentAsset,
       eq(instrumentAsset.id, issueTransaction.instrumentAssetId),
     )
-    .leftJoin(
-      toolUnit,
-      eq(toolUnit.id, issueTransaction.toolUnitId),
-    )
-    .leftJoin(
-      toolAsset,
-      eq(toolAsset.id, issueTransaction.toolAssetId),
-    )
+    .leftJoin(toolUnit, eq(toolUnit.id, issueTransaction.toolUnitId))
+    .leftJoin(toolAsset, eq(toolAsset.id, issueTransaction.toolAssetId))
     .leftJoin(
       materialBatch,
       eq(materialBatch.id, issueTransaction.materialBatchId),
@@ -388,14 +396,19 @@ export async function exportIncidents(
       severity: incident.severity,
       status: incident.status,
       reporterName: user.name,
-      assetCode: sql<string | null>`coalesce(${instrumentAsset.assetCode}, ${toolAsset.assetCode})`,
+      assetCode: sql<
+        string | null
+      >`coalesce(${instrumentAsset.assetCode}, ${toolAsset.assetCode})`,
       roomName: room.name,
       occurredAt: incident.occurredAt,
       resolvedAt: incidentResolution.resolvedAt,
     })
     .from(incident)
     .innerJoin(user, eq(user.id, incident.reporterId))
-    .leftJoin(instrumentAsset, eq(instrumentAsset.id, incident.instrumentAssetId))
+    .leftJoin(
+      instrumentAsset,
+      eq(instrumentAsset.id, incident.instrumentAssetId),
+    )
     .leftJoin(toolAsset, eq(toolAsset.id, incident.toolAssetId))
     .leftJoin(room, eq(room.id, incident.roomId))
     .leftJoin(
@@ -525,9 +538,15 @@ export async function exportOpnameVariance(sessionId: string) {
       batchLot: materialBatch.lotNumber,
       batchLocation: materialBatch.storageLocation,
       // Instrument & Tool
-      assetCode: sql<string | null>`coalesce(${instrumentAsset.assetCode}, ${toolAsset.assetCode})`,
-      assetCondition: sql<string | null>`coalesce(${instrumentAsset.condition}, ${toolAsset.condition})`,
-      typeName: sql<string | null>`coalesce(${instrumentType.name}, ${toolType.name})`,
+      assetCode: sql<
+        string | null
+      >`coalesce(${instrumentAsset.assetCode}, ${toolAsset.assetCode})`,
+      assetCondition: sql<
+        string | null
+      >`coalesce(${instrumentAsset.condition}, ${toolAsset.condition})`,
+      typeName: sql<
+        string | null
+      >`coalesce(${instrumentType.name}, ${toolType.name})`,
     })
     .from(stockOpnameEntry)
     .leftJoin(
@@ -543,14 +562,8 @@ export async function exportOpnameVariance(sessionId: string) {
       instrumentType,
       eq(instrumentType.id, instrumentAsset.instrumentTypeId),
     )
-    .leftJoin(
-      toolAsset,
-      eq(toolAsset.id, stockOpnameEntry.toolAssetId),
-    )
-    .leftJoin(
-      toolType,
-      eq(toolType.id, toolAsset.toolTypeId),
-    )
+    .leftJoin(toolAsset, eq(toolAsset.id, stockOpnameEntry.toolAssetId))
+    .leftJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
     .leftJoin(user, eq(user.id, stockOpnameEntry.countedById))
     .where(eq(stockOpnameEntry.sessionId, sessionId))
     .orderBy(asc(stockOpnameEntry.itemType), asc(stockOpnameEntry.countedAt))
@@ -567,10 +580,16 @@ export async function exportOpnameVariance(sessionId: string) {
             ? "Instrumen"
             : "Alat & Glassware";
 
-      const code = isMaterial ? (row.materialCode ?? "-") : (row.assetCode ?? "-");
-      const name = isMaterial ? (row.materialName ?? "-") : (row.typeName ?? "-");
+      const code = isMaterial
+        ? (row.materialCode ?? "-")
+        : (row.assetCode ?? "-");
+      const name = isMaterial
+        ? (row.materialName ?? "-")
+        : (row.typeName ?? "-");
       const location = row.storageLocation ?? row.batchLocation ?? "-";
-      const lotOrLabel = isMaterial ? (row.batchLot ?? "-") : (row.assetCode ?? "-");
+      const lotOrLabel = isMaterial
+        ? (row.batchLot ?? "-")
+        : (row.assetCode ?? "-");
       const unit = isMaterial ? (row.materialUnit ?? "unit") : "unit";
 
       const baseline = Number(row.baselineQuantity ?? 0);

@@ -1,6 +1,9 @@
 import { ApiError, withApiPermission } from "@/lib/api";
 import { scopeForSession } from "@/services/access-scope.service";
-import { deletePlpMaterial, getPlpMaterialDetail } from "@/services/plp.service";
+import {
+  deletePlpMaterial,
+  getPlpMaterialDetail,
+} from "@/services/plp.service";
 import { entityCodeSchema } from "@/validators/catalog";
 import { z } from "zod";
 
@@ -39,4 +42,3 @@ export function DELETE(request: Request, context: Context) {
     },
   );
 }
-

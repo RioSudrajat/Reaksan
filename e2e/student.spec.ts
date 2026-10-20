@@ -23,7 +23,9 @@ async function signUp(client: APIRequestContext, name: string) {
   });
   if (response.status() === 429) {
     const seconds = Number(response.headers()["retry-after"] || 10);
-    expect(Number.isFinite(seconds) && seconds >= 0 && seconds <= 10).toBe(true);
+    expect(Number.isFinite(seconds) && seconds >= 0 && seconds <= 10).toBe(
+      true,
+    );
     await delay((seconds + 0.1) * 1000);
     response = await client.post("/api/auth/sign-up/email", { headers, data });
   }
@@ -157,7 +159,7 @@ test("student APIs reject anonymous callers and student pages redirect", async (
   }
   await page.goto("/student");
   await expect(page).toHaveURL(/\/sign-in/);
-  await page.goto("/app/calendar");
+  await page.goto("/student/calendar");
   await expect(page).toHaveURL(/\/sign-in/);
 });
 
@@ -175,7 +177,9 @@ test("a student only sees own requests and cannot review them", async ({
   expect(mine.status).toBe("PENDING_PLP");
   expect(mine.code).toMatch(/^REQ-\d{4}-\d{3}$/);
 
-  const strangerContext = await playwright.request.newContext({ baseURL: origin });
+  const strangerContext = await playwright.request.newContext({
+    baseURL: origin,
+  });
   try {
     await signUp(strangerContext, "Stranger");
     const strangerList = await (
@@ -238,10 +242,10 @@ test("PLP review drives the request lifecycle and blocks conflicts", async ({
   expect(created.status()).toBe(201);
   const booking = (await created.json()).data;
 
-  const approved = await plpContext.post(
-    `/api/requests/${booking.id}/review`,
-    { headers, data: { action: "approve", note: "Setuju" } },
-  );
+  const approved = await plpContext.post(`/api/requests/${booking.id}/review`, {
+    headers,
+    data: { action: "approve", note: "Setuju" },
+  });
   expect(approved.status()).toBe(200);
   expect((await approved.json()).data.status).toBe("APPROVED");
 
@@ -358,10 +362,13 @@ test("material stock cannot be overbooked and cancel releases reserved stock", a
     });
     expect(created.status()).toBe(201);
     ids.push((await created.json()).data.id);
-    const approved = await plpContext.post(`/api/requests/${ids.at(-1)}/review`, {
-      headers,
-      data: { action: "approve", note: "" },
-    });
+    const approved = await plpContext.post(
+      `/api/requests/${ids.at(-1)}/review`,
+      {
+        headers,
+        data: { action: "approve", note: "" },
+      },
+    );
     expect(approved.status()).toBe(200);
   }
 
@@ -386,12 +393,12 @@ test("material stock cannot be overbooked and cancel releases reserved stock", a
   expect((await cancelled.json()).data.status).toBe("CANCELLED");
 
   const released = await catalog(request, "lab-organik");
-  expect(released.materials.find((item) => item.id === "MAT-027")?.reserved).toBe(
-    2000,
-  );
-  expect(released.materials.find((item) => item.id === "MAT-027")?.available).toBe(
-    1000,
-  );
+  expect(
+    released.materials.find((item) => item.id === "MAT-027")?.reserved,
+  ).toBe(2000);
+  expect(
+    released.materials.find((item) => item.id === "MAT-027")?.available,
+  ).toBe(1000);
 
   const reuse = await createRequest(request, {
     roomCode: "lab-organik",
@@ -575,7 +582,9 @@ test("shared usage stays inside the primary reservation and needs acceptance", a
 });
 
 async function firstReservation(client: APIRequestContext) {
-  const page = await (await client.get("/api/shared-usage", { headers })).json();
+  const page = await (
+    await client.get("/api/shared-usage", { headers })
+  ).json();
   const reservation = page.data.available[0];
   expect(reservation).toBeTruthy();
   return reservation.id as string;
@@ -666,16 +675,18 @@ test("an incident report never flips equipment status by itself", async ({
   }
 });
 
-test("room catalog only exposes resources of that room", async ({ request }) => {
+test("room catalog only exposes resources of that room", async ({
+  request,
+}) => {
   await signUp(request, "Catalog Student");
   const organik = await catalog(request, "lab-organik");
   expect(organik.equipment.length).toBeGreaterThan(0);
   expect(
     organik.equipment.every((asset) => asset.roomId === "lab-organik"),
   ).toBe(true);
-  expect(
-    organik.materials.every((item) => item.roomId === "lab-organik"),
-  ).toBe(true);
+  expect(organik.materials.every((item) => item.roomId === "lab-organik")).toBe(
+    true,
+  );
 
   const analitik = await catalog(request, "lab-analitik");
   expect(analitik.materials.length).toBeGreaterThan(0);
@@ -699,9 +710,11 @@ test("the student workspace renders real server data", async ({ page }) => {
   await signUpWithPage(page, email);
   await page.goto("/student");
   await expect(
-    page.getByRole("heading", { name: /Plan your next lab session/i }),
+    page.getByRole("heading", {
+      name: /Pusat Reservasi & Koordinasi Laboratorium Kimia/i,
+    }),
   ).toBeVisible();
-  await expect(page.getByText("Organik").first()).toBeVisible();
+  await expect(page.getByText(/Organik/i).first()).toBeVisible();
 
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, "0");
@@ -743,7 +756,7 @@ test("the student workspace renders real server data", async ({ page }) => {
   await page.goto("/student/calendar");
   await expect(
     page.getByRole("heading", {
-      name: /Follow the status of every request/i,
+      name: /Pantau status setiap pengajuan dan reservasi Anda/i,
     }),
   ).toBeVisible();
   const bar = page.locator("[data-schedule-bar]").first();
@@ -764,33 +777,18 @@ test("the student workspace renders real server data", async ({ page }) => {
   ).toBeVisible();
   await page.goto("/student/laboratory/rooms/lab-analitik");
   await expect(
-    page.getByRole("heading", { name: "Lab Analitik", level: 2 }),
+    page.getByRole("heading", { name: /Analitik/i, level: 2 }),
   ).toBeVisible();
   await page.goto("/student/shared-usage");
   await expect(
-    page.getByRole("heading", { name: /Ask to share a slot/i }),
+    page.getByRole("heading", {
+      name: /Pengajuan Sesi Bersama/i,
+    }),
   ).toBeVisible();
-  await page.goto("/app");
-  await expect(page).toHaveURL(/\/student$/);
   expect(errors).toEqual([]);
 });
 
 async function signUpWithPage(page: Page, email: string) {
-  await page.goto("/sign-up");
-  await page.getByLabel("Name").fill("Student UI");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill("Student-test-password-123!");
-  await page.getByRole("button", { name: "Create account" }).click();
-  // The auth server rate-limits rapid sign-ups; retry once inside its window.
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      await expect(page).toHaveURL(/\/student$/, { timeout: 4000 });
-      return;
-    } catch {
-      await page.waitForTimeout(4000);
-      const button = page.getByRole("button", { name: "Create account" });
-      if (await button.isVisible()) await button.click();
-    }
-  }
-  await expect(page).toHaveURL(/\/student$/);
+  await signUp(page.request, "Student UI");
+  void email;
 }

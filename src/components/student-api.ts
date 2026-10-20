@@ -25,7 +25,8 @@ async function parseError(response: Response): Promise<ApiFailure> {
     return {
       status: response.status,
       code: body.error?.code ?? "UNKNOWN",
-      message: body.error?.message ?? "Terjadi masalah saat memproses permintaan.",
+      message:
+        body.error?.message ?? "Terjadi masalah saat memproses permintaan.",
       details: body.error?.details,
     };
   } catch {
@@ -70,7 +71,8 @@ export async function apiRequest<T>(
           response.status === 503 ||
           response.status === 504)
       ) {
-        const delayMs = 200 * 2 ** (attempt - 1) + Math.floor(Math.random() * 100);
+        const delayMs =
+          200 * 2 ** (attempt - 1) + Math.floor(Math.random() * 100);
         await new Promise((resolve) => setTimeout(resolve, delayMs));
         continue;
       }
@@ -80,7 +82,8 @@ export async function apiRequest<T>(
         err instanceof DOMException &&
         (err.name === "TimeoutError" || err.name === "AbortError");
       if (isIdempotent && attempt < maxAttempts) {
-        const delayMs = 200 * 2 ** (attempt - 1) + Math.floor(Math.random() * 100);
+        const delayMs =
+          200 * 2 ** (attempt - 1) + Math.floor(Math.random() * 100);
         await new Promise((resolve) => setTimeout(resolve, delayMs));
         continue;
       }

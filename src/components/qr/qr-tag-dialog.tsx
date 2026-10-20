@@ -23,7 +23,9 @@ export function QrTagDialog({
   onQrUpdated?: (newQrCode: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [currentQr, setCurrentQr] = useState<string | null>(item.qrCode ?? null);
+  const [currentQr, setCurrentQr] = useState<string | null>(
+    item.qrCode ?? null,
+  );
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
@@ -90,7 +92,9 @@ export function QrTagDialog({
       const fallbackCode =
         currentQr ||
         item.qrCode ||
-        (item.targetType === "BATCH" ? `RK-MAT-${item.code}` : `RK-UNT-${item.code}`);
+        (item.targetType === "BATCH"
+          ? `RK-MAT-${item.code}`
+          : `RK-UNT-${item.code}`);
       const svg = await renderClientQr(fallbackCode);
       if (svg) {
         setCurrentQr(fallbackCode);
@@ -125,7 +129,9 @@ export function QrTagDialog({
 
   function handleDownloadSvg() {
     if (!svgContent) return;
-    const blob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
+    const blob = new Blob([svgContent], {
+      type: "image/svg+xml;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -176,7 +182,8 @@ export function QrTagDialog({
                   Label Tag QR Code
                 </h3>
                 <p className="mt-0.5 text-[12px] text-[#6B6B6B]">
-                  Stiker identifikasi fisik untuk scanning akurat & opname cepat.
+                  Stiker identifikasi fisik untuk scanning akurat & opname
+                  cepat.
                 </p>
               </div>
               <button
@@ -203,7 +210,9 @@ export function QrTagDialog({
               >
                 <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-2 text-[10px] font-bold tracking-wider text-[#6B7280]">
                   <span>REAKSAN LAB MANAGEMENT</span>
-                  <span className="uppercase text-[#38529B]">{item.targetType}</span>
+                  <span className="uppercase text-[#38529B]">
+                    {item.targetType}
+                  </span>
                 </div>
 
                 <div className="mt-3 flex items-center gap-4">
@@ -216,7 +225,9 @@ export function QrTagDialog({
                         dangerouslySetInnerHTML={{ __html: svgContent }}
                       />
                     ) : (
-                      <span className="text-[10px] text-[#929292]">Memuat...</span>
+                      <span className="text-[10px] text-[#929292]">
+                        Memuat...
+                      </span>
                     )}
                   </div>
 
@@ -271,9 +282,12 @@ export function QrTagDialog({
               <div className="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[12px] font-bold text-[#212121]">Stiker Fisik Rusak?</p>
+                    <p className="text-[12px] font-bold text-[#212121]">
+                      Stiker Fisik Rusak?
+                    </p>
                     <p className="text-[11px] text-[#6B6B6B]">
-                      Buat kode QR baru bila stiker lama terkelupas cairan kimia.
+                      Buat kode QR baru bila stiker lama terkelupas cairan
+                      kimia.
                     </p>
                   </div>
                   <button
@@ -282,7 +296,9 @@ export function QrTagDialog({
                     disabled={regenerating || loading}
                     className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-white px-3 py-1.5 text-[11px] font-bold text-[#9E3636] transition hover:bg-[#FDE9E9] disabled:opacity-50"
                   >
-                    <RefreshCw className={`size-3.5 ${regenerating ? "animate-spin" : ""}`} />
+                    <RefreshCw
+                      className={`size-3.5 ${regenerating ? "animate-spin" : ""}`}
+                    />
                     <span>{regenerating ? "Memproses..." : "Regenerate"}</span>
                   </button>
                 </div>

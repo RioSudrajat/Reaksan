@@ -20,9 +20,7 @@ export const sharedUsageRequest = pgTable(
       withTimezone: true,
     }).notNull(),
     purpose: text("purpose"),
-    status: sharedUsageRequestStatusEnum("status")
-      .default("PENDING")
-      .notNull(),
+    status: sharedUsageRequestStatusEnum("status").default("PENDING").notNull(),
     respondedAt: timestamp("responded_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

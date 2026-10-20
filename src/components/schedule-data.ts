@@ -3,11 +3,7 @@ import type { CSSProperties } from "react";
 export type ScheduleTone = "blue" | "green" | "yellow" | "rose" | "cream";
 
 export type EquipmentUnitStatus =
-  | "Available"
-  | "Reserved"
-  | "In use"
-  | "Awaiting return"
-  | "Maintenance";
+  "Available" | "Reserved" | "In use" | "Awaiting return" | "Maintenance";
 
 export type RequestStatus =
   | "PENDING_PLP"
@@ -164,10 +160,7 @@ export type LabCatalog = {
 export type IncidentSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
 export type IncidentStatus =
-  | "REPORTED"
-  | "UNDER_ASSESSMENT"
-  | "IN_MAINTENANCE"
-  | "RESOLVED";
+  "REPORTED" | "UNDER_ASSESSMENT" | "IN_MAINTENANCE" | "RESOLVED";
 
 export type IncidentView = {
   id: string;
@@ -370,24 +363,56 @@ export function eventsForRange(
           try {
             s = parseJakartaDate(event.startAt);
           } catch {
-            s = new Date(month.year, month.month, Math.min(event.startDay, event.endDay));
+            s = new Date(
+              month.year,
+              month.month,
+              Math.min(event.startDay, event.endDay),
+            );
           }
         } else {
-          s = new Date(month.year, month.month, Math.min(event.startDay, event.endDay));
+          s = new Date(
+            month.year,
+            month.month,
+            Math.min(event.startDay, event.endDay),
+          );
         }
 
         if (event.endAt) {
           try {
             e = parseJakartaDate(event.endAt);
           } catch {
-            e = new Date(month.year, month.month, Math.max(event.startDay, event.endDay));
+            e = new Date(
+              month.year,
+              month.month,
+              Math.max(event.startDay, event.endDay),
+            );
           }
         } else {
-          e = new Date(month.year, month.month, Math.max(event.startDay, event.endDay));
+          e = new Date(
+            month.year,
+            month.month,
+            Math.max(event.startDay, event.endDay),
+          );
         }
 
-        const sMidnight = new Date(s.getFullYear(), s.getMonth(), s.getDate(), 0, 0, 0, 0);
-        const eMidnight = new Date(e.getFullYear(), e.getMonth(), e.getDate(), 23, 59, 59, 999);
+        const sMidnight = new Date(
+          s.getFullYear(),
+          s.getMonth(),
+          s.getDate(),
+          0,
+          0,
+          0,
+          0,
+        );
+        const eMidnight = new Date(
+          e.getFullYear(),
+          e.getMonth(),
+          e.getDate(),
+          23,
+          59,
+          59,
+          999,
+        );
         return sMidnight <= rangeEnd && eMidnight >= rangeStart;
       })
       .sort((a, b) => {

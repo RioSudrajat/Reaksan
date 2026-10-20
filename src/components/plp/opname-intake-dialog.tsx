@@ -93,7 +93,9 @@ export function OpnameIntakeDialog({
           entrySource,
           storageLocation: storageLocation.trim() || undefined,
           lotNumber: lotNumber.trim() || undefined,
-          expiryDate: expiryDate ? new Date(expiryDate).toISOString() : undefined,
+          expiryDate: expiryDate
+            ? new Date(expiryDate).toISOString()
+            : undefined,
           notes: notes.trim() || undefined,
         },
       });
@@ -121,8 +123,8 @@ export function OpnameIntakeDialog({
         onClick={() => setOpen(true)}
         className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#FDE68A] bg-[#FEF7E6] px-4 text-[12px] font-semibold text-[#8D6500] transition hover:bg-[#FDF2D0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
       >
-        <Sparkles className="size-4" aria-hidden="true" />
-        + Catat Bahan Hibah / Sisa
+        <Sparkles className="size-4" aria-hidden="true" />+ Catat Bahan Hibah /
+        Sisa
       </button>
 
       {open && (
@@ -142,8 +144,8 @@ export function OpnameIntakeDialog({
                   Catat Bahan Hibah, Sisa, atau Temuan
                 </h3>
                 <p className="mt-1 text-[12px] text-[#475569]">
-                  Pencatatan langsung botol reagen fisik yang belum ada di sistem
-                  saat sensus opname berlangsung.
+                  Pencatatan langsung botol reagen fisik yang belum ada di
+                  sistem saat sensus opname berlangsung.
                 </p>
               </div>
               <button
@@ -252,7 +254,8 @@ export function OpnameIntakeDialog({
                   >
                     {materials.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.name} ({m.code}) - {m.category || "Umum"} [{m.baseUnit}]
+                        {m.name} ({m.code}) - {m.category || "Umum"} [
+                        {m.baseUnit}]
                       </option>
                     ))}
                   </select>
@@ -311,14 +314,19 @@ export function OpnameIntakeDialog({
 
               {/* Takaran Fisik & Preset Chips */}
               {(() => {
-                const currentUnit = mode === "NEW" ? newMatUnit : (selectedMaterial?.baseUnit ?? "unit");
+                const currentUnit =
+                  mode === "NEW"
+                    ? newMatUnit
+                    : (selectedMaterial?.baseUnit ?? "unit");
                 return (
                   <div>
                     <div className="flex items-center justify-between">
                       <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#64748B]">
                         Takaran Fisik Nyata ({currentUnit}) *
                       </label>
-                      <span className="text-[11px] text-[#64748B]">Pilih cepat:</span>
+                      <span className="text-[11px] text-[#64748B]">
+                        Pilih cepat:
+                      </span>
                     </div>
 
                     <div className="mt-1 flex flex-wrap gap-1.5">

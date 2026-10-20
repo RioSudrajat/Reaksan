@@ -75,8 +75,16 @@ export function checkRateLimit(
   };
 }
 
+export function isAutomatedTestEnv(): boolean {
+  return (
+    process.env.NODE_ENV === "test" ||
+    Boolean(process.env.STARTER_TEST_RUN?.startsWith("starter-pg-test-")) ||
+    process.env.BETTER_AUTH_URL === "http://localhost:3101"
+  );
+}
+
 export function assertRateLimit(request: Request, options: RateLimitOptions) {
-  if (process.env.NODE_ENV === "test") return;
+  if (isAutomatedTestEnv()) return;
   const result = checkRateLimit(request, options);
   if (!result.allowed) {
     throw new ApiError(

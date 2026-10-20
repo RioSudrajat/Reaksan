@@ -1,11 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import { Pool } from "pg";
-import {
-  expect,
-  test,
-  type APIRequestContext,
-} from "@playwright/test";
+import { expect, test, type APIRequestContext } from "@playwright/test";
 
 const origin = "http://localhost:3101";
 const headers = { Origin: origin };
@@ -23,7 +19,9 @@ async function signUp(client: APIRequestContext, name: string) {
   });
   if (response.status() === 429) {
     const seconds = Number(response.headers()["retry-after"] || 10);
-    expect(Number.isFinite(seconds) && seconds >= 0 && seconds <= 10).toBe(true);
+    expect(Number.isFinite(seconds) && seconds >= 0 && seconds <= 10).toBe(
+      true,
+    );
     await delay((seconds + 0.1) * 1000);
     response = await client.post("/api/auth/sign-up/email", { headers, data });
   }
@@ -183,16 +181,14 @@ test("PLP API dan UI hanya untuk role PLP", async ({
       expect((await response.json()).error.code).toBe("FORBIDDEN");
     }
 
-    // The UI renders not-found, so the route stays invisible for a student.
+    // A student visiting a PLP route is redirected back to their own workspace.
     await page.goto("/sign-in");
-    await page.getByLabel("Email").fill(studentEmail);
-    await page.getByLabel("Password").fill(password);
-    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.getByLabel(/Email/i).fill(studentEmail);
+    await page.getByLabel(/Password/i).fill(password);
+    await page.getByRole("button", { name: "Login", exact: true }).click();
     await expect(page).toHaveURL(/\/student$/);
     await page.goto("/plp/dashboard");
-    await expect(
-      page.getByRole("heading", { name: "This page isn’t here" }),
-    ).toBeVisible();
+    await expect(page).toHaveURL(/\/student$/);
   } finally {
     await student.dispose();
   }
@@ -210,21 +206,23 @@ test("PLP API dan UI hanya untuk role PLP", async ({
   try {
     const plpPage = await browser.newPage();
     await plpPage.goto(`${origin}/sign-in`);
-    await plpPage.getByLabel("Email").fill(plpEmail);
-    await plpPage.getByLabel("Password").fill(password);
-    await plpPage.getByRole("button", { name: "Sign in" }).click();
+    await plpPage.getByLabel(/Email/i).fill(plpEmail);
+    await plpPage.getByLabel(/Password/i).fill(password);
+    await plpPage.getByRole("button", { name: "Login", exact: true }).click();
     // Role-aware landing: PLP goes straight to its own workspace.
     await expect(plpPage).toHaveURL(/\/plp\/dashboard$/);
     await plpPage.goto(`${origin}/plp/dashboard`);
     await expect(
-      plpPage.getByRole("heading", { name: /Selamat bekerja/i }),
+      plpPage.getByRole("heading", { name: /Selamat bertugas/i }),
     ).toBeVisible();
     await plpPage.goto(`${origin}/plp/requests`);
     await expect(
       plpPage.getByRole("heading", { name: "Request review" }),
     ).toBeVisible();
     await plpPage.goto(`${origin}/plp/schedule`);
-    await expect(plpPage.getByText("Global lab schedule").first()).toBeVisible();
+    await expect(
+      plpPage.getByRole("heading", { name: /Jadwal & Agenda Lab/i }),
+    ).toBeVisible();
     await plpPage.close();
   } finally {
     await browser.close();
@@ -309,8 +307,9 @@ test("PLP memenuhi flow borrowable dan menutup usage-only", async ({
       ).status(),
     ).toBe(200);
     expect(
-      (await plp.post(`/api/requests/${usageOnly.id}/issue`, { headers }))
-        .status(),
+      (
+        await plp.post(`/api/requests/${usageOnly.id}/issue`, { headers })
+      ).status(),
     ).toBe(200);
 
     const blockedReturn = await plp.post(
@@ -386,10 +385,9 @@ test("PLP request list memuat filter, pagination, dan konteks review", async ({
       headers,
       data: { action: "approve", note: "" },
     });
-    const overlapDetail = await plp.get(
-      `/api/plp/requests/${overlapping.id}`,
-      { headers },
-    );
+    const overlapDetail = await plp.get(`/api/plp/requests/${overlapping.id}`, {
+      headers,
+    });
     expect(overlapDetail.status()).toBe(200);
     const overlapContext = (await overlapDetail.json()).data;
     expect(
@@ -525,7 +523,10 @@ test("admin mengelola master data, konfigurasi, dan audit", async ({
   }
 });
 
-test("approval stok bersamaan tidak bisa overbook", async ({ playwright, request }) => {
+test("approval stok bersamaan tidak bisa overbook", async ({
+  playwright,
+  request,
+}) => {
   await ensureAccount(request, "student");
   await ensureAccount(request, "plp");
   const student = await sessionFor(playwright.request, "student");

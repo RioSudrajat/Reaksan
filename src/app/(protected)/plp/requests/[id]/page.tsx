@@ -104,7 +104,10 @@ export default async function PlpRequestDetailPage({
           </p>
           <ul className="mt-2 space-y-1.5">
             {context.warnings.map((warning, index) => (
-              <li key={index} className="text-[12px] leading-5 text-[#8D6500]/90">
+              <li
+                key={index}
+                className="text-[12px] leading-5 text-[#8D6500]/90"
+              >
                 {warning.message}
               </li>
             ))}
@@ -423,7 +426,10 @@ export default async function PlpRequestDetailPage({
           </Panel>
 
           <Panel context="Aksi PLP" title="Review">
-            <RequestReviewPanel requestId={request.id} status={request.status} />
+            <RequestReviewPanel
+              requestId={request.id}
+              status={request.status}
+            />
           </Panel>
         </div>
       </div>

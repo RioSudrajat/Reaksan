@@ -173,7 +173,11 @@ export default async function OpnameDetailPage({
       </Panel>
 
       {inProgress && (
-        <Panel context="Input" title="Jumlah fisik & Sensus Lapangan" className="mb-5">
+        <Panel
+          context="Input"
+          title="Jumlah fisik & Sensus Lapangan"
+          className="mb-5"
+        >
           <OpnameCountForm
             sessionId={session.id}
             entries={session.entries.map((entry) => ({
@@ -251,8 +255,11 @@ export default async function OpnameDetailPage({
                           )}
                         </div>
                         <p className="text-[11px] text-[#64748B]">
-                          {entry.materialCode} {entry.lotNumber ? `· ${entry.lotNumber}` : ""}{" "}
-                          {entry.storageLocation ? `· ${entry.storageLocation}` : ""}
+                          {entry.materialCode}{" "}
+                          {entry.lotNumber ? `· ${entry.lotNumber}` : ""}{" "}
+                          {entry.storageLocation
+                            ? `· ${entry.storageLocation}`
+                            : ""}
                         </p>
                       </div>
                       <span
@@ -270,13 +277,17 @@ export default async function OpnameDetailPage({
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-[12px] rounded-xl border border-[#E5E7EB] bg-[#F8F9FA] p-2.5">
                       <div>
-                        <span className="text-[#64748B] text-[11px] block">Baseline</span>
+                        <span className="text-[#64748B] text-[11px] block">
+                          Baseline
+                        </span>
                         <span className="font-medium text-[#121826] tabular-nums">
                           {formatQuantity(entry.baseline)} {entry.unit}
                         </span>
                       </div>
                       <div>
-                        <span className="text-[#64748B] text-[11px] block">Fisik</span>
+                        <span className="text-[#64748B] text-[11px] block">
+                          Fisik
+                        </span>
                         <span className="font-semibold text-[#121826] tabular-nums">
                           {formatQuantity(entry.counted)} {entry.unit}
                         </span>
@@ -301,7 +312,8 @@ export default async function OpnameDetailPage({
                       </p>
                     )}
                     <p className="text-[11px] text-[#64748B]">
-                      Dihitung oleh {entry.countedByName} · {formatDateTime(entry.countedAt)}
+                      Dihitung oleh {entry.countedByName} ·{" "}
+                      {formatDateTime(entry.countedAt)}
                     </p>
                   </div>
                 ))}

@@ -69,7 +69,8 @@ export async function withApiSession(
         {
           error: {
             code: "CONFLICT",
-            message: "Data dengan kode atau identitas tersebut sudah terdaftar.",
+            message:
+              "Data dengan kode atau identitas tersebut sudah terdaftar.",
           },
         },
         { status: 409 },

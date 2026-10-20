@@ -30,7 +30,11 @@ export function PATCH(request: Request, context: Context) {
         );
       }
       const updated = hasRest
-        ? await updateMaterial(session.user.id, id, materialUpdateSchema.parse(rest))
+        ? await updateMaterial(
+            session.user.id,
+            id,
+            materialUpdateSchema.parse(rest),
+          )
         : null;
       const data =
         imageMediaId !== undefined

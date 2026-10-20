@@ -118,7 +118,9 @@ export function StatCard({
   );
   const className =
     "dashboard-card block p-4 transition duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] " +
-    (href ? "hover:-translate-y-0.5 hover:border-[#FDB913]/70 hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)]" : "");
+    (href
+      ? "hover:-translate-y-0.5 hover:border-[#FDB913]/70 hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)]"
+      : "");
   return href ? (
     <Link href={href} className={className}>
       {body}
@@ -160,10 +162,7 @@ export function RequestStatusBadge({ status }: { status: string }) {
   return <StatusBadge tone="cream">{status.replaceAll("_", " ")}</StatusBadge>;
 }
 
-const incidentTone: Record<
-  IncidentStatus,
-  keyof typeof toneClasses
-> = {
+const incidentTone: Record<IncidentStatus, keyof typeof toneClasses> = {
   REPORTED: "rose",
   UNDER_ASSESSMENT: "blue",
   IN_MAINTENANCE: "yellow",
@@ -185,7 +184,11 @@ export function IncidentBadge({ incident }: { incident: IncidentView }) {
   );
 }
 
-export function SeverityBadge({ severity }: { severity: IncidentView["severity"] }) {
+export function SeverityBadge({
+  severity,
+}: {
+  severity: IncidentView["severity"];
+}) {
   const tone =
     severity === "CRITICAL"
       ? "rose"
@@ -233,11 +236,7 @@ export function formatRange(startAt: string, endAt: string) {
   return `${formatDate(startAt)} · ${formatTime(startAt)}-${formatTime(endAt)}`;
 }
 
-export const SkeletonBlock = ({
-  className,
-}: {
-  className?: string;
-}) => (
+export const SkeletonBlock = ({ className }: { className?: string }) => (
   <div
     className={cn("animate-pulse rounded-lg bg-[#EEEEEE]", className)}
     aria-hidden="true"

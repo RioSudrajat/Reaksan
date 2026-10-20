@@ -11,7 +11,10 @@ export function DELETE(request: Request, context: Context) {
     request,
     { inventory: ["manage-any"] },
     async (session) => {
-      const id = z.string().uuid().parse((await context.params).id);
+      const id = z
+        .string()
+        .uuid()
+        .parse((await context.params).id);
       const scope = await getRoomScope(session.user.id, session.user.role);
       const result = await deletePlpMaterialBatch(session.user.id, scope, id);
       return Response.json({ data: result });

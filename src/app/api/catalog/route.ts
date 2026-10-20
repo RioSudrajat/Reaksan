@@ -16,8 +16,7 @@ export function GET(request: Request) {
     const query = roomQuerySchema.parse(
       Object.fromEntries(new URL(request.url).searchParams),
     );
-    if (!query.room)
-      return Response.json({ data: await buildLabCatalog() });
+    if (!query.room) return Response.json({ data: await buildLabCatalog() });
     const room = await findRoomByCode(db, query.room);
     if (!room) throw new ApiError(404, "NOT_FOUND", "Room not found.");
     const [rooms, equipment, materials] = await Promise.all([

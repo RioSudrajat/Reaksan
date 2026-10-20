@@ -257,27 +257,25 @@ Admin mengelola konfigurasi, master data laboratorium, penugasan ruangan, dan ma
 
 # 7. Role & Permission Matrix (MVP 3-Role Scope)
 
-
-| Capability                  | Student | PLP      | Admin |
-| --------------------------- | -------: | --------: | -----: |
-| Login                       | ✓       | ✓        | ✓     |
-| View Lab Map                | ✓       | ✓        | ✓     |
-| View Inventory              | ✓       | ✓        | ✓     |
-| View Equipment Availability | ✓       | ✓        | ✓     |
-| View Usage Plan             | ✓       | ✓        | ✓     |
-| Create Activity             | ✓       | —        | ✓     |
-| Create Request              | ✓       | —        | ✓     |
-| Approve Request             | —       | ✓        | ✓     |
-| Issue Equipment             | —       | ✓        | ✓     |
-| Issue Material              | —       | ✓        | ✓     |
-| Return Equipment            | ✓       | ✓        | ✓     |
-| Condition Inspection        | —       | ✓        | ✓     |
-| Report Incident             | ✓       | ✓        | ✓     |
-| Manage Inventory            | —       | ✓        | ✓     |
-| Manage Users                | —       | —        | ✓     |
-| Manage Configuration        | —       | —        | ✓     |
-| View Audit Log              | —       | Relevant | ✓     |
-
+| Capability                  | Student |      PLP | Admin |
+| --------------------------- | ------: | -------: | ----: |
+| Login                       |       ✓ |        ✓ |     ✓ |
+| View Lab Map                |       ✓ |        ✓ |     ✓ |
+| View Inventory              |       ✓ |        ✓ |     ✓ |
+| View Equipment Availability |       ✓ |        ✓ |     ✓ |
+| View Usage Plan             |       ✓ |        ✓ |     ✓ |
+| Create Activity             |       ✓ |        — |     ✓ |
+| Create Request              |       ✓ |        — |     ✓ |
+| Approve Request             |       — |        ✓ |     ✓ |
+| Issue Equipment             |       — |        ✓ |     ✓ |
+| Issue Material              |       — |        ✓ |     ✓ |
+| Return Equipment            |       ✓ |        ✓ |     ✓ |
+| Condition Inspection        |       — |        ✓ |     ✓ |
+| Report Incident             |       ✓ |        ✓ |     ✓ |
+| Manage Inventory            |       — |        ✓ |     ✓ |
+| Manage Users                |       — |        — |     ✓ |
+| Manage Configuration        |       — |        — |     ✓ |
+| View Audit Log              |       — | Relevant |     ✓ |
 
 Permissions should eventually be implemented using **RBAC + scoped permissions**, not only hardcoded role checks.
 
@@ -957,7 +955,6 @@ Student kemudian mengedit request dan resubmit.
 
 Student dapat melakukan cancellation sesuai status.
 
-
 | Request Status     | Student Action                |
 | ------------------ | ----------------------------- |
 | DRAFT              | Cancel                        |
@@ -968,7 +965,6 @@ Student dapat melakukan cancellation sesuai status.
 | ACTIVE             | No cancellation; Early Return |
 | RETURNED           | No                            |
 | COMPLETED          | No                            |
-
 
 Recommended configurable policy:
 

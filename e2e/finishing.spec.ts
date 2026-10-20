@@ -71,7 +71,9 @@ async function setRole(email: string, role: string) {
 
 async function userIdFor(email: string) {
   const rows = await withDatabase(async (pool) =>
-    pool.query<{ id: string }>('SELECT id FROM "user" WHERE email = $1', [email]),
+    pool.query<{ id: string }>('SELECT id FROM "user" WHERE email = $1', [
+      email,
+    ]),
   );
   expect(rows.rows[0]?.id).toBeTruthy();
   return rows.rows[0].id;
@@ -129,9 +131,9 @@ async function sessionFor(factory: RequestFactory, kind: AccountKind) {
 
 async function signInPage(page: Page, email: string) {
   await page.goto(`${origin}/sign-in`);
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByLabel(/Email/i).fill(email);
+  await page.getByLabel(/Password/i).fill(password);
+  await page.getByRole("button", { name: "Login", exact: true }).click();
 }
 
 test("admin material batches dan assignments membuka data, bukan error render", async ({
@@ -164,15 +166,16 @@ test("admin material batches dan assignments membuka data, bukan error render", 
   await signInPage(page, adminEmail);
   await expect(page).toHaveURL(/\/admin\/dashboard$/);
 
-  await page.goto(`${origin}/admin/materials/batches`);
-  await expect(
-    page.getByRole("heading", { name: "Material batches" }),
-  ).toBeVisible();
-  await expect(page.getByText(lot)).toBeVisible();
+  await page.goto(`${origin}/plp/inventory/materials/MAT-027`);
+  await expect(page.getByText(lot).first()).toBeVisible();
   await expect(page.getByText("Something went wrong")).toHaveCount(0);
 
   await page.goto(`${origin}/admin/assignments`);
-  await expect(page.getByRole("heading", { name: "Assignments" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: /Penugasan PLP & Penanggung Jawab Lab/i,
+    }),
+  ).toBeVisible();
   await expect(page.getByText("Lab Organik").first()).toBeVisible();
   await expect(page.getByText("Something went wrong")).toHaveCount(0);
 });
@@ -319,10 +322,10 @@ test("upload gambar memvalidasi tipe dan hanya bisa dibaca user terautentikasi",
       (await materials.json()).data as { id: string; code: string }[]
     ).find((material) => material.code === "MAT-027");
     expect(acetone).toBeTruthy();
-    const patched = await admin.patch(
-      `/api/admin/materials/${acetone?.id}`,
-      { headers, data: { imageMediaId: media.id } },
-    );
+    const patched = await admin.patch(`/api/admin/materials/${acetone?.id}`, {
+      headers,
+      data: { imageMediaId: media.id },
+    });
     expect(patched.status()).toBe(200);
     expect((await patched.json()).data.imageMediaId).toBe(media.id);
   } finally {
@@ -343,11 +346,13 @@ test("hasil hitung stok tidak mengubah ledger dan CSV selisih hanya untuk invent
       headers,
     });
     expect(before.status()).toBe(200);
-    const beforeBatches = ((await before.json()).data as {
-      material: {
-        batches: { batchId: string; quantity: number; roomCode: string }[];
-      };
-    }).material.batches;
+    const beforeBatches = (
+      (await before.json()).data as {
+        material: {
+          batches: { batchId: string; quantity: number; roomCode: string }[];
+        };
+      }
+    ).material.batches;
     expect(beforeBatches.length).toBeGreaterThan(0);
     const targetBatch =
       beforeBatches.find((batch) => batch.roomCode === "lab-organik") ??
@@ -384,9 +389,11 @@ test("hasil hitung stok tidak mengubah ledger dan CSV selisih hanya untuk invent
 
     const detail = await plp.get(`/api/plp/opname/${sessionId}`, { headers });
     expect(detail.status()).toBe(200);
-    const entries = ((await detail.json()).data as {
-      entries: { materialBatchId: string; baseline: number }[];
-    }).entries;
+    const entries = (
+      (await detail.json()).data as {
+        entries: { materialBatchId: string; baseline: number }[];
+      }
+    ).entries;
     const entry = entries.find(
       (item) => item.materialBatchId === targetBatch.batchId,
     );
@@ -411,9 +418,11 @@ test("hasil hitung stok tidak mengubah ledger dan CSV selisih hanya untuk invent
     const after = await plp.get("/api/plp/inventory/materials/MAT-027", {
       headers,
     });
-    const afterBatches = ((await after.json()).data as {
-      material: { batches: { batchId: string; quantity: number }[] };
-    }).material.batches;
+    const afterBatches = (
+      (await after.json()).data as {
+        material: { batches: { batchId: string; quantity: number }[] };
+      }
+    ).material.batches;
     const unchanged = afterBatches.find(
       (batch) => batch.batchId === targetBatch.batchId,
     );
@@ -422,9 +431,11 @@ test("hasil hitung stok tidak mengubah ledger dan CSV selisih hanya untuk invent
     const variance = await plp.get(`/api/plp/opname/${sessionId}`, {
       headers,
     });
-    const varianceEntries = ((await variance.json()).data as {
-      entries: { materialBatchId: string; difference: number }[];
-    }).entries;
+    const varianceEntries = (
+      (await variance.json()).data as {
+        entries: { materialBatchId: string; difference: number }[];
+      }
+    ).entries;
     expect(
       varianceEntries.find(
         (item) => item.materialBatchId === targetBatch.batchId,
@@ -466,11 +477,13 @@ test("dashboard dan inventory menampilkan chart dengan data nyata dan tautan sum
 
       await page.goto(`${origin}/plp/dashboard?trend=7`);
       await expect(
-        page.getByRole("heading", { name: "Tren request per periode" }),
+        page.getByRole("heading", { name: /Tren Dinamika Permintaan Lab/i }),
       ).toBeVisible();
-      await expect(page.getByText("7 hari terakhir, per hari")).toBeVisible();
+      await expect(page.getByText(/7 hari terakhir, per hari/i)).toBeVisible();
       await expect(
-        page.getByRole("heading", { name: "Material berisiko per room" }),
+        page.getByRole("heading", {
+          name: /Sebaran Beban Risiko Antar-Ruang Lab/i,
+        }),
       ).toBeVisible();
       await expect(
         page.getByRole("link", { name: "7 hari" }).first(),
@@ -493,11 +506,13 @@ test("dashboard dan inventory menampilkan chart dengan data nyata dan tautan sum
       await expect(adminPage).toHaveURL(/\/admin\/dashboard$/);
       await adminPage.goto(`${origin}/admin/dashboard`);
       await expect(
-        adminPage.getByRole("heading", { name: "Tren request lintas lab" }),
+        adminPage.getByRole("heading", {
+          name: /Tren Pengajuan Sesi Lintas Lab/i,
+        }),
       ).toBeVisible();
       await expect(
         adminPage.getByRole("heading", {
-          name: "Equipment per room dan status",
+          name: /Aktivitas Sistem Terakhir/i,
         }),
       ).toBeVisible();
       await adminContext.close();

@@ -16,10 +16,7 @@ import {
 } from "@/components/workspace";
 import { listIncidentPage } from "@/services/incidents.service";
 import { requirePermission } from "@/lib/session";
-import {
-  getRoomScope,
-  scopeRoomCodes,
-} from "@/services/access-scope.service";
+import { getRoomScope, scopeRoomCodes } from "@/services/access-scope.service";
 import { listPlpIncidentsSchema } from "@/validators/plp";
 
 export const metadata: Metadata = { title: "Incidents" };

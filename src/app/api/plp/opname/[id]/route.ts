@@ -1,5 +1,8 @@
 import { ApiError, withApiPermission } from "@/lib/api";
-import { assertOpnameInScope, scopeForSession } from "@/services/access-scope.service";
+import {
+  assertOpnameInScope,
+  scopeForSession,
+} from "@/services/access-scope.service";
 import { getOpnameSessionDetail } from "@/services/opname.service";
 import { z } from "zod";
 

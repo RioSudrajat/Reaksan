@@ -20,9 +20,7 @@ export function GET(request: Request) {
         Object.fromEntries(new URL(request.url).searchParams),
       );
       const { roomCodes } = await scopeForSession(session);
-      return Response.json(
-        await listPlpEquipment({ ...query, roomCodes }),
-      );
+      return Response.json(await listPlpEquipment({ ...query, roomCodes }));
     },
   );
 }
@@ -43,4 +41,3 @@ export function POST(request: Request) {
     },
   );
 }
-

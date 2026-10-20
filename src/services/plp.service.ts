@@ -1,5 +1,16 @@
 import "server-only";
-import { and, asc, count, desc, eq, gte, inArray, lte, notInArray, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  lte,
+  notInArray,
+  sql,
+} from "drizzle-orm";
 import { db } from "@/db";
 import {
   auditLog,
@@ -395,100 +406,98 @@ async function loadEquipmentRows(
   const instrumentAssetIds = instrumentAssets.map((asset) => asset.assetId);
   const toolAssetIds = toolAssets.map((asset) => asset.assetId);
 
-  const [
-    instrumentUnits,
-    toolUnits,
-    instrumentRequestStats,
-    toolRequestStats,
-  ] = await Promise.all([
-    instrumentAssetIds.length > 0
-      ? exec
-          .select({
-            unitId: instrumentUnit.id,
-            assetId: instrumentUnit.instrumentAssetId,
-            code: instrumentUnit.code,
-            label: instrumentUnit.label,
-            qrCode: instrumentUnit.qrCode,
-            storageLocation: instrumentUnit.storageLocation,
-            status: instrumentUnit.status,
-            condition: instrumentUnit.condition,
-            notes: instrumentUnit.notes,
-            active: instrumentUnit.active,
-          })
-          .from(instrumentUnit)
-          .where(inArray(instrumentUnit.instrumentAssetId, instrumentAssetIds))
-          .orderBy(asc(instrumentUnit.code))
-      : [],
-    toolAssetIds.length > 0
-      ? exec
-          .select({
-            unitId: toolUnit.id,
-            assetId: toolUnit.toolAssetId,
-            code: toolUnit.code,
-            label: toolUnit.label,
-            qrCode: toolUnit.qrCode,
-            storageLocation: toolUnit.storageLocation,
-            status: toolUnit.status,
-            condition: toolUnit.condition,
-            notes: toolUnit.notes,
-            active: toolUnit.active,
-          })
-          .from(toolUnit)
-          .where(inArray(toolUnit.toolAssetId, toolAssetIds))
-          .orderBy(asc(toolUnit.code))
-      : [],
-    instrumentAssetIds.length > 0
-      ? exec
-          .select({
-            assetId: instrumentRequestItem.instrumentAssetId,
-            totalRequests: sql<number>`COUNT(DISTINCT ${resourceRequest.id})::int`,
-            activeRequests: sql<number>`COUNT(DISTINCT CASE WHEN ${resourceRequest.status} IN ('APPROVED', 'READY_FOR_PICKUP', 'ACTIVE', 'OVERDUE') THEN ${resourceRequest.id} END)::int`,
-          })
-          .from(instrumentRequestItem)
-          .innerJoin(
-            resourceRequest,
-            eq(resourceRequest.id, instrumentRequestItem.requestId),
-          )
-          .where(
-            and(
-              inArray(
-                instrumentRequestItem.instrumentAssetId,
-                instrumentAssetIds,
+  const [instrumentUnits, toolUnits, instrumentRequestStats, toolRequestStats] =
+    await Promise.all([
+      instrumentAssetIds.length > 0
+        ? exec
+            .select({
+              unitId: instrumentUnit.id,
+              assetId: instrumentUnit.instrumentAssetId,
+              code: instrumentUnit.code,
+              label: instrumentUnit.label,
+              qrCode: instrumentUnit.qrCode,
+              storageLocation: instrumentUnit.storageLocation,
+              status: instrumentUnit.status,
+              condition: instrumentUnit.condition,
+              notes: instrumentUnit.notes,
+              active: instrumentUnit.active,
+            })
+            .from(instrumentUnit)
+            .where(
+              inArray(instrumentUnit.instrumentAssetId, instrumentAssetIds),
+            )
+            .orderBy(asc(instrumentUnit.code))
+        : [],
+      toolAssetIds.length > 0
+        ? exec
+            .select({
+              unitId: toolUnit.id,
+              assetId: toolUnit.toolAssetId,
+              code: toolUnit.code,
+              label: toolUnit.label,
+              qrCode: toolUnit.qrCode,
+              storageLocation: toolUnit.storageLocation,
+              status: toolUnit.status,
+              condition: toolUnit.condition,
+              notes: toolUnit.notes,
+              active: toolUnit.active,
+            })
+            .from(toolUnit)
+            .where(inArray(toolUnit.toolAssetId, toolAssetIds))
+            .orderBy(asc(toolUnit.code))
+        : [],
+      instrumentAssetIds.length > 0
+        ? exec
+            .select({
+              assetId: instrumentRequestItem.instrumentAssetId,
+              totalRequests: sql<number>`COUNT(DISTINCT ${resourceRequest.id})::int`,
+              activeRequests: sql<number>`COUNT(DISTINCT CASE WHEN ${resourceRequest.status} IN ('APPROVED', 'READY_FOR_PICKUP', 'ACTIVE', 'OVERDUE') THEN ${resourceRequest.id} END)::int`,
+            })
+            .from(instrumentRequestItem)
+            .innerJoin(
+              resourceRequest,
+              eq(resourceRequest.id, instrumentRequestItem.requestId),
+            )
+            .where(
+              and(
+                inArray(
+                  instrumentRequestItem.instrumentAssetId,
+                  instrumentAssetIds,
+                ),
+                notInArray(resourceRequest.status, [
+                  "CANCELLED",
+                  "REJECTED",
+                  "DRAFT",
+                ]),
               ),
-              notInArray(resourceRequest.status, [
-                "CANCELLED",
-                "REJECTED",
-                "DRAFT",
-              ]),
-            ),
-          )
-          .groupBy(instrumentRequestItem.instrumentAssetId)
-      : [],
-    toolAssetIds.length > 0
-      ? exec
-          .select({
-            assetId: toolRequestItem.toolAssetId,
-            totalRequests: sql<number>`COUNT(DISTINCT ${resourceRequest.id})::int`,
-            activeRequests: sql<number>`COUNT(DISTINCT CASE WHEN ${resourceRequest.status} IN ('APPROVED', 'READY_FOR_PICKUP', 'ACTIVE', 'OVERDUE') THEN ${resourceRequest.id} END)::int`,
-          })
-          .from(toolRequestItem)
-          .innerJoin(
-            resourceRequest,
-            eq(resourceRequest.id, toolRequestItem.requestId),
-          )
-          .where(
-            and(
-              inArray(toolRequestItem.toolAssetId, toolAssetIds),
-              notInArray(resourceRequest.status, [
-                "CANCELLED",
-                "REJECTED",
-                "DRAFT",
-              ]),
-            ),
-          )
-          .groupBy(toolRequestItem.toolAssetId)
-      : [],
-  ]);
+            )
+            .groupBy(instrumentRequestItem.instrumentAssetId)
+        : [],
+      toolAssetIds.length > 0
+        ? exec
+            .select({
+              assetId: toolRequestItem.toolAssetId,
+              totalRequests: sql<number>`COUNT(DISTINCT ${resourceRequest.id})::int`,
+              activeRequests: sql<number>`COUNT(DISTINCT CASE WHEN ${resourceRequest.status} IN ('APPROVED', 'READY_FOR_PICKUP', 'ACTIVE', 'OVERDUE') THEN ${resourceRequest.id} END)::int`,
+            })
+            .from(toolRequestItem)
+            .innerJoin(
+              resourceRequest,
+              eq(resourceRequest.id, toolRequestItem.requestId),
+            )
+            .where(
+              and(
+                inArray(toolRequestItem.toolAssetId, toolAssetIds),
+                notInArray(resourceRequest.status, [
+                  "CANCELLED",
+                  "REJECTED",
+                  "DRAFT",
+                ]),
+              ),
+            )
+            .groupBy(toolRequestItem.toolAssetId)
+        : [],
+    ]);
   const units = [...instrumentUnits, ...toolUnits];
   const requestStats = [...instrumentRequestStats, ...toolRequestStats];
 
@@ -541,7 +550,8 @@ export async function listPlpEquipment(input: {
   });
   const search = input.search?.toLowerCase();
   const filtered = rows.filter((row) => {
-    if (input.classification && row.classification !== input.classification) return false;
+    if (input.classification && row.classification !== input.classification)
+      return false;
     if (input.usage && row.usageType !== input.usage) return false;
     if (input.condition && row.condition !== input.condition) return false;
     if (
@@ -689,7 +699,11 @@ export async function listPlpMaterials(input: {
         .where(
           and(
             inArray(materialRequestItem.materialId, materialIds),
-            notInArray(resourceRequest.status, ["CANCELLED", "REJECTED", "DRAFT"]),
+            notInArray(resourceRequest.status, [
+              "CANCELLED",
+              "REJECTED",
+              "DRAFT",
+            ]),
           ),
         )
         .groupBy(materialRequestItem.materialId)
@@ -698,8 +712,7 @@ export async function listPlpMaterials(input: {
   const mapped = rows.map<PlpMaterialRow>((row: MaterialAggregateRow) => {
     const totals = materialStockSummary(row);
     const minimum = row.minimum_quantity ? Number(row.minimum_quantity) : null;
-    const threshold =
-      minimum !== null ? minimum * settings.low_stock_ratio : 0;
+    const threshold = minimum !== null ? minimum * settings.low_stock_ratio : 0;
     const lowStock =
       minimum !== null ? totals.available <= threshold : totals.available <= 0;
     const materialStock = stockRows.filter(
@@ -733,9 +746,7 @@ export async function listPlpMaterials(input: {
           totalCapacity: batchCapacity,
           expiryDate: batch.expiryDate?.toISOString() ?? null,
           active: batch.active,
-          expired: batch.expiryDate
-            ? batch.expiryDate.getTime() < now
-            : false,
+          expired: batch.expiryDate ? batch.expiryDate.getTime() < now : false,
         };
       });
     const hasExpired = materialBatches.some((batch) => batch.expired);
@@ -1062,7 +1073,9 @@ export async function getPlpDashboard(
     listMaintenanceUnits(roomCodes),
   ]);
   const issueQueue = [...issueQueueRaw]
-    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
+    .sort(
+      (a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
+    )
     .slice(0, 8);
   const returnQueue = [...returnQueueRaw]
     .filter(
@@ -1181,14 +1194,8 @@ export async function listMaintenanceUnits(
         typeImageMediaId: toolType.imageMediaId,
       })
       .from(toolUnit)
-      .innerJoin(
-        toolAsset,
-        eq(toolAsset.id, toolUnit.toolAssetId),
-      )
-      .innerJoin(
-        toolType,
-        eq(toolType.id, toolAsset.toolTypeId),
-      )
+      .innerJoin(toolAsset, eq(toolAsset.id, toolUnit.toolAssetId))
+      .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
       .innerJoin(room, eq(room.id, toolAsset.roomId))
       .where(
         and(
@@ -1250,7 +1257,9 @@ export async function listEquipmentTypesForPlp() {
       .from(toolType)
       .where(eq(toolType.active, true)),
   ]);
-  return [...instruments, ...tools].sort((a, b) => a.name.localeCompare(b.name));
+  return [...instruments, ...tools].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
 }
 
 export async function createPlpEquipmentAsset(
@@ -1324,8 +1333,7 @@ export async function createPlpEquipmentAsset(
       .from(room)
       .where(eq(room.code, input.roomCode))
       .limit(1);
-    if (!roomRow)
-      throw new ApiError(404, "NOT_FOUND", "Room tidak ditemukan.");
+    if (!roomRow) throw new ApiError(404, "NOT_FOUND", "Room tidak ditemukan.");
 
     const [existingIns, existingTol] = await Promise.all([
       tx
@@ -1491,7 +1499,11 @@ export async function createPlpMaterial(
       .where(eq(material.code, input.code))
       .limit(1);
     if (existing.length > 0) {
-      throw new ApiError(409, "CODE_TAKEN", `Kode material ${input.code} sudah dipakai.`);
+      throw new ApiError(
+        409,
+        "CODE_TAKEN",
+        `Kode material ${input.code} sudah dipakai.`,
+      );
     }
 
     const [createdMaterial] = await tx
@@ -1522,11 +1534,19 @@ export async function createPlpMaterial(
         .where(eq(room.code, input.initialBatch.roomCode))
         .limit(1);
       if (!roomRow) {
-        throw new ApiError(404, "NOT_FOUND", "Room untuk batch tidak ditemukan.");
+        throw new ApiError(
+          404,
+          "NOT_FOUND",
+          "Room untuk batch tidak ditemukan.",
+        );
       }
 
-      const lot = input.initialBatch.lotNumber?.trim() || `LOT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-      const expiry = input.initialBatch.expiryDate ? new Date(input.initialBatch.expiryDate) : null;
+      const lot =
+        input.initialBatch.lotNumber?.trim() ||
+        `LOT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const expiry = input.initialBatch.expiryDate
+        ? new Date(input.initialBatch.expiryDate)
+        : null;
       const defaultStorage =
         input.initialBatch.storageLocation?.trim() ||
         (input.category === "Pelarut" ? "Lemari Asam / B3" : "Gudang Reagen");
@@ -1609,8 +1629,7 @@ export async function createPlpEquipmentUnit(
             rows[0] ? { ...rows[0], kind: "TOOL" as const } : null,
           );
 
-    if (!asset)
-      throw new ApiError(404, "NOT_FOUND", "Asset tidak ditemukan.");
+    if (!asset) throw new ApiError(404, "NOT_FOUND", "Asset tidak ditemukan.");
 
     assertRoomInScope(scope, asset.roomCode);
 
@@ -1709,10 +1728,11 @@ export async function createPlpMaterialBatch(
       .from(room)
       .where(eq(room.code, input.roomCode))
       .limit(1);
-    if (!roomRow)
-      throw new ApiError(404, "NOT_FOUND", "Room tidak ditemukan.");
+    if (!roomRow) throw new ApiError(404, "NOT_FOUND", "Room tidak ditemukan.");
 
-    const lot = input.lotNumber?.trim() || `LOT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const lot =
+      input.lotNumber?.trim() ||
+      `LOT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const [created] = await tx
       .insert(materialBatch)
       .values({
@@ -1776,8 +1796,7 @@ export async function adjustPlpMaterialStock(
       .where(eq(materialBatch.id, batchId))
       .limit(1)
       .for("update");
-    if (!batch)
-      throw new ApiError(404, "NOT_FOUND", "Batch tidak ditemukan.");
+    if (!batch) throw new ApiError(404, "NOT_FOUND", "Batch tidak ditemukan.");
 
     assertRoomInScope(scope, batch.roomCode);
 
@@ -2162,9 +2181,7 @@ export async function deletePlpEquipmentAsset(
       await tx
         .delete(instrumentConditionHistory)
         .where(eq(instrumentConditionHistory.instrumentAssetId, asset.id));
-      await tx
-        .delete(instrumentAsset)
-        .where(eq(instrumentAsset.id, asset.id));
+      await tx.delete(instrumentAsset).where(eq(instrumentAsset.id, asset.id));
 
       const remainingAssets = await tx
         .select({ count: count() })
@@ -2246,14 +2263,10 @@ export async function deletePlpEquipmentAsset(
         await tx
           .delete(toolConditionHistory)
           .where(inArray(toolConditionHistory.toolUnitId, unitIds));
-        await tx
-          .delete(toolUnit)
-          .where(inArray(toolUnit.id, unitIds));
+        await tx.delete(toolUnit).where(inArray(toolUnit.id, unitIds));
       }
 
-      await tx
-        .delete(reservation)
-        .where(eq(reservation.toolAssetId, asset.id));
+      await tx.delete(reservation).where(eq(reservation.toolAssetId, asset.id));
       await tx
         .delete(toolRequestItem)
         .where(eq(toolRequestItem.toolAssetId, asset.id));
@@ -2275,9 +2288,7 @@ export async function deletePlpEquipmentAsset(
       await tx
         .delete(toolConditionHistory)
         .where(eq(toolConditionHistory.toolAssetId, asset.id));
-      await tx
-        .delete(toolAsset)
-        .where(eq(toolAsset.id, asset.id));
+      await tx.delete(toolAsset).where(eq(toolAsset.id, asset.id));
 
       const remainingAssets = await tx
         .select({ count: count() })
@@ -2285,9 +2296,7 @@ export async function deletePlpEquipmentAsset(
         .where(eq(toolAsset.toolTypeId, asset.typeId));
 
       if (Number(remainingAssets[0]?.count ?? 0) === 0) {
-        await tx
-          .delete(toolType)
-          .where(eq(toolType.id, asset.typeId));
+        await tx.delete(toolType).where(eq(toolType.id, asset.typeId));
       }
 
       await writeAudit(tx, {
@@ -2337,12 +2346,19 @@ export async function deletePlpEquipmentType(
           );
 
     if (!eqType) {
-      throw new ApiError(404, "NOT_FOUND", "Katalog peralatan tidak ditemukan.");
+      throw new ApiError(
+        404,
+        "NOT_FOUND",
+        "Katalog peralatan tidak ditemukan.",
+      );
     }
 
     if (eqType.kind === "INSTRUMENT") {
       const assets = await tx
-        .select({ id: instrumentAsset.id, assetCode: instrumentAsset.assetCode })
+        .select({
+          id: instrumentAsset.id,
+          assetCode: instrumentAsset.assetCode,
+        })
         .from(instrumentAsset)
         .where(eq(instrumentAsset.instrumentTypeId, typeId));
 
@@ -2417,7 +2433,11 @@ export async function deletePlpMaterialBatch(
       .limit(1);
 
     if (!batch) {
-      throw new ApiError(404, "NOT_FOUND", "Batch bahan kimia tidak ditemukan.");
+      throw new ApiError(
+        404,
+        "NOT_FOUND",
+        "Batch bahan kimia tidak ditemukan.",
+      );
     }
 
     assertRoomInScope(scope, batch.roomCode);
@@ -2441,10 +2461,21 @@ export async function deletePlpMaterialBatch(
       );
     }
 
-    await tx.update(materialRequestItem).set({ allocatedBatchId: null }).where(eq(materialRequestItem.allocatedBatchId, batchId));
-    await tx.update(issueTransaction).set({ materialBatchId: null }).where(eq(issueTransaction.materialBatchId, batchId));
-    await tx.update(stockOpnameEntry).set({ materialBatchId: null }).where(eq(stockOpnameEntry.materialBatchId, batchId));
-    await tx.delete(stockTransaction).where(eq(stockTransaction.materialBatchId, batchId));
+    await tx
+      .update(materialRequestItem)
+      .set({ allocatedBatchId: null })
+      .where(eq(materialRequestItem.allocatedBatchId, batchId));
+    await tx
+      .update(issueTransaction)
+      .set({ materialBatchId: null })
+      .where(eq(issueTransaction.materialBatchId, batchId));
+    await tx
+      .update(stockOpnameEntry)
+      .set({ materialBatchId: null })
+      .where(eq(stockOpnameEntry.materialBatchId, batchId));
+    await tx
+      .delete(stockTransaction)
+      .where(eq(stockTransaction.materialBatchId, batchId));
     await tx.delete(materialBatch).where(eq(materialBatch.id, batchId));
 
     await writeAudit(tx, {
@@ -2484,7 +2515,11 @@ export async function deletePlpMaterial(
       .limit(1);
 
     if (!mat) {
-      throw new ApiError(404, "NOT_FOUND", "Katalog bahan kimia tidak ditemukan.");
+      throw new ApiError(
+        404,
+        "NOT_FOUND",
+        "Katalog bahan kimia tidak ditemukan.",
+      );
     }
 
     const batches = await tx
@@ -2522,15 +2557,30 @@ export async function deletePlpMaterial(
         );
       }
 
-      await tx.update(materialRequestItem).set({ allocatedBatchId: null }).where(inArray(materialRequestItem.allocatedBatchId, batchIds));
-      await tx.update(issueTransaction).set({ materialBatchId: null }).where(inArray(issueTransaction.materialBatchId, batchIds));
-      await tx.update(stockOpnameEntry).set({ materialBatchId: null }).where(inArray(stockOpnameEntry.materialBatchId, batchIds));
-      await tx.delete(stockTransaction).where(inArray(stockTransaction.materialBatchId, batchIds));
+      await tx
+        .update(materialRequestItem)
+        .set({ allocatedBatchId: null })
+        .where(inArray(materialRequestItem.allocatedBatchId, batchIds));
+      await tx
+        .update(issueTransaction)
+        .set({ materialBatchId: null })
+        .where(inArray(issueTransaction.materialBatchId, batchIds));
+      await tx
+        .update(stockOpnameEntry)
+        .set({ materialBatchId: null })
+        .where(inArray(stockOpnameEntry.materialBatchId, batchIds));
+      await tx
+        .delete(stockTransaction)
+        .where(inArray(stockTransaction.materialBatchId, batchIds));
       await tx.delete(materialBatch).where(inArray(materialBatch.id, batchIds));
     }
 
-    await tx.delete(materialDispensingRule).where(eq(materialDispensingRule.materialId, mat.id));
-    await tx.delete(materialRequestItem).where(eq(materialRequestItem.materialId, mat.id));
+    await tx
+      .delete(materialDispensingRule)
+      .where(eq(materialDispensingRule.materialId, mat.id));
+    await tx
+      .delete(materialRequestItem)
+      .where(eq(materialRequestItem.materialId, mat.id));
     await tx.delete(material).where(eq(material.id, mat.id));
 
     await writeAudit(tx, {
@@ -2549,4 +2599,3 @@ export async function deletePlpMaterial(
     return { success: true, code: mat.code, name: mat.name };
   });
 }
-

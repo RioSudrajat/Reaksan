@@ -23,10 +23,7 @@ import { StockAdjustDialog } from "@/components/plp/stock-adjust-dialog";
 import { DeleteConfirmButton } from "@/components/plp/delete-confirm-button";
 import { QrTagDialog } from "@/components/qr/qr-tag-dialog";
 import { requirePermission } from "@/lib/session";
-import {
-  getRoomScope,
-  scopeRoomCodes,
-} from "@/services/access-scope.service";
+import { getRoomScope, scopeRoomCodes } from "@/services/access-scope.service";
 
 export const metadata: Metadata = { title: "Material Detail" };
 
@@ -115,7 +112,10 @@ export default async function PlpMaterialDetailPage({
             ) : (
               <HorizontalBarChart
                 rows={material.batches.map((batch) => {
-                  const available = Math.max(0, batch.quantity - batch.reserved);
+                  const available = Math.max(
+                    0,
+                    batch.quantity - batch.reserved,
+                  );
                   const tone: ChartTone = batch.expired
                     ? "rose"
                     : batch.reserved > 0
@@ -162,14 +162,33 @@ export default async function PlpMaterialDetailPage({
                   <caption className="sr-only">Daftar batch material</caption>
                   <thead>
                     <tr className="border-b border-[#E5E7EB] bg-[#F8F9FA] text-[11px] uppercase tracking-[0.08em] text-[#64748B]">
-                      <th scope="col" className="px-3 py-2.5 font-semibold">Lot</th>
-                      <th scope="col" className="px-3 py-2.5 font-semibold">Tag QR</th>
-                      <th scope="col" className="px-3 py-2.5 font-semibold">Room / Lokasi</th>
-                      <th scope="col" className="px-3 py-2.5 font-semibold">Fisik</th>
-                      <th scope="col" className="px-3 py-2.5 font-semibold">Reserved</th>
-                      <th scope="col" className="px-3 py-2.5 font-semibold">Tersedia</th>
-                      <th scope="col" className="px-3 py-2.5 font-semibold">Expiry</th>
-                      <th scope="col" className="px-3 py-2.5 font-semibold text-right">Aksi</th>
+                      <th scope="col" className="px-3 py-2.5 font-semibold">
+                        Lot
+                      </th>
+                      <th scope="col" className="px-3 py-2.5 font-semibold">
+                        Tag QR
+                      </th>
+                      <th scope="col" className="px-3 py-2.5 font-semibold">
+                        Room / Lokasi
+                      </th>
+                      <th scope="col" className="px-3 py-2.5 font-semibold">
+                        Fisik
+                      </th>
+                      <th scope="col" className="px-3 py-2.5 font-semibold">
+                        Reserved
+                      </th>
+                      <th scope="col" className="px-3 py-2.5 font-semibold">
+                        Tersedia
+                      </th>
+                      <th scope="col" className="px-3 py-2.5 font-semibold">
+                        Expiry
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-3 py-2.5 font-semibold text-right"
+                      >
+                        Aksi
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -178,7 +197,10 @@ export default async function PlpMaterialDetailPage({
                         key={batch.batchId}
                         className="border-b border-[#F1F0EC] transition-colors hover:bg-[#FDFBF7] last:border-0"
                       >
-                        <th scope="row" className="px-3 py-2.5 text-[12px] font-semibold text-[#121826]">
+                        <th
+                          scope="row"
+                          className="px-3 py-2.5 text-[12px] font-semibold text-[#121826]"
+                        >
                           {batch.lotNumber ?? "Tanpa lot"}
                         </th>
                         <td className="px-3 py-2.5 text-[12px]">
@@ -213,7 +235,13 @@ export default async function PlpMaterialDetailPage({
                           {material.unit}
                         </td>
                         <td className="px-3 py-2.5 text-[12px] [font-variant-numeric:tabular-nums]">
-                          <span className={batch.expired ? "font-semibold text-[#DC2626]" : "text-[#121826]"}>
+                          <span
+                            className={
+                              batch.expired
+                                ? "font-semibold text-[#DC2626]"
+                                : "text-[#121826]"
+                            }
+                          >
                             {formatDate(batch.expiryDate)}
                             {batch.expired ? " · kedaluwarsa" : ""}
                           </span>
@@ -264,7 +292,10 @@ export default async function PlpMaterialDetailPage({
             ) : (
               <ul className="divide-y divide-[#E5E7EB]">
                 {transactions.map((entry) => (
-                  <li key={entry.id} className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                  <li
+                    key={entry.id}
+                    className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                  >
                     <div>
                       <p className="text-[12px] font-semibold text-[#121826]">
                         {entry.type} · {entry.quantity} {material.unit}

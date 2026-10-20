@@ -152,7 +152,9 @@ async function ensureDefaultActivity(
   const [existing] = await exec
     .select({ id: activity.id })
     .from(activity)
-    .where(and(eq(activity.studentId, studentId), eq(activity.status, "ACTIVE")))
+    .where(
+      and(eq(activity.studentId, studentId), eq(activity.status, "ACTIVE")),
+    )
     .orderBy(desc(activity.createdAt))
     .limit(1);
   if (existing) return existing;
@@ -200,7 +202,10 @@ async function resolveEquipment(
       instrumentAsset,
       eq(instrumentAsset.id, instrumentUnit.instrumentAssetId),
     )
-    .innerJoin(instrumentType, eq(instrumentType.id, instrumentAsset.instrumentTypeId))
+    .innerJoin(
+      instrumentType,
+      eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+    )
     .innerJoin(room, eq(room.id, instrumentAsset.roomId))
     .where(inArray(instrumentUnit.code, codes));
 
@@ -226,10 +231,7 @@ async function resolveEquipment(
             usageType: toolType.usageType,
           })
           .from(toolUnit)
-          .innerJoin(
-            toolAsset,
-            eq(toolAsset.id, toolUnit.toolAssetId),
-          )
+          .innerJoin(toolAsset, eq(toolAsset.id, toolUnit.toolAssetId))
           .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
           .innerJoin(room, eq(room.id, toolAsset.roomId))
           .where(inArray(toolUnit.code, remainingCodes))
@@ -321,7 +323,10 @@ async function assertNoReservationConflict(
       endAt: reservation.endAt,
     })
     .from(reservation)
-    .leftJoin(instrumentUnit, eq(instrumentUnit.id, reservation.instrumentUnitId))
+    .leftJoin(
+      instrumentUnit,
+      eq(instrumentUnit.id, reservation.instrumentUnitId),
+    )
     .leftJoin(toolUnit, eq(toolUnit.id, reservation.toolUnitId))
     .where(and(...filters))
     .limit(1);
@@ -587,14 +592,8 @@ export async function loadRequestDtos(
         typeImageMediaId: toolType.imageMediaId,
       })
       .from(toolRequestItem)
-      .innerJoin(
-        toolUnit,
-        eq(toolUnit.id, toolRequestItem.toolUnitId),
-      )
-      .innerJoin(
-        toolAsset,
-        eq(toolAsset.id, toolRequestItem.toolAssetId),
-      )
+      .innerJoin(toolUnit, eq(toolUnit.id, toolRequestItem.toolUnitId))
+      .innerJoin(toolAsset, eq(toolAsset.id, toolRequestItem.toolAssetId))
       .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
       .where(inArray(toolRequestItem.requestId, requestIds)),
   ]);
@@ -683,8 +682,9 @@ export async function loadRequestDtos(
         imageMediaId: item.imageMediaId ?? null,
       })),
     issuedAt:
-      issueRows.find((item) => item.requestId === row.id)?.issuedAt.toISOString() ??
-      null,
+      issueRows
+        .find((item) => item.requestId === row.id)
+        ?.issuedAt.toISOString() ?? null,
     returnedAt:
       returnRows
         .filter((item) => item.requestId === row.id)
@@ -900,14 +900,8 @@ export async function getRequestReviewContext(
         roomName: room.name,
       })
       .from(toolRequestItem)
-      .innerJoin(
-        toolUnit,
-        eq(toolUnit.id, toolRequestItem.toolUnitId),
-      )
-      .innerJoin(
-        toolAsset,
-        eq(toolAsset.id, toolRequestItem.toolAssetId),
-      )
+      .innerJoin(toolUnit, eq(toolUnit.id, toolRequestItem.toolUnitId))
+      .innerJoin(toolAsset, eq(toolAsset.id, toolRequestItem.toolAssetId))
       .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
       .innerJoin(room, eq(room.id, toolAsset.roomId))
       .where(eq(toolRequestItem.requestId, requestId)),
@@ -1105,8 +1099,7 @@ export async function markRequestReady(actorId: string, requestId: string) {
       .where(eq(resourceRequest.id, requestId))
       .limit(1)
       .for("update");
-    if (!current)
-      throw new ApiError(404, "NOT_FOUND", "Request not found.");
+    if (!current) throw new ApiError(404, "NOT_FOUND", "Request not found.");
     if (current.status !== "APPROVED")
       throw new ApiError(
         409,
@@ -1145,7 +1138,10 @@ export async function completeRequest(
   input: {
     notes: string;
     equipmentStatus?: "AVAILABLE" | "MAINTENANCE";
-    unitStatuses?: Array<{ unitId: string; status: "AVAILABLE" | "MAINTENANCE" }>;
+    unitStatuses?: Array<{
+      unitId: string;
+      status: "AVAILABLE" | "MAINTENANCE";
+    }>;
   },
 ) {
   return db.transaction(async (tx) => {
@@ -1155,8 +1151,7 @@ export async function completeRequest(
       .where(eq(resourceRequest.id, requestId))
       .limit(1)
       .for("update");
-    if (!request)
-      throw new ApiError(404, "NOT_FOUND", "Request not found.");
+    if (!request) throw new ApiError(404, "NOT_FOUND", "Request not found.");
     if (!["RETURNED", "ACTIVE", "OVERDUE"].includes(request.status))
       throw new ApiError(
         409,
@@ -1198,10 +1193,7 @@ export async function completeRequest(
                 toolAsset,
                 eq(toolAsset.id, issueTransaction.toolAssetId),
               )
-              .innerJoin(
-                toolType,
-                eq(toolType.id, toolAsset.toolTypeId),
-              )
+              .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
               .leftJoin(
                 returnTransaction,
                 eq(returnTransaction.issueTransactionId, issueTransaction.id),
@@ -1637,7 +1629,11 @@ export async function createRequest(userId: string, input: CreateRequestInput) {
       .from(user)
       .where(eq(user.id, userId))
       .limit(1);
-    const requestActivity = await ensureDefaultActivity(tx, userId, input.title);
+    const requestActivity = await ensureDefaultActivity(
+      tx,
+      userId,
+      input.title,
+    );
     const code = await requestCode(tx);
     const [created] = await tx
       .insert(resourceRequest)
@@ -1740,8 +1736,7 @@ export async function updateRequest(
       )
       .limit(1)
       .for("update");
-    if (!current)
-      throw new ApiError(404, "NOT_FOUND", "Request not found.");
+    if (!current) throw new ApiError(404, "NOT_FOUND", "Request not found.");
     if (!["PENDING_PLP", "REQUEST_REVISION", "DRAFT"].includes(current.status))
       throw new ApiError(
         409,
@@ -1876,12 +1871,14 @@ export async function cancelRequest(userId: string, requestId: string) {
       )
       .limit(1)
       .for("update");
-    if (!current)
-      throw new ApiError(404, "NOT_FOUND", "Request not found.");
+    if (!current) throw new ApiError(404, "NOT_FOUND", "Request not found.");
     if (
-      !["PENDING_PLP", "REQUEST_REVISION", "APPROVED", "READY_FOR_PICKUP"].includes(
-        current.status,
-      )
+      ![
+        "PENDING_PLP",
+        "REQUEST_REVISION",
+        "APPROVED",
+        "READY_FOR_PICKUP",
+      ].includes(current.status)
     )
       throw new ApiError(
         409,
@@ -2085,7 +2082,10 @@ export async function reviewRequest(
                 status: "REJECTED",
                 rejectionReason: note || "Tidak memenuhi syarat.",
               }
-            : { status: "REQUEST_REVISION", revisionNote: note || "Perlu revisi." },
+            : {
+                status: "REQUEST_REVISION",
+                revisionNote: note || "Perlu revisi.",
+              },
         )
         .where(eq(resourceRequest.id, requestId))
         .returning({ code: resourceRequest.code });
@@ -2145,10 +2145,7 @@ export async function reviewRequest(
           kind: sql<"TOOL">`'TOOL'`,
         })
         .from(toolRequestItem)
-        .innerJoin(
-          toolUnit,
-          eq(toolUnit.id, toolRequestItem.toolUnitId),
-        )
+        .innerJoin(toolUnit, eq(toolUnit.id, toolRequestItem.toolUnitId))
         .where(eq(toolRequestItem.requestId, requestId))
         .for("update"),
     ]);
@@ -2293,8 +2290,7 @@ export async function issueRequest(actorId: string, requestId: string) {
       .where(eq(resourceRequest.id, requestId))
       .limit(1)
       .for("update");
-    if (!request)
-      throw new ApiError(404, "NOT_FOUND", "Request not found.");
+    if (!request) throw new ApiError(404, "NOT_FOUND", "Request not found.");
     if (!["APPROVED", "READY_FOR_PICKUP", "OVERDUE"].includes(request.status))
       throw new ApiError(409, "INVALID_STATE", "Request belum siap di-issue.");
 
@@ -2329,10 +2325,7 @@ export async function issueRequest(actorId: string, requestId: string) {
           kind: sql<"TOOL">`'TOOL'`,
         })
         .from(reservation)
-        .innerJoin(
-          toolAsset,
-          eq(toolAsset.id, reservation.toolAssetId),
-        )
+        .innerJoin(toolAsset, eq(toolAsset.id, reservation.toolAssetId))
         .where(
           and(
             eq(reservation.requestId, requestId),
@@ -2480,8 +2473,7 @@ export async function returnRequest(
       .where(eq(resourceRequest.id, requestId))
       .limit(1)
       .for("update");
-    if (!request)
-      throw new ApiError(404, "NOT_FOUND", "Request not found.");
+    if (!request) throw new ApiError(404, "NOT_FOUND", "Request not found.");
     if (request.status !== "ACTIVE" && request.status !== "OVERDUE")
       throw new ApiError(409, "INVALID_STATE", "Request belum aktif.");
 
@@ -2524,14 +2516,8 @@ export async function returnRequest(
           kind: sql<"TOOL">`'TOOL'`,
         })
         .from(issueTransaction)
-        .innerJoin(
-          toolAsset,
-          eq(toolAsset.id, issueTransaction.toolAssetId),
-        )
-        .innerJoin(
-          toolType,
-          eq(toolType.id, toolAsset.toolTypeId),
-        )
+        .innerJoin(toolAsset, eq(toolAsset.id, issueTransaction.toolAssetId))
+        .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
         .leftJoin(
           returnTransaction,
           eq(returnTransaction.issueTransactionId, issueTransaction.id),
@@ -2712,15 +2698,21 @@ export async function loadReservations(
       requestCode: resourceRequest.code,
       requestTitle: resourceRequest.title,
       requestStatus: resourceRequest.status,
-      classification: sql<"INSTRUMENT" | "TOOL">`CASE WHEN ${instrumentAsset.id} IS NOT NULL THEN 'INSTRUMENT' ELSE 'TOOL' END`,
+      classification: sql<
+        "INSTRUMENT" | "TOOL"
+      >`CASE WHEN ${instrumentAsset.id} IS NOT NULL THEN 'INSTRUMENT' ELSE 'TOOL' END`,
       supervisorName: resourceRequest.supervisorName,
       fieldPicName: resourceRequest.fieldPicName,
       unitCode: sql<string>`COALESCE(${instrumentUnit.code}, ${toolUnit.code})`,
       unitLabel: sql<string>`COALESCE(${instrumentUnit.label}, ${toolUnit.label})`,
       assetCode: sql<string>`COALESCE(${instrumentAsset.assetCode}, ${toolAsset.assetCode})`,
       assetName: sql<string>`COALESCE(${instrumentType.name}, ${toolType.name})`,
-      assetImageMediaId: sql<string | null>`COALESCE(${instrumentAsset.imageMediaId}, ${toolAsset.imageMediaId})`,
-      typeImageMediaId: sql<string | null>`COALESCE(${instrumentType.imageMediaId}, ${toolType.imageMediaId})`,
+      assetImageMediaId: sql<
+        string | null
+      >`COALESCE(${instrumentAsset.imageMediaId}, ${toolAsset.imageMediaId})`,
+      typeImageMediaId: sql<
+        string | null
+      >`COALESCE(${instrumentType.imageMediaId}, ${toolType.imageMediaId})`,
       roomCode: sql<string>`COALESCE(${instrumentRoom.code}, ${toolRoom.code})`,
       roomName: sql<string>`COALESCE(${instrumentRoom.name}, ${toolRoom.name})`,
     })
@@ -2740,18 +2732,9 @@ export async function loadReservations(
       eq(instrumentType.id, instrumentAsset.instrumentTypeId),
     )
     .leftJoin(instrumentRoom, eq(instrumentRoom.id, instrumentAsset.roomId))
-    .leftJoin(
-      toolUnit,
-      eq(toolUnit.id, reservation.toolUnitId),
-    )
-    .leftJoin(
-      toolAsset,
-      eq(toolAsset.id, reservation.toolAssetId),
-    )
-    .leftJoin(
-      toolType,
-      eq(toolType.id, toolAsset.toolTypeId),
-    )
+    .leftJoin(toolUnit, eq(toolUnit.id, reservation.toolUnitId))
+    .leftJoin(toolAsset, eq(toolAsset.id, reservation.toolAssetId))
+    .leftJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
     .leftJoin(toolRoom, eq(toolRoom.id, toolAsset.roomId))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(asc(reservation.startAt))
@@ -2836,8 +2819,9 @@ export async function loadReservations(
         imageMediaId: item.imageMediaId ?? null,
       })),
     issuedAt:
-      issueRows.find((item) => item.requestId === row.requestId)?.issuedAt.toISOString() ??
-      null,
+      issueRows
+        .find((item) => item.requestId === row.requestId)
+        ?.issuedAt.toISOString() ?? null,
     returnedAt:
       returnRows
         .filter((item) => item.requestId === row.requestId)

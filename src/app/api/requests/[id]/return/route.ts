@@ -4,10 +4,7 @@ import {
   scopeForSession,
 } from "@/services/access-scope.service";
 import { returnRequest } from "@/services/requests.service";
-import {
-  requestIdSchema,
-  returnRequestSchema,
-} from "@/validators/requests";
+import { requestIdSchema, returnRequestSchema } from "@/validators/requests";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ id: string }> };

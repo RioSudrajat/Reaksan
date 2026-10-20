@@ -286,7 +286,8 @@ export function WorkspaceShell({
                       title={collapsed ? item.label : undefined}
                       className={cn(
                         "group flex min-h-11 items-center gap-3 rounded-xl px-3 text-[13px] font-medium text-[#64748B] transition hover:bg-[#F8F9FA] hover:text-[#121826] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]",
-                        isActive && "bg-[#FEF7E6] font-semibold text-[#121826] border border-[#FDE68A]/70 shadow-xs",
+                        isActive &&
+                          "bg-[#FEF7E6] font-semibold text-[#121826] border border-[#FDE68A]/70 shadow-xs",
                         collapsed && "lg:justify-center lg:px-0",
                       )}
                       aria-current={isActive ? "page" : undefined}
@@ -301,7 +302,9 @@ export function WorkspaceShell({
                         strokeWidth={isActive ? 2.3 : 1.8}
                         aria-hidden="true"
                       />
-                      <span className={cn("truncate", collapsed && "lg:hidden")}>
+                      <span
+                        className={cn("truncate", collapsed && "lg:hidden")}
+                      >
                         {item.label}
                       </span>
                       {typeof item.badge === "number" && item.badge > 0 && (
@@ -400,7 +403,10 @@ export function WorkspaceShell({
               ref={searchBoxRef}
               className="relative hidden md:flex items-center flex-1 max-w-sm lg:max-w-md mx-2 lg:mx-4"
             >
-              <form onSubmit={handleGlobalSearchSubmit} className="relative w-full">
+              <form
+                onSubmit={handleGlobalSearchSubmit}
+                className="relative w-full"
+              >
                 <Search
                   className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400"
                   aria-hidden="true"

@@ -42,7 +42,9 @@ export function FilterBar({
     if (
       target instanceof HTMLSelectElement ||
       (target instanceof HTMLInputElement &&
-        ["date", "datetime-local", "radio", "checkbox", "month"].includes(target.type))
+        ["date", "datetime-local", "radio", "checkbox", "month"].includes(
+          target.type,
+        ))
     ) {
       e.currentTarget.requestSubmit();
     }
@@ -67,7 +69,9 @@ export function FilterBar({
           disabled={isPending}
           className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA] disabled:opacity-70"
         >
-          {isPending && <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />}
+          {isPending && (
+            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+          )}
           {isPending ? "Memuat..." : "Terapkan filter"}
         </button>
         {clearHref && activeCount > 0 && (

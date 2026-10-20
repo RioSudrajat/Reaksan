@@ -10,9 +10,21 @@ const ACCOUNTS = [
   { email: "admin@reaksan.local", name: "Admin Reaksan", role: "admin" },
   { email: "plp@reaksan.local", name: "Koordinator PLP", role: "plp" },
   { email: "plp.organik@reaksan.local", name: "PLP Lab Organik", role: "plp" },
-  { email: "plp.anorganik@reaksan.local", name: "PLP Lab Anorganik", role: "plp" },
-  { email: "plp.biokimia@reaksan.local", name: "PLP Lab Biokimia", role: "plp" },
-  { email: "plp.analitik@reaksan.local", name: "PLP Lab Analitik", role: "plp" },
+  {
+    email: "plp.anorganik@reaksan.local",
+    name: "PLP Lab Anorganik",
+    role: "plp",
+  },
+  {
+    email: "plp.biokimia@reaksan.local",
+    name: "PLP Lab Biokimia",
+    role: "plp",
+  },
+  {
+    email: "plp.analitik@reaksan.local",
+    name: "PLP Lab Analitik",
+    role: "plp",
+  },
   { email: "plp.fisik@reaksan.local", name: "PLP Lab Fisik", role: "plp" },
   { email: "student1@reaksan.local", name: "Mahasiswa Satu", role: "user" },
   { email: "student2@reaksan.local", name: "Mahasiswa Dua", role: "user" },
@@ -67,7 +79,14 @@ async function upsertCredential(client, userId) {
   );
 }
 
-async function upsertAssignment(client, userId, scopeType, scopeId, assignmentType, notes) {
+async function upsertAssignment(
+  client,
+  userId,
+  scopeType,
+  scopeId,
+  assignmentType,
+  notes,
+) {
   const existing = await client.query(
     "SELECT id FROM assignment WHERE user_id = $1 AND scope_type = $2 AND scope_id = $3 AND assignment_type = $4",
     [userId, scopeType, scopeId, assignmentType],
@@ -119,7 +138,13 @@ try {
 
   // Multi-lab / supervisor PLP
   if (userIdsByEmail["plp@reaksan.local"]) {
-    for (const roomCode of ["lab-organik", "lab-anorganik", "lab-biokimia", "lab-analitik", "lab-fisik"]) {
+    for (const roomCode of [
+      "lab-organik",
+      "lab-anorganik",
+      "lab-biokimia",
+      "lab-analitik",
+      "lab-fisik",
+    ]) {
       await upsertAssignment(
         client,
         userIdsByEmail["plp@reaksan.local"],
@@ -134,7 +159,9 @@ try {
   await client.query("COMMIT");
   console.log(
     `Seeded ${ACCOUNTS.length} demo accounts. Password source: ${
-      process.env.SEED_ACCOUNT_PASSWORD ? "SEED_ACCOUNT_PASSWORD" : "development default"
+      process.env.SEED_ACCOUNT_PASSWORD
+        ? "SEED_ACCOUNT_PASSWORD"
+        : "development default"
     }.`,
   );
   for (const account of ACCOUNTS) {

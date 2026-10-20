@@ -113,17 +113,27 @@ export function OpnameReconcileAction({
               <p className="font-semibold">Ringkasan penyesuaian:</p>
               <ul className="mt-1.5 list-inside list-disc space-y-1 text-[#64748B]">
                 <li>
-                  <strong className="text-[#121826]">{batchesWithDifference}</strong> batch akan disesuaikan kuantitas fisiknya.
+                  <strong className="text-[#121826]">
+                    {batchesWithDifference}
+                  </strong>{" "}
+                  batch akan disesuaikan kuantitas fisiknya.
                 </li>
                 <li>
-                  Total selisih positif: <strong className="text-[#16A34A]">+{positiveTotal.toFixed(3)}</strong>
+                  Total selisih positif:{" "}
+                  <strong className="text-[#16A34A]">
+                    +{positiveTotal.toFixed(3)}
+                  </strong>
                 </li>
                 <li>
-                  Total selisih negatif: <strong className="text-[#DC2626]">{negativeTotal.toFixed(3)}</strong>
+                  Total selisih negatif:{" "}
+                  <strong className="text-[#DC2626]">
+                    {negativeTotal.toFixed(3)}
+                  </strong>
                 </li>
               </ul>
               <p className="mt-2 text-[11px] text-[#64748B]">
-                Transaksi mutasi stok bertipe <code>ADJUST</code> akan dicatat secara otomatis untuk audit trail.
+                Transaksi mutasi stok bertipe <code>ADJUST</code> akan dicatat
+                secara otomatis untuk audit trail.
               </p>
             </div>
 

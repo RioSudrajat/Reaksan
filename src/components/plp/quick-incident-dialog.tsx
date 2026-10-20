@@ -26,7 +26,9 @@ export function QuickIncidentDialog({
   const [title, setTitle] = useState("");
   const [roomCode, setRoomCode] = useState(defaultRoomCode);
   const [equipmentCode, setEquipmentCode] = useState(defaultEquipmentCode);
-  const [severity, setSeverity] = useState<"LOW" | "MEDIUM" | "HIGH" | "CRITICAL">("MEDIUM");
+  const [severity, setSeverity] = useState<
+    "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+  >("MEDIUM");
   const [description, setDescription] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +60,9 @@ export function QuickIncidentDialog({
         body: {
           title: title.trim(),
           roomCode: roomCode.trim() ? roomCode.trim().toUpperCase() : undefined,
-          equipmentCode: equipmentCode.trim() ? equipmentCode.trim().toUpperCase() : undefined,
+          equipmentCode: equipmentCode.trim()
+            ? equipmentCode.trim().toUpperCase()
+            : undefined,
           requestId: defaultRequestId || undefined,
           severity,
           description: description.trim(),
@@ -92,7 +96,10 @@ export function QuickIncidentDialog({
         }}
         className={triggerClasses}
       >
-        <AlertTriangle className="size-4 shrink-0 text-current" aria-hidden="true" />
+        <AlertTriangle
+          className="size-4 shrink-0 text-current"
+          aria-hidden="true"
+        />
         {triggerLabel}
       </button>
 
@@ -184,20 +191,31 @@ export function QuickIncidentDialog({
                 <select
                   value={severity}
                   onChange={(e) =>
-                    setSeverity(e.target.value as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL")
+                    setSeverity(
+                      e.target.value as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
+                    )
                   }
                   className={controlClass + " mt-1"}
                 >
-                  <option value="LOW">LOW · Gangguan ringan, masih dapat beroperasi</option>
-                  <option value="MEDIUM">MEDIUM · Perlu perhatian, fungsi terbatas</option>
-                  <option value="HIGH">HIGH · Rusak, tidak dapat digunakan</option>
-                  <option value="CRITICAL">CRITICAL · Bahaya keselamatan / mendesak</option>
+                  <option value="LOW">
+                    LOW · Gangguan ringan, masih dapat beroperasi
+                  </option>
+                  <option value="MEDIUM">
+                    MEDIUM · Perlu perhatian, fungsi terbatas
+                  </option>
+                  <option value="HIGH">
+                    HIGH · Rusak, tidak dapat digunakan
+                  </option>
+                  <option value="CRITICAL">
+                    CRITICAL · Bahaya keselamatan / mendesak
+                  </option>
                 </select>
               </div>
 
               <div>
                 <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#64748B]">
-                  Deskripsi & Kronologi <span className="text-[#DC2626]">*</span>
+                  Deskripsi & Kronologi{" "}
+                  <span className="text-[#DC2626]">*</span>
                 </label>
                 <textarea
                   required

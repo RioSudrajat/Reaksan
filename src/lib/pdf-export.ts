@@ -103,7 +103,10 @@ export async function exportElementToPdf(
           clonedTargetEl.style.border = "none";
           clonedTargetEl.style.boxShadow = "none";
 
-          const containerWidth = Math.max(1024, clonedTargetEl.offsetWidth || 1100);
+          const containerWidth = Math.max(
+            1024,
+            clonedTargetEl.offsetWidth || 1100,
+          );
           clonedTargetEl.style.width = `${containerWidth}px`;
           clonedTargetEl.style.maxWidth = `${containerWidth}px`;
 
@@ -170,7 +173,8 @@ export async function exportElementToPdf(
             let chosenTargetSigTop: number;
             if (spaceLeftOnCurrent >= neededHeight) {
               // Fits on the current page: anchor cleanly at the bottom of this page
-              chosenTargetSigTop = currentPageBottom - sigHeight - bottomPadding;
+              chosenTargetSigTop =
+                currentPageBottom - sigHeight - bottomPadding;
               totalPages = currentPage + 1;
             } else {
               // Does not fit on current page: push to next page and anchor at its bottom
@@ -187,7 +191,10 @@ export async function exportElementToPdf(
           } else {
             const currentHeight =
               clonedTargetEl.scrollHeight || clonedTargetEl.offsetHeight;
-            totalPages = Math.max(1, Math.ceil(currentHeight / pageHeightInDom));
+            totalPages = Math.max(
+              1,
+              Math.ceil(currentHeight / pageHeightInDom),
+            );
           }
 
           // Explicitly clamp the DOM container height to exactly totalPages * pageHeightInDom
@@ -256,10 +263,15 @@ export async function exportElementToPdf(
       }
     }
 
-    const safeFilename = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
+    const safeFilename = filename.endsWith(".pdf")
+      ? filename
+      : `${filename}.pdf`;
     pdf.save(safeFilename);
   } catch (error) {
-    console.error("Failed to generate PDF via canvas, falling back to window.print():", error);
+    console.error(
+      "Failed to generate PDF via canvas, falling back to window.print():",
+      error,
+    );
     window.print();
   } finally {
     element.style.backgroundColor = originalBackground;

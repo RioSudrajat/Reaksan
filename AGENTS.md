@@ -78,24 +78,31 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 <!-- END:nextjs-agent-rules -->
 
 <!-- antislop:start -->
+
 ## antislop
+
 For UI, copy, people, mobile layout, or code comments work, read `docs/DESIGN.md` for visual direction, then `.agents/skills/antislop/SKILL.md` (core) and the skill for the task:
+
 - UI / visual: `.agents/skills/antislop-ui/SKILL.md`
 - Copy & text: `.agents/skills/antislop-copywriting/SKILL.md`
 - People: `.agents/skills/antislop-human/SKILL.md`
 - Mobile / responsive: `.agents/skills/antislop-layoutmobile/SKILL.md`
 - Code comments: `.agents/skills/antislop-code/SKILL.md`
-Usage mode chosen by the user: DURING (apply the rules while working, finish with the Delivery Gate).
+  Usage mode chosen by the user: DURING (apply the rules while working, finish with the Delivery Gate).
+
 <!-- antislop:end -->
 
 <!-- impeccable:start -->
+
 ## impeccable
+
 For frontend UI/UX craft, architectural shaping, heuristic evaluation, polishing, hardening, and anti-pattern scanning, consult `.agents/skills/impeccable/SKILL.md` and read `reference/craft-floor.md` before UI edits:
+
 - Planning / Architecture: `shape [feature]` (`reference/shape.md`)
 - Quality & A11y Audit: `audit [target]` (`reference/audit.md`)
 - Heuristic Review: `critique [target]` (`reference/critique.md`)
 - Polish & Consistency: `polish [target]` (`reference/polish.md`)
 - Resilience & States: `harden [target]` (`reference/harden.md`)
 - Anti-pattern scan: `.\.agents\skills\impeccable\scripts\impeccable.cmd detect <file-or-dir>`
-<!-- impeccable:end -->
 
+<!-- impeccable:end -->

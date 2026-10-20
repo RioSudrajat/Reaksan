@@ -17,9 +17,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   return { title: `Instrumen ${assetId} · Reaksan` };
 }
 
-export default async function StudentEquipmentDetailPage({
-  params,
-}: Params) {
+export default async function StudentEquipmentDetailPage({ params }: Params) {
   const { assetId } = await params;
   const { user } = await requireSession();
   const [rooms, equipment, materials] = await Promise.all([

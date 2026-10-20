@@ -21,11 +21,15 @@ export function POST(request: Request) {
       windowMs: 60_000,
       identifier: session.user.id,
     });
-    const userRoles = session.user.role ? session.user.role.split(",").map((r) => r.trim()) : [];
+    const userRoles = session.user.role
+      ? session.user.role.split(",").map((r) => r.trim())
+      : [];
     const allowed =
       (await hasPermission(session.user.id, { equipment: ["manage-any"] })) ||
       (await hasPermission(session.user.id, { materials: ["manage-any"] })) ||
-      (await hasPermission(session.user.id, { configuration: ["manage-any"] })) ||
+      (await hasPermission(session.user.id, {
+        configuration: ["manage-any"],
+      })) ||
       (await hasPermission(session.user.id, { inventory: ["manage-any"] })) ||
       (await hasPermission(session.user.id, { plp: ["view"] })) ||
       userRoles.includes("admin") ||

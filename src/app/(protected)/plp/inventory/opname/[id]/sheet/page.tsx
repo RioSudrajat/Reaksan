@@ -41,7 +41,9 @@ export default async function OpnameSheetPage({
 
   // Summary calculations
   const totalEntries = session.entries.length;
-  const entriesWithDiff = session.entries.filter((e) => Math.abs(e.difference) > 1e-4);
+  const entriesWithDiff = session.entries.filter(
+    (e) => Math.abs(e.difference) > 1e-4,
+  );
   const matchedEntries = totalEntries - entriesWithDiff.length;
   const positiveDiffTotal = session.entries
     .filter((e) => e.difference > 1e-4)
@@ -137,12 +139,15 @@ export default async function OpnameSheetPage({
                 BERITA ACARA & LEMBAR HASIL SENSUS STOK OPNAME
               </h1>
               <p className="text-[12px] text-[#6B6B6B]">
-                Laporan inventarisasi fisik, verifikasi baseline sistem, dan rekapitulasi selisih stok laboratorium.
+                Laporan inventarisasi fisik, verifikasi baseline sistem, dan
+                rekapitulasi selisih stok laboratorium.
               </p>
             </div>
             <div className="hidden sm:block text-right">
               <span className="inline-block rounded-lg bg-[#FEF1CC] px-3 py-1 font-mono text-[11px] font-bold text-[#AE7C1D] border border-[#F9B129]/30">
-                {session.status === "COMPLETED" ? "STATUS: SELESAI" : "STATUS: BERJALAN"}
+                {session.status === "COMPLETED"
+                  ? "STATUS: SELESAI"
+                  : "STATUS: BERJALAN"}
               </span>
             </div>
           </div>
@@ -163,7 +168,8 @@ export default async function OpnameSheetPage({
               </span>
               <span className="text-[#212121]">
                 {formatDate(session.startedAt)}
-                {session.completedAt && ` s/d ${formatDate(session.completedAt)}`}
+                {session.completedAt &&
+                  ` s/d ${formatDate(session.completedAt)}`}
               </span>
             </div>
             <div>
@@ -187,31 +193,48 @@ export default async function OpnameSheetPage({
           {/* Summary Metric Ribbon */}
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5 text-center text-[11px]">
             <div className="rounded-lg border border-[#E1E1E1] bg-white p-2">
-              <span className="block text-[10px] text-[#6B6B6B]">Total Item</span>
+              <span className="block text-[10px] text-[#6B6B6B]">
+                Total Item
+              </span>
               <strong className="text-[14px] font-bold text-[#212121] tabular-nums">
                 {totalEntries}
               </strong>
             </div>
             <div className="rounded-lg border border-[#E1E1E1] bg-white p-2">
-              <span className="block text-[10px] text-[#6B6B6B]">Sesuai (Match)</span>
+              <span className="block text-[10px] text-[#6B6B6B]">
+                Sesuai (Match)
+              </span>
               <strong className="text-[14px] font-bold text-[#16A34A] tabular-nums">
                 {matchedEntries}
               </strong>
             </div>
             <div className="rounded-lg border border-[#E1E1E1] bg-white p-2">
-              <span className="block text-[10px] text-[#6B6B6B]">Berselisih</span>
-              <strong className={cn("text-[14px] font-bold tabular-nums", entriesWithDiff.length > 0 ? "text-[#AE7C1D]" : "text-[#212121]")}>
+              <span className="block text-[10px] text-[#6B6B6B]">
+                Berselisih
+              </span>
+              <strong
+                className={cn(
+                  "text-[14px] font-bold tabular-nums",
+                  entriesWithDiff.length > 0
+                    ? "text-[#AE7C1D]"
+                    : "text-[#212121]",
+                )}
+              >
                 {entriesWithDiff.length}
               </strong>
             </div>
             <div className="rounded-lg border border-[#E1E1E1] bg-white p-2">
-              <span className="block text-[10px] text-[#6B6B6B]">Varian Positif</span>
+              <span className="block text-[10px] text-[#6B6B6B]">
+                Varian Positif
+              </span>
               <strong className="text-[14px] font-bold text-[#16A34A] tabular-nums">
                 {formatSigned(positiveDiffTotal)}
               </strong>
             </div>
             <div className="rounded-lg border border-[#E1E1E1] bg-white p-2">
-              <span className="block text-[10px] text-[#6B6B6B]">Varian Negatif</span>
+              <span className="block text-[10px] text-[#6B6B6B]">
+                Varian Negatif
+              </span>
               <strong className="text-[14px] font-bold text-[#DC2626] tabular-nums">
                 {formatSigned(negativeDiffTotal)}
               </strong>
@@ -260,7 +283,8 @@ export default async function OpnameSheetPage({
               {session.entries.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="p-6 text-center text-[#6B6B6B]">
-                    Tidak ada item fisik atau bahan aktif terdaftar pada ruangan ini.
+                    Tidak ada item fisik atau bahan aktif terdaftar pada ruangan
+                    ini.
                   </td>
                 </tr>
               ) : (
@@ -292,7 +316,9 @@ export default async function OpnameSheetPage({
                       <td className="px-2 py-2.5 text-[#212121]">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-semibold">{entry.materialName}</span>
+                            <span className="font-semibold">
+                              {entry.materialName}
+                            </span>
                             <span className="rounded bg-[#F5F5F5] px-1 py-0.2 text-[9px] font-bold text-[#6B6B6B] border border-[#E1E1E1]">
                               {typeLabel}
                             </span>
@@ -375,28 +401,38 @@ export default async function OpnameSheetPage({
             <div>
               <p className="font-bold">Petugas Pencacah Fisik Lapangan:</p>
               <p className="text-[11px] text-[#6B6B6B] mt-0.5">
-                Telah melakukan pemeriksaan dan penghitungan fisik secara langsung di lokasi.
+                Telah melakukan pemeriksaan dan penghitungan fisik secara
+                langsung di lokasi.
               </p>
               <div className="mt-14 border-t border-dashed border-[#212121] pt-1">
                 <p className="font-semibold">{session.startedByName}</p>
-                <p className="text-[10px] text-[#6B6B6B]">Pranata Laboratorium Pendidikan</p>
+                <p className="text-[10px] text-[#6B6B6B]">
+                  Pranata Laboratorium Pendidikan
+                </p>
               </div>
             </div>
 
             <div>
               <p className="font-bold">Verifikator / Mengetahui:</p>
               <p className="text-[11px] text-[#6B6B6B] mt-0.5">
-                Hasil sensus diverifikasi dan disahkan untuk pembukuan persediaan laboratorium.
+                Hasil sensus diverifikasi dan disahkan untuk pembukuan
+                persediaan laboratorium.
               </p>
               <div className="mt-14 border-t border-dashed border-[#212121] pt-1">
-                <p className="font-semibold">{session.completedByName ?? "Koordinator Laboratorium"}</p>
-                <p className="text-[10px] text-[#6B6B6B]">NIP / Identitas Verifikator Resmi</p>
+                <p className="font-semibold">
+                  {session.completedByName ?? "Koordinator Laboratorium"}
+                </p>
+                <p className="text-[10px] text-[#6B6B6B]">
+                  NIP / Identitas Verifikator Resmi
+                </p>
               </div>
             </div>
           </div>
 
           <div className="mt-6 flex items-center justify-between text-[10px] text-[#6B6B6B] border-t border-[#E1E1E1] pt-2">
-            <span>Dicetak secara resmi melalui Sistem Informasi Reaksan UNPAD</span>
+            <span>
+              Dicetak secara resmi melalui Sistem Informasi Reaksan UNPAD
+            </span>
             <span className="font-mono">Dokumen Referensi: {session.id}</span>
           </div>
         </footer>

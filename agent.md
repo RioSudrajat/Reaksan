@@ -13,12 +13,14 @@ Backend features use API routes, Better Auth session checks, validators, service
 When designing, building, or refining frontend interfaces (pages, dialogs, forms, tables, cards, navigation), always combine **Impeccable** (craft & lifecycle) with **Anti-Slop** (guardrails & anti-pattern filter). Never produce generic, repetitive "AI template" aesthetics.
 
 ### 1. Visual Source of Truth
+
 - Always read and follow [docs/DESIGN.md](docs/DESIGN.md) for brand identity, tokens, typography, and layout rules.
 - **Brand Tokens:** Use Reaksan's core palette (`#F9B129` primary yellow, `#FEF1CC` primary soft, `#212121` ink, `#F5F5F5` canvas, `#FFFFFF` panel surface).
 - **Typography:** Inter for all UI text, Alfa Slab One strictly reserved for the `Reaksan Unpad` wordmark (`src/components/reaksan-logo.tsx`).
 - **Mode:** Reaksan dashboards, PLP inventory tools, and admin interfaces use **Mode Operate** (task-driven, scanability, precise data hierarchy). Landing pages use **Mode Persuade**.
 
 ### 2. Impeccable (Craft, Lifecycle & Evaluation)
+
 - Core skill: [.agents/skills/impeccable/SKILL.md](.agents/skills/impeccable/SKILL.md).
 - Quality floor: Before touching or editing UI code, read [.agents/skills/impeccable/reference/craft-floor.md](.agents/skills/impeccable/reference/craft-floor.md) to adhere to absolute craft standards and quality locks.
 - Key workflows & commands:
@@ -30,6 +32,7 @@ When designing, building, or refining frontend interfaces (pages, dialogs, forms
   - Deterministic Anti-Pattern Detector: Run `.\.agents\skills\impeccable\scripts\impeccable.cmd detect <file-or-dir>` to scan UI code for 61+ design anti-patterns without LLM tokens.
 
 ### 3. Anti-Slop (Quality Guardrails & Anti-AI Filters)
+
 - Core filter: [.agents/skills/antislop/SKILL.md](.agents/skills/antislop/SKILL.md).
 - Apply during implementation:
   - **Visual & UI** ([.agents/skills/antislop-ui/SKILL.md](.agents/skills/antislop-ui/SKILL.md)): Ban AI clichés (no gratuitous purple/blue gradients, no floating geometric blobs, no nested cards-inside-cards, no decorative icons with zero semantic function).
@@ -39,9 +42,9 @@ When designing, building, or refining frontend interfaces (pages, dialogs, forms
   - **Code Comments** ([.agents/skills/antislop-code/SKILL.md](.agents/skills/antislop-code/SKILL.md)): Strip obvious/redundant AI comments.
 
 ### 4. Frontend Execution Checklist
+
 1. **Check Design System:** Verify color tokens and components in [docs/DESIGN.md](docs/DESIGN.md).
 2. **Reuse Existing UI:** Use primitives in `src/components/ui/` with `cn()` utility.
 3. **Build Fully:** Implement empty states, loading states, error states, and responsive breakpoints (mobile and desktop).
 4. **Audit & Detect:** Run `.\.agents\skills\impeccable\scripts\impeccable.cmd detect <target>` to eliminate anti-patterns.
 5. **Delivery Gate:** Confirm contrast, keyboard navigation, and layout stability before finalizing.
-

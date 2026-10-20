@@ -10,11 +10,18 @@ import {
   type PermissionMap,
   type Permissions,
 } from "@/lib/permissions";
-import { editableResources, roleDescriptions, roleLabels } from "@/lib/permission-copy";
+import {
+  editableResources,
+  roleDescriptions,
+  roleLabels,
+} from "@/lib/permission-copy";
 import { writeAudit } from "@/services/audit.service";
 
 const CACHE_TTL_MS = 5_000;
-const cache = new Map<string, { permissions: Permissions; expiresAt: number }>();
+const cache = new Map<
+  string,
+  { permissions: Permissions; expiresAt: number }
+>();
 
 type PermissionRecord = Record<string, string[]>;
 
@@ -47,7 +54,9 @@ export function invalidateRolePermissionCache(roleName?: string) {
   else cache.clear();
 }
 
-export async function getRolePermissions(roleName: string): Promise<Permissions> {
+export async function getRolePermissions(
+  roleName: string,
+): Promise<Permissions> {
   // The administrator role always uses the compile-time full set so no stored
   // row or edit can lock everyone out of account management.
   if (roleName === "admin") return defaultPermissionsFor("admin");
@@ -181,7 +190,9 @@ export async function listRoleAccess(): Promise<RoleAccessSummary[]> {
       permissions,
       defaultPermissions: defaults,
       customized:
-        name !== "admin" && row !== undefined && !samePermissions(permissions, defaults),
+        name !== "admin" &&
+        row !== undefined &&
+        !samePermissions(permissions, defaults),
       editable: name !== "admin",
       updatedAt: row?.updatedAt?.toISOString() ?? null,
     };

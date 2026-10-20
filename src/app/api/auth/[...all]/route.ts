@@ -1,6 +1,6 @@
 import { toNextJsHandler } from "better-auth/next-js";
 import { auth } from "@/lib/auth";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, isAutomatedTestEnv } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -9,7 +9,7 @@ const handler = toNextJsHandler(auth);
 export const GET = handler.GET;
 
 export async function POST(request: Request) {
-  if (process.env.NODE_ENV !== "test") {
+  if (!isAutomatedTestEnv()) {
     const rl = checkRateLimit(request, {
       namespace: "auth:post",
       limit: 20,

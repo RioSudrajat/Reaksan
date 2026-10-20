@@ -29,8 +29,12 @@ export function StockAdjustDialog({
   const [error, setError] = useState<string | null>(null);
 
   const parsedAmount = Number(amount) || 0;
-  const deltaQuantity = mode === "decrease" ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
-  const projectedQuantity = Math.max(0, Math.round((currentQuantity + deltaQuantity) * 1000) / 1000);
+  const deltaQuantity =
+    mode === "decrease" ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
+  const projectedQuantity = Math.max(
+    0,
+    Math.round((currentQuantity + deltaQuantity) * 1000) / 1000,
+  );
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -39,7 +43,9 @@ export function StockAdjustDialog({
       return;
     }
     if (mode === "decrease" && parsedAmount > currentQuantity) {
-      setError(`Pengurangan melebihi stok fisik saat ini (${currentQuantity} ${unit}).`);
+      setError(
+        `Pengurangan melebihi stok fisik saat ini (${currentQuantity} ${unit}).`,
+      );
       return;
     }
     setPending(true);
@@ -96,7 +102,10 @@ export function StockAdjustDialog({
                 <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#64748B]">
                   {lotNumber ?? "Batch tanpa lot"} · {roomName}
                 </p>
-                <h3 id="stock-adjust-title" className="text-[16px] font-bold text-[#121826]">
+                <h3
+                  id="stock-adjust-title"
+                  className="text-[16px] font-bold text-[#121826]"
+                >
                   Penyesuaian Stok Batch
                 </h3>
               </div>
@@ -120,7 +129,9 @@ export function StockAdjustDialog({
                 </div>
                 {parsedAmount > 0 && (
                   <div className="mt-2 flex justify-between border-t border-[#E5E7EB] pt-2">
-                    <span className="text-[#64748B]">Perkiraan Setelah Koreksi</span>
+                    <span className="text-[#64748B]">
+                      Perkiraan Setelah Koreksi
+                    </span>
                     <span
                       className={
                         "font-bold " +
@@ -129,7 +140,8 @@ export function StockAdjustDialog({
                           : "text-[#16A34A]")
                       }
                     >
-                      {projectedQuantity} {unit} ({deltaQuantity > 0 ? `+${deltaQuantity}` : deltaQuantity})
+                      {projectedQuantity} {unit} (
+                      {deltaQuantity > 0 ? `+${deltaQuantity}` : deltaQuantity})
                     </span>
                   </div>
                 )}
@@ -204,7 +216,9 @@ export function StockAdjustDialog({
                   <select
                     id="adjust-type"
                     value={type}
-                    onChange={(e) => setType(e.target.value as "ADJUST" | "EXPIRE")}
+                    onChange={(e) =>
+                      setType(e.target.value as "ADJUST" | "EXPIRE")
+                    }
                     className={controlClass + " mt-1"}
                   >
                     <option value="ADJUST">ADJUST · Koreksi / Kerusakan</option>

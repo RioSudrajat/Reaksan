@@ -27,7 +27,9 @@ export function ReturnQueue({ requests }: { requests: FulfillmentRequest[] }) {
   const [condition, setCondition] = useState("GOOD");
   const [notes, setNotes] = useState("");
   const [inspection, setInspection] = useState("AVAILABLE");
-  const [unitStatuses, setUnitStatuses] = useState<Record<string, "AVAILABLE" | "MAINTENANCE">>({});
+  const [unitStatuses, setUnitStatuses] = useState<
+    Record<string, "AVAILABLE" | "MAINTENANCE">
+  >({});
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -35,8 +37,14 @@ export function ReturnQueue({ requests }: { requests: FulfillmentRequest[] }) {
   const filtered = requests.filter((r) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    const eqText = r.equipment.map((e) => `${e.unitCode} ${e.assetName}`).join(" ").toLowerCase();
-    const matText = r.materials.map((m) => m.name).join(" ").toLowerCase();
+    const eqText = r.equipment
+      .map((e) => `${e.unitCode} ${e.assetName}`)
+      .join(" ")
+      .toLowerCase();
+    const matText = r.materials
+      .map((m) => m.name)
+      .join(" ")
+      .toLowerCase();
     return (
       r.code.toLowerCase().includes(q) ||
       r.actorName.toLowerCase().includes(q) ||
@@ -71,7 +79,10 @@ export function ReturnQueue({ requests }: { requests: FulfillmentRequest[] }) {
     }
   }
 
-  async function complete(request: FulfillmentRequest, withInspection: boolean) {
+  async function complete(
+    request: FulfillmentRequest,
+    withInspection: boolean,
+  ) {
     setPendingId(request.id);
     setError("");
     setSuccess("");
@@ -81,7 +92,10 @@ export function ReturnQueue({ requests }: { requests: FulfillmentRequest[] }) {
         const unitId = item?.id ?? item?.unitId;
         return unitId ? { unitId, status } : null;
       })
-      .filter((x): x is { unitId: string; status: "AVAILABLE" | "MAINTENANCE" } => Boolean(x));
+      .filter(
+        (x): x is { unitId: string; status: "AVAILABLE" | "MAINTENANCE" } =>
+          Boolean(x),
+      );
 
     try {
       await apiRequest(`/api/plp/requests/${request.id}/complete`, {
@@ -152,7 +166,8 @@ export function ReturnQueue({ requests }: { requests: FulfillmentRequest[] }) {
 
       {filtered.length === 0 ? (
         <div className="rounded-xl border border-[#E5E7EB] bg-[#F8F9FA] p-6 text-center text-[12px] text-[#64748B]">
-          Tidak ada pengembalian yang cocok dengan pencarian &ldquo;{search}&rdquo;.
+          Tidak ada pengembalian yang cocok dengan pencarian &ldquo;{search}
+          &rdquo;.
         </div>
       ) : (
         <ul className="space-y-3">
@@ -173,7 +188,10 @@ export function ReturnQueue({ requests }: { requests: FulfillmentRequest[] }) {
               Object.values(unitStatuses).some((s) => s === "MAINTENANCE");
 
             return (
-              <li key={request.id} className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-xs">
+              <li
+                key={request.id}
+                className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-xs"
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[13px] font-semibold text-[#121826]">
@@ -316,14 +334,16 @@ export function ReturnQueue({ requests }: { requests: FulfillmentRequest[] }) {
                       </label>
                     </div>
 
-                    {(condition === "DAMAGED" || condition === "MINOR_ISSUE") && (
+                    {(condition === "DAMAGED" ||
+                      condition === "MINOR_ISSUE") && (
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-[#FECACA] bg-[#FEF2F2] p-3.5">
                         <div className="min-w-0">
                           <p className="text-[12px] font-semibold text-[#DC2626]">
                             Kondisi terindikasi ada masalah/kerusakan
                           </p>
                           <p className="text-[11px] text-[#64748B]">
-                            Buat tiket insiden agar unit langsung tercatat dan dapat ditindaklanjuti.
+                            Buat tiket insiden agar unit langsung tercatat dan
+                            dapat ditindaklanjuti.
                           </p>
                         </div>
                         <QuickIncidentDialog
@@ -363,11 +383,17 @@ export function ReturnQueue({ requests }: { requests: FulfillmentRequest[] }) {
                         </span>
                         <select
                           value={inspection}
-                          onChange={(event) => setInspection(event.target.value)}
+                          onChange={(event) =>
+                            setInspection(event.target.value)
+                          }
                           className={controlClass}
                         >
-                          <option value="AVAILABLE">AVAILABLE · siap dipakai</option>
-                          <option value="MAINTENANCE">MAINTENANCE · perlu perbaikan</option>
+                          <option value="AVAILABLE">
+                            AVAILABLE · siap dipakai
+                          </option>
+                          <option value="MAINTENANCE">
+                            MAINTENANCE · perlu perbaikan
+                          </option>
                         </select>
                       </label>
                       <label className="flex flex-col gap-1.5">
@@ -398,17 +424,24 @@ export function ReturnQueue({ requests }: { requests: FulfillmentRequest[] }) {
                                   {item.unitCode} · {item.assetName}
                                 </span>
                                 <select
-                                  value={unitStatuses[item.unitCode] ?? inspection}
+                                  value={
+                                    unitStatuses[item.unitCode] ?? inspection
+                                  }
                                   onChange={(e) =>
                                     setUnitStatuses((prev) => ({
                                       ...prev,
-                                      [item.unitCode]: e.target.value as "AVAILABLE" | "MAINTENANCE",
+                                      [item.unitCode]: e.target.value as
+                                        "AVAILABLE" | "MAINTENANCE",
                                     }))
                                   }
                                   className="rounded-lg border border-[#E5E7EB] bg-white px-2.5 py-1 text-[11px] text-[#121826] focus:border-[#FDB913] focus:outline-[#FDB913]"
                                 >
-                                  <option value="AVAILABLE">AVAILABLE (Siap)</option>
-                                  <option value="MAINTENANCE">MAINTENANCE (Perlu dicek)</option>
+                                  <option value="AVAILABLE">
+                                    AVAILABLE (Siap)
+                                  </option>
+                                  <option value="MAINTENANCE">
+                                    MAINTENANCE (Perlu dicek)
+                                  </option>
                                 </select>
                               </div>
                             ))}
@@ -424,7 +457,8 @@ export function ReturnQueue({ requests }: { requests: FulfillmentRequest[] }) {
                             Unit berstatus MAINTENANCE
                           </p>
                           <p className="text-[11px] text-[#64748B]">
-                            Segera buka tiket insiden agar tercatat di antrian perbaikan teknisi.
+                            Segera buka tiket insiden agar tercatat di antrian
+                            perbaikan teknisi.
                           </p>
                         </div>
                         <QuickIncidentDialog

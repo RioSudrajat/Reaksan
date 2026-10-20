@@ -64,7 +64,8 @@ export function PlpScheduleSection({
 }) {
   const [activeMonth, setActiveMonth] = useState(initialMonth);
   const [search, setSearch] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState<StatusFilterOption>("ALL");
+  const [selectedStatus, setSelectedStatus] =
+    useState<StatusFilterOption>("ALL");
 
   const filteredCalendarEvents = useMemo(() => {
     return events.filter((event) =>

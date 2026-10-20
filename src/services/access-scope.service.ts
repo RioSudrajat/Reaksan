@@ -26,9 +26,7 @@ export function invalidateRoomScope(userId?: string) {
 }
 
 export function isAdminRole(role: string | null | undefined) {
-  const roles = (role ?? "")
-    .split(",")
-    .map((value) => value.trim());
+  const roles = (role ?? "").split(",").map((value) => value.trim());
   return roles.some((value) =>
     (ADMIN_ROLES as readonly string[]).includes(value),
   );
@@ -88,14 +86,13 @@ export async function scopeForSession(session: {
 export function assertRoomInScope(scope: RoomScope, roomCode: string) {
   if (scope.all) return;
   if (!scope.roomCodes.includes(roomCode))
-    throw new ApiError(
-      404,
-      "NOT_FOUND",
-      "Lab ini di luar penugasan Anda.",
-    );
+    throw new ApiError(404, "NOT_FOUND", "Lab ini di luar penugasan Anda.");
 }
 
-export async function assertRequestInScope(scope: RoomScope, requestId: string) {
+export async function assertRequestInScope(
+  scope: RoomScope,
+  requestId: string,
+) {
   if (scope.all) return;
   const [row] = await db
     .select({ roomCode: room.code })
@@ -103,8 +100,7 @@ export async function assertRequestInScope(scope: RoomScope, requestId: string) 
     .innerJoin(room, eq(room.id, resourceRequest.roomId))
     .where(eq(resourceRequest.id, requestId))
     .limit(1);
-  if (!row)
-    throw new ApiError(404, "NOT_FOUND", "Request tidak ditemukan.");
+  if (!row) throw new ApiError(404, "NOT_FOUND", "Request tidak ditemukan.");
   assertRoomInScope(scope, row.roomCode);
 }
 
@@ -115,15 +111,11 @@ export async function assertSessionInScope(scope: RoomScope, roomId: string) {
     .from(room)
     .where(eq(room.id, roomId))
     .limit(1);
-  if (!row)
-    throw new ApiError(404, "NOT_FOUND", "Room tidak ditemukan.");
+  if (!row) throw new ApiError(404, "NOT_FOUND", "Room tidak ditemukan.");
   assertRoomInScope(scope, row.code);
 }
 
-export async function assertOpnameInScope(
-  scope: RoomScope,
-  sessionId: string,
-) {
+export async function assertOpnameInScope(scope: RoomScope, sessionId: string) {
   if (scope.all) return;
   const [row] = await db
     .select({ roomCode: room.code })

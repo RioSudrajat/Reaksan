@@ -47,7 +47,8 @@ export function LabReadinessSideRail({
                 Kesiapan Fasilitas & Stok
               </h2>
               <p className="text-[11px] text-[#6B6B6B]">
-                {maintenanceUnits.length} alat servis · {lowStockMaterials.length} bahan menipis
+                {maintenanceUnits.length} alat servis ·{" "}
+                {lowStockMaterials.length} bahan menipis
               </p>
             </div>
           </div>
@@ -164,8 +165,12 @@ export function LabReadinessSideRail({
                       {mat.name}
                     </p>
                     <p className="text-[10px] text-[#6B6B6B]">
-                      Tersedia: <strong className="text-[#212121]">{mat.available} {mat.unit}</strong>
-                      {mat.minimum !== null && ` · Min: ${mat.minimum} ${mat.unit}`}
+                      Tersedia:{" "}
+                      <strong className="text-[#212121]">
+                        {mat.available} {mat.unit}
+                      </strong>
+                      {mat.minimum !== null &&
+                        ` · Min: ${mat.minimum} ${mat.unit}`}
                     </p>
                   </div>
                   <span

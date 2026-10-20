@@ -11,7 +11,9 @@ import { requirePermission } from "@/lib/session";
 import { listAssignments } from "@/services/admin.service";
 import { listRoleAccess } from "@/services/permissions.service";
 
-export const metadata: Metadata = { title: "Peran & Hak Akses · Admin Reaksan" };
+export const metadata: Metadata = {
+  title: "Peran & Hak Akses · Admin Reaksan",
+};
 
 export default async function AdminRolesPage() {
   await requirePermission({ configuration: ["manage-any"] });
@@ -30,8 +32,7 @@ export default async function AdminRolesPage() {
     role: account.role ?? null,
   }));
   const plpAssignments = assignments.filter(
-    (assignment) =>
-      assignment.assignmentType === "PLP" && assignment.active,
+    (assignment) => assignment.assignmentType === "PLP" && assignment.active,
   );
 
   return (

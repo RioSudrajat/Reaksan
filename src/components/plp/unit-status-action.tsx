@@ -46,7 +46,9 @@ export function UnitStatusAction({
   );
   const [condition, setCondition] = useState<string>(unit.condition ?? "GOOD");
   const [notes, setNotes] = useState<string>(
-    variant === "quick-available" ? "Perbaikan selesai, unit siap digunakan kembali." : (unit.notes ?? ""),
+    variant === "quick-available"
+      ? "Perbaikan selesai, unit siap digunakan kembali."
+      : (unit.notes ?? ""),
   );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);

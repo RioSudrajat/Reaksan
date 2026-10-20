@@ -86,7 +86,9 @@ export function exportScheduleEventsToPdf({
     const facilityText =
       [...equipItems, ...matItems].join("\n") || "Hanya pemakaian ruangan";
 
-    let statusText = (requestStatusLabels[evt.status] || evt.status).toUpperCase();
+    let statusText = (
+      requestStatusLabels[evt.status] || evt.status
+    ).toUpperCase();
     if (evt.status === "OVERDUE") {
       statusText += "\n(Belum Kembali)";
     }
@@ -186,7 +188,9 @@ export function exportScheduleEventsToPdf({
     },
   });
 
-  const finalY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 150;
+  const finalY =
+    (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
+      ?.finalY ?? 150;
   const pageHeight = doc.internal.pageSize.getHeight();
 
   // If there's enough room on the last page for signature block, add it, otherwise add new page
@@ -194,7 +198,7 @@ export function exportScheduleEventsToPdf({
     doc.addPage();
   }
 
-  const sigY = (finalY + 35 > pageHeight - 15 ? 20 : finalY + 12);
+  const sigY = finalY + 35 > pageHeight - 15 ? 20 : finalY + 12;
   const sigX = pageWidth - margin - 65;
 
   doc.setFont("helvetica", "normal");
@@ -261,7 +265,10 @@ export function exportDailyRunSheetToPdf({
 
   const bodyRows = events.map((evt, idx) => {
     const timeRange = `${formatTimeId(evt.startAt)} - ${formatTimeId(evt.endAt)}`;
-    const statusText = (requestStatusLabels[evt.status as keyof typeof requestStatusLabels] || evt.status).toUpperCase();
+    const statusText = (
+      requestStatusLabels[evt.status as keyof typeof requestStatusLabels] ||
+      evt.status
+    ).toUpperCase();
 
     return [
       String(idx + 1),
@@ -276,7 +283,16 @@ export function exportDailyRunSheetToPdf({
   autoTable(doc, {
     startY: 33,
     margin: { left: margin, right: margin, top: 33, bottom: 18 },
-    head: [["No.", "WAKTU", "RUANGAN", "KEGIATAN & PEMINJAM", "ALAT & BAHAN", "STATUS"]],
+    head: [
+      [
+        "No.",
+        "WAKTU",
+        "RUANGAN",
+        "KEGIATAN & PEMINJAM",
+        "ALAT & BAHAN",
+        "STATUS",
+      ],
+    ],
     body: bodyRows,
     theme: "grid",
     headStyles: {

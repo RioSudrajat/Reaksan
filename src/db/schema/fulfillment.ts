@@ -45,9 +45,7 @@ export const issueTransaction = pgTable(
   },
   (table) => [
     index("issue_transaction_request_idx").on(table.requestId),
-    index("issue_transaction_instrument_asset_idx").on(
-      table.instrumentAssetId,
-    ),
+    index("issue_transaction_instrument_asset_idx").on(table.instrumentAssetId),
     index("issue_transaction_tool_asset_idx").on(table.toolAssetId),
     index("issue_transaction_batch_idx").on(table.materialBatchId),
     index("issue_transaction_recipient_idx").on(table.issuedToId),

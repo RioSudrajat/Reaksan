@@ -77,7 +77,9 @@ export function AddAssetDialog({
     }
 
     if (!newTypeName.trim()) {
-      setError(`Nama ${classification === "TOOL" ? "alat" : "instrumen"} baru wajib diisi.`);
+      setError(
+        `Nama ${classification === "TOOL" ? "alat" : "instrumen"} baru wajib diisi.`,
+      );
       setPending(false);
       return;
     }
@@ -133,7 +135,10 @@ export function AddAssetDialog({
         className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] shadow-xs transition hover:bg-[#EAA805] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
       >
         <Plus className="size-4" aria-hidden="true" />
-        {label ?? (defaultClassification === "TOOL" ? "Tambah Alat ke Ruangan" : "Tambah Instrumen")}
+        {label ??
+          (defaultClassification === "TOOL"
+            ? "Tambah Alat ke Ruangan"
+            : "Tambah Instrumen")}
       </button>
 
       {open && (
@@ -149,8 +154,13 @@ export function AddAssetDialog({
                 <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#64748B]">
                   Stok Ruangan
                 </p>
-                <h3 id="add-asset-title" className="text-[16px] font-bold text-[#121826]">
-                  {defaultClassification === "TOOL" ? "Tambah Alat Praktikum Baru" : "Tambah Instrumen Laboratorium"}
+                <h3
+                  id="add-asset-title"
+                  className="text-[16px] font-bold text-[#121826]"
+                >
+                  {defaultClassification === "TOOL"
+                    ? "Tambah Alat Praktikum Baru"
+                    : "Tambah Instrumen Laboratorium"}
                 </h3>
               </div>
               <button
@@ -169,7 +179,9 @@ export function AddAssetDialog({
                   htmlFor="plp-new-type-name"
                   className="block text-[11px] font-semibold text-[#6B6B6B]"
                 >
-                  Nama {classification === "TOOL" ? "Alat / Glassware" : "Instrumen"} Baru *
+                  Nama{" "}
+                  {classification === "TOOL" ? "Alat / Glassware" : "Instrumen"}{" "}
+                  Baru *
                 </label>
                 <input
                   id="plp-new-type-name"
@@ -203,14 +215,22 @@ export function AddAssetDialog({
                   }
                   className={controlClass + " mt-1"}
                 >
-                  <option value="USAGE_ONLY">Pakai di Ruangan (Usage Only)</option>
-                  <option value="BORROWABLE">Bisa Dipinjam Keluar (Borrowable)</option>
+                  <option value="USAGE_ONLY">
+                    Pakai di Ruangan (Usage Only)
+                  </option>
+                  <option value="BORROWABLE">
+                    Bisa Dipinjam Keluar (Borrowable)
+                  </option>
                 </select>
               </div>
 
               <div>
                 <ImageUploadField
-                  label={defaultClassification === "TOOL" ? "Foto Alat / Glassware" : "Foto Instrumen Laboratorium"}
+                  label={
+                    defaultClassification === "TOOL"
+                      ? "Foto Alat / Glassware"
+                      : "Foto Instrumen Laboratorium"
+                  }
                   help="Format gambar harus PNG, JPEG, atau WebP (maks. 5 MB)."
                   onMediaChange={setImageMediaId}
                 />
@@ -275,7 +295,8 @@ export function AddAssetDialog({
                     className={controlClass + " mt-1"}
                   />
                   <p className="mt-1 text-[10px] text-[#929292]">
-                    Ketik 1 untuk instrumen tunggal, atau &gt; 1 untuk glassware.
+                    Ketik 1 untuk instrumen tunggal, atau &gt; 1 untuk
+                    glassware.
                   </p>
                 </div>
               </div>
@@ -328,7 +349,9 @@ export function AddAssetDialog({
                   className={controlClass + " mt-1"}
                 >
                   <option value="GOOD">GOOD · Baik</option>
-                  <option value="MINOR_ISSUE">MINOR ISSUE · Masalah kecil</option>
+                  <option value="MINOR_ISSUE">
+                    MINOR ISSUE · Masalah kecil
+                  </option>
                   <option value="DAMAGED">DAMAGED · Rusak</option>
                   <option value="UNKNOWN">UNKNOWN · Belum dicek</option>
                 </select>

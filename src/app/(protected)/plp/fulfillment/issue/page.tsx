@@ -2,10 +2,7 @@ import type { Metadata } from "next";
 import { IssueQueue } from "@/components/plp/issue-queue";
 import { PageHeader, Panel } from "@/components/workspace";
 import { requirePermission } from "@/lib/session";
-import {
-  getRoomScope,
-  scopeRoomCodes,
-} from "@/services/access-scope.service";
+import { getRoomScope, scopeRoomCodes } from "@/services/access-scope.service";
 import { listRequestPage } from "@/services/requests.service";
 
 export const metadata: Metadata = { title: "Issue" };

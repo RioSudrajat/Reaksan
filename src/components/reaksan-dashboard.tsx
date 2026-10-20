@@ -271,7 +271,9 @@ export function LabMap({
   equipmentByRoom?: Map<string, string[]>;
 }) {
   const [rotation, setRotation] = useState({ yaw: -8, pitch: 18 });
-  const [statusFilter, setStatusFilter] = useState<"all" | "available" | "active">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "available" | "active"
+  >("all");
 
   const visibleRooms = rooms.filter((room) => {
     const q = searchTerm.trim().toLowerCase();
@@ -406,11 +408,16 @@ export function LabMap({
                 type="button"
                 className={cn(
                   "lab-room absolute z-20 flex flex-col justify-between rounded-md border-2 p-3 text-left transition-all duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#212121]",
-                  room.tone === "yellow" && "border-[#D3A02D] bg-[#F8E3A9] hover:bg-[#F3DC9B]",
-                  room.tone === "blue" && "border-[#91A9E6] bg-[#C9D6F5] hover:bg-[#BCD0F5]",
-                  room.tone === "green" && "border-[#8FC9A5] bg-[#C8E7D1] hover:bg-[#BBE2C6]",
-                  room.tone === "cream" && "border-[#BAB6AC] bg-[#F0EEE8] hover:bg-[#EAE7DF]",
-                  room.tone === "rose" && "border-[#D7A0A0] bg-[#F7D7D7] hover:bg-[#F5CCCC]",
+                  room.tone === "yellow" &&
+                    "border-[#D3A02D] bg-[#F8E3A9] hover:bg-[#F3DC9B]",
+                  room.tone === "blue" &&
+                    "border-[#91A9E6] bg-[#C9D6F5] hover:bg-[#BCD0F5]",
+                  room.tone === "green" &&
+                    "border-[#8FC9A5] bg-[#C8E7D1] hover:bg-[#BBE2C6]",
+                  room.tone === "cream" &&
+                    "border-[#BAB6AC] bg-[#F0EEE8] hover:bg-[#EAE7DF]",
+                  room.tone === "rose" &&
+                    "border-[#D7A0A0] bg-[#F7D7D7] hover:bg-[#F5CCCC]",
                   isSelected
                     ? "z-30 ring-4 ring-[#F9B129] ring-offset-2 scale-[1.04] shadow-lg brightness-105"
                     : "hover:scale-[1.02] active:scale-[0.98]",
@@ -579,7 +586,9 @@ export function ReaksanDashboard({
     (searchTerm.trim() && currentRoom && !selectedRoomMatchesSearch
       ? (searchMatches[0] ?? currentRoom)
       : currentRoom) ?? null;
-  const selectedTone = visibleSelectedRoom ? toneClasses[visibleSelectedRoom.tone] : null;
+  const selectedTone = visibleSelectedRoom
+    ? toneClasses[visibleSelectedRoom.tone]
+    : null;
   const roomOpenPercent =
     visibleSelectedRoom && visibleSelectedRoom.equipment > 0
       ? Math.round(
@@ -622,611 +631,638 @@ export function ReaksanDashboard({
         </div>
       </section>
 
-          <section
-            className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]"
-            aria-labelledby="lab-overview-title"
-          >
+      <section
+        className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]"
+        aria-labelledby="lab-overview-title"
+      >
+        <div>
+          <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <h2
-                    id="lab-overview-title"
-                    className="text-[18px] font-bold tracking-tight text-[#1E293B]"
-                  >
-                    Denah Laboratorium & Status Ruangan
-                  </h2>
-                </div>
-                <a
-                  className="hidden items-center gap-1 text-[12px] font-semibold text-[#64748B] hover:text-[#1E293B] sm:flex"
-                  href="#map"
-                >
-                  Buka denah lengkap{" "}
-                  <ChevronRight className="size-3.5" aria-hidden="true" />
-                </a>
-              </div>
-              <LabMap
-                rooms={rooms}
-                selectedRoom={visibleSelectedRoom}
-                onSelectRoom={setSelectedRoom}
-                searchTerm={searchTerm}
-                equipmentByRoom={equipmentByRoom}
-              />
+              <h2
+                id="lab-overview-title"
+                className="text-[18px] font-bold tracking-tight text-[#1E293B]"
+              >
+                Denah Laboratorium & Status Ruangan
+              </h2>
             </div>
+            <a
+              className="hidden items-center gap-1 text-[12px] font-semibold text-[#64748B] hover:text-[#1E293B] sm:flex"
+              href="#map"
+            >
+              Buka denah lengkap{" "}
+              <ChevronRight className="size-3.5" aria-hidden="true" />
+            </a>
+          </div>
+          <LabMap
+            rooms={rooms}
+            selectedRoom={visibleSelectedRoom}
+            onSelectRoom={setSelectedRoom}
+            searchTerm={searchTerm}
+            equipmentByRoom={equipmentByRoom}
+          />
+        </div>
 
-            {visibleSelectedRoom && selectedTone ? (
-              <motion.aside
-                key={visibleSelectedRoom.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className="dashboard-card flex flex-col p-5"
-                aria-live="polite"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[#AE7C1D]">
-                      Ruang Terpilih
-                    </span>
-                    <h3 className="mt-1 text-[20px] font-bold leading-tight tracking-tight text-[#1E293B]">
-                      {visibleSelectedRoom.name}
-                    </h3>
-                  </div>
-                  <span
-                    className={cn(
-                      "flex size-10 items-center justify-center rounded-xl",
-                      selectedTone.soft,
-                    )}
-                  >
-                    <FlaskConical className="size-[18px]" aria-hidden="true" />
-                  </span>
-                </div>
-                <p className="mt-3 text-[13px] leading-relaxed text-[#64748B]">
-                  {visibleSelectedRoom.description}
-                </p>
-
-                <div className="mt-6 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3">
-                  <p className="text-[11px] font-semibold text-[#64748B]">
-                    Total Instrumen ·{" "}
-                    <span className="font-bold tabular-nums text-[#1E293B]">
-                      {visibleSelectedRoom.equipment} unit
-                    </span>{" "}
-                    dari {visibleSelectedRoom.typeCount} jenis terdata
-                  </p>
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    <div className="rounded-lg bg-white p-2.5 text-center border border-slate-100 shadow-2xs">
-                      <p className="text-[18px] font-bold tabular-nums text-[#048444]">
-                        {visibleSelectedRoom.available}
-                      </p>
-                      <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">Tersedia</p>
-                    </div>
-                    <div className="rounded-lg bg-white p-2.5 text-center border border-slate-100 shadow-2xs">
-                      <p className="text-[18px] font-bold tabular-nums text-[#6E8EDA]">
-                        {visibleSelectedRoom.reserved}
-                      </p>
-                      <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">Reservasi</p>
-                    </div>
-                    <div className="rounded-lg bg-white p-2.5 text-center border border-slate-100 shadow-2xs">
-                      <p className="text-[18px] font-bold tabular-nums text-[#AE7C1D]">
-                        {visibleSelectedRoom.inUse}
-                      </p>
-                      <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">Dipakai</p>
-                    </div>
-                    <div className="rounded-lg bg-white p-2.5 text-center border border-slate-100 shadow-2xs">
-                      <p className="text-[18px] font-bold tabular-nums text-[#9E3636]">
-                        {visibleSelectedRoom.awaitingReturn}
-                      </p>
-                      <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">Kembali</p>
-                    </div>
-                    <div className="rounded-lg bg-white p-2.5 text-center border border-slate-100 shadow-2xs">
-                      <p className="text-[18px] font-bold tabular-nums text-[#9E3636]">
-                        {visibleSelectedRoom.maintenance}
-                      </p>
-                      <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">Perbaikan</p>
-                    </div>
-                    <div className="rounded-lg bg-[#1E293B] p-2.5 text-center text-white">
-                      <p className="text-[18px] font-bold tabular-nums">
-                        {visibleSelectedRoom.equipment}
-                      </p>
-                      <p className="mt-0.5 text-[10px] text-white/70">Total Unit</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-5 space-y-2">
-                  <div className="flex items-center justify-between text-[12px]">
-                    <span className="font-medium text-[#64748B]">
-                      Kesiapan Penggunaan
-                    </span>
-                    <span className="font-semibold text-[#048444]">
-                      {roomOpenPercent}% siap pakai
-                    </span>
-                  </div>
-                  <div
-                    className="h-2 overflow-hidden rounded-full bg-[#EEEEEE]"
-                    aria-label={`${visibleSelectedRoom.available} dari ${visibleSelectedRoom.equipment} unit siap digunakan di ${visibleSelectedRoom.name}`}
-                  >
-                    <div
-                      className="h-full rounded-full bg-[#048444] transition-all"
-                      style={{ width: `${roomOpenPercent}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-auto pt-6">
-                  <Link
-                    href={`/student/laboratory/rooms/${visibleSelectedRoom.id}`}
-                    className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
-                  >
-                    Lihat Jadwal Ruangan{" "}
-                    <ChevronRight className="size-4" aria-hidden="true" />
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRoom(null)}
-                    className="mt-2 text-center w-full text-[11px] font-semibold text-[#94A3B8] hover:text-[#64748B] transition"
-                  >
-                    Tutup detail ruangan (tampilkan ikhtisar)
-                  </button>
-                </div>
-              </motion.aside>
-            ) : (
-              <motion.aside
-                key="facility-overview"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className="dashboard-card flex flex-col p-5"
-                aria-live="polite"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[#AE7C1D]">
-                      Ikhtisar Fasilitas
-                    </span>
-                    <h3 className="mt-1 text-[20px] font-bold leading-tight tracking-tight text-[#1E293B]">
-                      Laboratorium Kimia
-                    </h3>
-                  </div>
-                  <span className="flex size-10 items-center justify-center rounded-xl bg-[#FEF1CC] text-[#AE7C1D]">
-                    <MapPin className="size-[18px]" aria-hidden="true" />
-                  </span>
-                </div>
-                <p className="mt-3 text-[13px] leading-relaxed text-[#64748B]">
-                  Pilih ruangan pada denah atau daftar di bawah untuk memeriksa ketersediaan instrumen, spesifikasi teknis, serta jadwal pemakaian aktif.
-                </p>
-
-                <div className="mt-5 space-y-2">
-                  <p className="text-[11px] font-semibold text-[#64748B]">
-                    Pilih Ruangan Cepat
-                  </p>
-                  <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
-                    {rooms.map((room) => (
-                      <button
-                        key={room.id}
-                        type="button"
-                        onClick={() => setSelectedRoom(room)}
-                        className="flex w-full items-center justify-between rounded-xl border border-slate-200/80 bg-white p-2.5 text-left transition hover:border-[#F9B129] hover:bg-[#FEF1CC]/20 focus-visible:outline-2 focus-visible:outline-[#6E8EDA]"
-                      >
-                        <div className="min-w-0 pr-2">
-                          <p className="truncate text-[12px] font-bold text-[#1E293B]">
-                            {room.name}
-                          </p>
-                          <p className="text-[11px] text-[#64748B]">
-                            {room.available} unit siap pakai · {room.equipment} total
-                          </p>
-                        </div>
-                        <span className="shrink-0 rounded-full bg-[#E5F5ED] px-2 py-0.5 text-[10px] font-semibold text-[#048444]">
-                          {room.available > 0 ? "Tersedia" : "Penuh"}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-auto pt-6">
-                  <Link
-                    href="/student/calendar"
-                    className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
-                  >
-                    Buka Kalender Laboratorium{" "}
-                    <ChevronRight className="size-4" aria-hidden="true" />
-                  </Link>
-                  <p className="mt-2.5 text-center text-[11px] text-[#94A3B8]">
-                    {rooms.length} ruang laboratorium terintegrasi
-                  </p>
-                </div>
-              </motion.aside>
-            )}
-          </section>
-
-          <section
-            className="mb-6 grid gap-4 md:grid-cols-3"
-            aria-label="Ringkasan sumber daya"
+        {visibleSelectedRoom && selectedTone ? (
+          <motion.aside
+            key={visibleSelectedRoom.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="dashboard-card flex flex-col p-5"
+            aria-live="polite"
           >
-            <div className="dashboard-card flex items-start justify-between gap-4 p-5">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[12px] font-semibold text-[#64748B]">
-                  Instrumen & Alat Siap Pakai
-                </p>
-                <p className="mt-2 text-[28px] font-bold tracking-tight tabular-nums text-[#1E293B]">
-                  {lab.availableUnits}
-                </p>
-                <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#E5F5ED] px-2.5 py-1 text-[11px] font-semibold text-[#03683A]">
-                  {lab.typeCount} jenis instrumen · {lab.totalUnits} unit total
-                </p>
-              </div>
-              <span className="flex size-10 items-center justify-center rounded-xl bg-[#E5F5ED] text-[#048444]">
-                <PackageSearch className="size-[18px]" aria-hidden="true" />
-              </span>
-            </div>
-            <div className="dashboard-card flex items-start justify-between gap-4 p-5">
-              <div>
-                <p className="text-[12px] font-semibold text-[#64748B]">
-                  Reservasi Terkonfirmasi
-                </p>
-                <p className="mt-2 text-[28px] font-bold tracking-tight tabular-nums text-[#1E293B]">
-                  {approvedEvents.length}
-                </p>
-                <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#E9EEFC] px-2.5 py-1 text-[11px] font-semibold text-[#38529B]">
-                  Tercatat resmi di jadwal laboratorium
-                </p>
-              </div>
-              <span className="flex size-10 items-center justify-center rounded-xl bg-[#E9EEFC] text-[#6E8EDA]">
-                <CalendarDays className="size-[18px]" aria-hidden="true" />
-              </span>
-            </div>
-            <div className="dashboard-card flex items-start justify-between gap-4 p-5">
-              <div>
-                <p className="text-[12px] font-semibold text-[#64748B]">
-                  Menunggu Verifikasi PLP
-                </p>
-                <p className="mt-2 text-[28px] font-bold tracking-tight tabular-nums text-[#1E293B]">
-                  {pendingEvents.length}
-                </p>
-                <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#FFF4D9] px-2.5 py-1 text-[11px] font-semibold text-[#705012]">
-                  Dalam proses verifikasi pengurus lab
-                </p>
-              </div>
-              <span className="flex size-10 items-center justify-center rounded-xl bg-[#FFF4D9] text-[#AE7C1D]">
-                <ClipboardList className="size-[18px]" aria-hidden="true" />
-              </span>
-            </div>
-          </section>
-
-          <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
-            <div id="reservations" className="dashboard-card p-5 sm:p-6">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <SectionTitle
-                  title={
-                    requestView === "upcoming"
-                      ? "Reservasi Terdekat"
-                      : "Permintaan Saya"
-                  }
-                  action={
-                    <Link
-                      href="/student/calendar"
-                      className="text-[12px] font-semibold text-[#64748B] hover:text-[#1E293B]"
-                    >
-                      Buka Kalender Mahasiswa
-                    </Link>
-                  }
-                />
-                <div
-                  className="flex rounded-xl bg-[#F5F5F5] p-1"
-                  role="tablist"
-                  aria-label="Tampilan aktivitas mahasiswa"
-                >
-                  <button
-                    className={cn(
-                      "min-h-9 rounded-lg px-3 text-[11px] font-semibold transition",
-                      requestView === "upcoming"
-                        ? "bg-white text-[#212121] shadow-xs"
-                        : "text-[#929292] hover:text-[#212121]",
-                    )}
-                    onClick={() => setRequestView("upcoming")}
-                    role="tab"
-                    aria-selected={requestView === "upcoming"}
-                  >
-                    Jadwal Terdekat
-                  </button>
-                  <button
-                    className={cn(
-                      "min-h-9 rounded-lg px-3 text-[11px] font-semibold transition",
-                      requestView === "requests"
-                        ? "bg-white text-[#212121] shadow-xs"
-                        : "text-[#929292] hover:text-[#212121]",
-                    )}
-                    onClick={() => setRequestView("requests")}
-                    role="tab"
-                    aria-selected={requestView === "requests"}
-                  >
-                    Semua Pengajuan
-                  </button>
-                </div>
-              </div>
-              <AnimatePresence mode="wait">
-                {requestView === "upcoming" ? (
-                  <motion.div
-                    key="upcoming"
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                    className="mt-6 divide-y divide-[#EEEEEE]"
-                  >
-                    {reservationRows.length === 0 ? (
-                      <p className="py-6 text-[12px] text-[#64748B]">
-                        Belum ada reservasi aktif yang terkonfirmasi. Ajukan permintaan jadwal melalui Kalender Mahasiswa untuk memulai.
-                      </p>
-                    ) : (
-                      reservationRows.map((reservation) => (
-                        <div
-                          key={reservation.id}
-                          className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-                        >
-                          <div className="flex min-w-0 items-center gap-3">
-                            {reservation.mediaId ? (
-                              <CatalogImage
-                                mediaId={reservation.mediaId}
-                                alt={reservation.title}
-                                size={40}
-                                className="shrink-0 rounded-xl"
-                              />
-                            ) : (
-                              <span
-                                className={cn(
-                                  "flex size-10 shrink-0 items-center justify-center rounded-xl",
-                                  toneClasses[
-                                    reservation.tone as keyof typeof toneClasses
-                                  ].soft,
-                                )}
-                              >
-                                <CalendarDays
-                                  className="size-4"
-                                  aria-hidden="true"
-                                />
-                              </span>
-                            )}
-                            <div className="min-w-0">
-                              <p className="truncate text-[13px] font-semibold text-[#212121]">
-                                {reservation.title}
-                              </p>
-                              <p className="mt-1 truncate text-[11px] text-[#64748B]">
-                                {reservation.detail}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between gap-4 sm:justify-end">
-                            <p className="text-[11px] font-medium text-[#64748B]">
-                              {reservation.time}
-                            </p>
-                            <StatusBadge
-                              tone={
-                                reservation.tone as keyof typeof toneClasses
-                              }
-                            >
-                              Terkonfirmasi
-                            </StatusBadge>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="requests"
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                    className="mt-6 divide-y divide-[#EEEEEE]"
-                  >
-                    {requestRows.length === 0 ? (
-                      <p className="py-6 text-[12px] text-[#64748B]">
-                        Belum ada permintaan di Kalender Mahasiswa. Buka kalender untuk memilih tanggal dan mengajukan perizinan.
-                      </p>
-                    ) : (
-                      requestRows.map((request) => (
-                        <div
-                          key={request.key}
-                          className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-                        >
-                          <div className="flex min-w-0 items-center gap-3">
-                            {request.mediaId && (
-                              <CatalogImage
-                                mediaId={request.mediaId}
-                                alt={request.title}
-                                size={36}
-                                className="shrink-0 rounded-lg"
-                              />
-                            )}
-                            <div className="min-w-0">
-                              <p className="text-[13px] font-semibold text-[#212121]">
-                                {request.title}
-                              </p>
-                              <p className="mt-1 text-[11px] text-[#64748B]">
-                                {request.id} · {request.detail}
-                              </p>
-                            </div>
-                          </div>
-                          <StatusBadge
-                            tone={request.tone as keyof typeof toneClasses}
-                          >
-                            {request.status}
-                          </StatusBadge>
-                        </div>
-                      ))
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            <div id="research" className="dashboard-card p-5 sm:p-6">
-              <SectionTitle
-                title="Aktivitas Penelitian & Riset"
-                action={
-                  <Link
-                    href="/student/calendar"
-                    className="text-[12px] font-semibold text-[#64748B] hover:text-[#212121]"
-                  >
-                    Buka Kalender
-                  </Link>
-                }
-              />
-              <div className="mt-5 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <span className="flex size-9 items-center justify-center rounded-lg bg-[#FEF7E6] text-[#8D6500]">
-                    <GraduationCap className="size-4" aria-hidden="true" />
-                  </span>
-                  <span className="text-[11px] font-semibold text-[#048444]">
-                    Aktif
-                  </span>
-                </div>
-                <h3 className="mt-4 text-[15px] font-bold text-[#1E293B] tracking-tight">
-                  {myEvents[0]?.title ?? "Aktivitas Penelitian & Praktikum"}
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#AE7C1D]">
+                  Ruang Terpilih
+                </span>
+                <h3 className="mt-1 text-[20px] font-bold leading-tight tracking-tight text-[#1E293B]">
+                  {visibleSelectedRoom.name}
                 </h3>
-                <p className="mt-1 text-[11px] leading-5 text-[#64748B]">
-                  {myEvents[0]?.supervisor
-                    ? `Penelitian · Pembimbing: ${myEvents[0].supervisor}`
-                    : (myEvents[0]?.purpose ?? "Penelitian laboratorium aktif")}
-                </p>
-                <div className="mt-5 flex items-center justify-between border-t border-[#E2E8F0] pt-3 text-[11px]">
-                  <span className="text-[#64748B]">
-                    {myEvents.length} pengajuan terdaftar
-                  </span>
-                  <span className="font-semibold text-[#1E293B]">
-                    {(() => {
-                      const evt = myEvents.find((e) => e.status === "ACTIVE" || e.status === "APPROVED") ?? myEvents[0];
-                      if (!evt?.startAt) return "Oktober 2026";
-                      try {
-                        const s = new Date(evt.startAt);
-                        const e = new Date(evt.endAt);
-                        const sStr = new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "short" }).format(s);
-                        const eStr = new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "short", year: "numeric" }).format(e);
-                        return `${sStr} – ${eStr}`;
-                      } catch {
-                        return "Oktober 2026";
-                      }
-                    })()}
-                  </span>
+              </div>
+              <span
+                className={cn(
+                  "flex size-10 items-center justify-center rounded-xl",
+                  selectedTone.soft,
+                )}
+              >
+                <FlaskConical className="size-[18px]" aria-hidden="true" />
+              </span>
+            </div>
+            <p className="mt-3 text-[13px] leading-relaxed text-[#64748B]">
+              {visibleSelectedRoom.description}
+            </p>
+
+            <div className="mt-6 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3">
+              <p className="text-[11px] font-semibold text-[#64748B]">
+                Total Instrumen ·{" "}
+                <span className="font-bold tabular-nums text-[#1E293B]">
+                  {visibleSelectedRoom.equipment} unit
+                </span>{" "}
+                dari {visibleSelectedRoom.typeCount} jenis terdata
+              </p>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <div className="rounded-lg bg-white p-2.5 text-center border border-slate-100 shadow-2xs">
+                  <p className="text-[18px] font-bold tabular-nums text-[#048444]">
+                    {visibleSelectedRoom.available}
+                  </p>
+                  <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">
+                    Tersedia
+                  </p>
+                </div>
+                <div className="rounded-lg bg-white p-2.5 text-center border border-slate-100 shadow-2xs">
+                  <p className="text-[18px] font-bold tabular-nums text-[#6E8EDA]">
+                    {visibleSelectedRoom.reserved}
+                  </p>
+                  <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">
+                    Reservasi
+                  </p>
+                </div>
+                <div className="rounded-lg bg-white p-2.5 text-center border border-slate-100 shadow-2xs">
+                  <p className="text-[18px] font-bold tabular-nums text-[#AE7C1D]">
+                    {visibleSelectedRoom.inUse}
+                  </p>
+                  <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">
+                    Dipakai
+                  </p>
+                </div>
+                <div className="rounded-lg bg-white p-2.5 text-center border border-slate-100 shadow-2xs">
+                  <p className="text-[18px] font-bold tabular-nums text-[#9E3636]">
+                    {visibleSelectedRoom.awaitingReturn}
+                  </p>
+                  <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">
+                    Kembali
+                  </p>
+                </div>
+                <div className="rounded-lg bg-white p-2.5 text-center border border-slate-100 shadow-2xs">
+                  <p className="text-[18px] font-bold tabular-nums text-[#9E3636]">
+                    {visibleSelectedRoom.maintenance}
+                  </p>
+                  <p className="mt-0.5 text-[10px] font-medium text-[#64748B]">
+                    Perbaikan
+                  </p>
+                </div>
+                <div className="rounded-lg bg-[#1E293B] p-2.5 text-center text-white">
+                  <p className="text-[18px] font-bold tabular-nums">
+                    {visibleSelectedRoom.equipment}
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-white/70">Total Unit</p>
                 </div>
               </div>
-              <Link
-                href="/student/calendar"
-                className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#E2E8F0] bg-white text-[12px] font-bold text-[#1E293B] transition hover:bg-[#F8FAFC] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+            </div>
+
+            <div className="mt-5 space-y-2">
+              <div className="flex items-center justify-between text-[12px]">
+                <span className="font-medium text-[#64748B]">
+                  Kesiapan Penggunaan
+                </span>
+                <span className="font-semibold text-[#048444]">
+                  {roomOpenPercent}% siap pakai
+                </span>
+              </div>
+              <div
+                className="h-2 overflow-hidden rounded-full bg-[#EEEEEE]"
+                aria-label={`${visibleSelectedRoom.available} dari ${visibleSelectedRoom.equipment} unit siap digunakan di ${visibleSelectedRoom.name}`}
               >
-                Lihat Kalender Saya{" "}
+                <div
+                  className="h-full rounded-full bg-[#048444] transition-all"
+                  style={{ width: `${roomOpenPercent}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="mt-auto pt-6">
+              <Link
+                href={`/student/laboratory/rooms/${visibleSelectedRoom.id}`}
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+              >
+                Lihat Jadwal Ruangan{" "}
                 <ChevronRight className="size-4" aria-hidden="true" />
               </Link>
+              <button
+                type="button"
+                onClick={() => setSelectedRoom(null)}
+                className="mt-2 text-center w-full text-[11px] font-semibold text-[#94A3B8] hover:text-[#64748B] transition"
+              >
+                Tutup detail ruangan (tampilkan ikhtisar)
+              </button>
             </div>
-          </section>
+          </motion.aside>
+        ) : (
+          <motion.aside
+            key="facility-overview"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="dashboard-card flex flex-col p-5"
+            aria-live="polite"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#AE7C1D]">
+                  Ikhtisar Fasilitas
+                </span>
+                <h3 className="mt-1 text-[20px] font-bold leading-tight tracking-tight text-[#1E293B]">
+                  Laboratorium Kimia
+                </h3>
+              </div>
+              <span className="flex size-10 items-center justify-center rounded-xl bg-[#FEF1CC] text-[#AE7C1D]">
+                <MapPin className="size-[18px]" aria-hidden="true" />
+              </span>
+            </div>
+            <p className="mt-3 text-[13px] leading-relaxed text-[#64748B]">
+              Pilih ruangan pada denah atau daftar di bawah untuk memeriksa
+              ketersediaan instrumen, spesifikasi teknis, serta jadwal pemakaian
+              aktif.
+            </p>
 
-          <section className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-            <div id="requests" className="dashboard-card p-5 sm:p-6">
-              <SectionTitle
-                title="Alur Pengajuan Reservasi"
-                action={
-                  <span className="rounded-full bg-[#F1F0EC] px-2.5 py-1 text-[10px] font-semibold text-[#64748B]">
-                    Panduan
-                  </span>
-                }
-              />
-              <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
-                <div>
-                  <p className="text-[14px] font-bold text-[#1E293B]">
-                    Pilih jadwal, tentukan instrumen, lalu kirim pengajuan.
-                  </p>
-                  <p className="mt-1 max-w-[480px] text-[12px] leading-5 text-[#64748B]">
-                    Pengajuan akan masuk ke antrean PLP untuk diverifikasi sebelum jadwal resmi ruangan diterbitkan.
-                  </p>
-                </div>
+            <div className="mt-5 space-y-2">
+              <p className="text-[11px] font-semibold text-[#64748B]">
+                Pilih Ruangan Cepat
+              </p>
+              <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+                {rooms.map((room) => (
+                  <button
+                    key={room.id}
+                    type="button"
+                    onClick={() => setSelectedRoom(room)}
+                    className="flex w-full items-center justify-between rounded-xl border border-slate-200/80 bg-white p-2.5 text-left transition hover:border-[#F9B129] hover:bg-[#FEF1CC]/20 focus-visible:outline-2 focus-visible:outline-[#6E8EDA]"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <p className="truncate text-[12px] font-bold text-[#1E293B]">
+                        {room.name}
+                      </p>
+                      <p className="text-[11px] text-[#64748B]">
+                        {room.available} unit siap pakai · {room.equipment}{" "}
+                        total
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-[#E5F5ED] px-2 py-0.5 text-[10px] font-semibold text-[#048444]">
+                      {room.available > 0 ? "Tersedia" : "Penuh"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-auto pt-6">
+              <Link
+                href="/student/calendar"
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+              >
+                Buka Kalender Laboratorium{" "}
+                <ChevronRight className="size-4" aria-hidden="true" />
+              </Link>
+              <p className="mt-2.5 text-center text-[11px] text-[#94A3B8]">
+                {rooms.length} ruang laboratorium terintegrasi
+              </p>
+            </div>
+          </motion.aside>
+        )}
+      </section>
+
+      <section
+        className="mb-6 grid gap-4 md:grid-cols-3"
+        aria-label="Ringkasan sumber daya"
+      >
+        <div className="dashboard-card flex items-start justify-between gap-4 p-5">
+          <div>
+            <p className="text-[12px] font-semibold text-[#64748B]">
+              Instrumen & Alat Siap Pakai
+            </p>
+            <p className="mt-2 text-[28px] font-bold tracking-tight tabular-nums text-[#1E293B]">
+              {lab.availableUnits}
+            </p>
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#E5F5ED] px-2.5 py-1 text-[11px] font-semibold text-[#03683A]">
+              {lab.typeCount} jenis instrumen · {lab.totalUnits} unit total
+            </p>
+          </div>
+          <span className="flex size-10 items-center justify-center rounded-xl bg-[#E5F5ED] text-[#048444]">
+            <PackageSearch className="size-[18px]" aria-hidden="true" />
+          </span>
+        </div>
+        <div className="dashboard-card flex items-start justify-between gap-4 p-5">
+          <div>
+            <p className="text-[12px] font-semibold text-[#64748B]">
+              Reservasi Terkonfirmasi
+            </p>
+            <p className="mt-2 text-[28px] font-bold tracking-tight tabular-nums text-[#1E293B]">
+              {approvedEvents.length}
+            </p>
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#E9EEFC] px-2.5 py-1 text-[11px] font-semibold text-[#38529B]">
+              Tercatat resmi di jadwal laboratorium
+            </p>
+          </div>
+          <span className="flex size-10 items-center justify-center rounded-xl bg-[#E9EEFC] text-[#6E8EDA]">
+            <CalendarDays className="size-[18px]" aria-hidden="true" />
+          </span>
+        </div>
+        <div className="dashboard-card flex items-start justify-between gap-4 p-5">
+          <div>
+            <p className="text-[12px] font-semibold text-[#64748B]">
+              Menunggu Verifikasi PLP
+            </p>
+            <p className="mt-2 text-[28px] font-bold tracking-tight tabular-nums text-[#1E293B]">
+              {pendingEvents.length}
+            </p>
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#FFF4D9] px-2.5 py-1 text-[11px] font-semibold text-[#705012]">
+              Dalam proses verifikasi pengurus lab
+            </p>
+          </div>
+          <span className="flex size-10 items-center justify-center rounded-xl bg-[#FFF4D9] text-[#AE7C1D]">
+            <ClipboardList className="size-[18px]" aria-hidden="true" />
+          </span>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
+        <div id="reservations" className="dashboard-card p-5 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <SectionTitle
+              title={
+                requestView === "upcoming"
+                  ? "Reservasi Terdekat"
+                  : "Permintaan Saya"
+              }
+              action={
                 <Link
                   href="/student/calendar"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+                  className="text-[12px] font-semibold text-[#64748B] hover:text-[#1E293B]"
                 >
-                  Buka Kalender{" "}
-                  <ChevronRight className="size-4" aria-hidden="true" />
+                  Buka Kalender Mahasiswa
+                </Link>
+              }
+            />
+            <div
+              className="flex rounded-xl bg-[#F5F5F5] p-1"
+              role="tablist"
+              aria-label="Tampilan aktivitas mahasiswa"
+            >
+              <button
+                className={cn(
+                  "min-h-9 rounded-lg px-3 text-[11px] font-semibold transition",
+                  requestView === "upcoming"
+                    ? "bg-white text-[#212121] shadow-xs"
+                    : "text-[#929292] hover:text-[#212121]",
+                )}
+                onClick={() => setRequestView("upcoming")}
+                role="tab"
+                aria-selected={requestView === "upcoming"}
+              >
+                Jadwal Terdekat
+              </button>
+              <button
+                className={cn(
+                  "min-h-9 rounded-lg px-3 text-[11px] font-semibold transition",
+                  requestView === "requests"
+                    ? "bg-white text-[#212121] shadow-xs"
+                    : "text-[#929292] hover:text-[#212121]",
+                )}
+                onClick={() => setRequestView("requests")}
+                role="tab"
+                aria-selected={requestView === "requests"}
+              >
+                Semua Pengajuan
+              </button>
+            </div>
+          </div>
+          <AnimatePresence mode="wait">
+            {requestView === "upcoming" ? (
+              <motion.div
+                key="upcoming"
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                className="mt-6 divide-y divide-[#EEEEEE]"
+              >
+                {reservationRows.length === 0 ? (
+                  <p className="py-6 text-[12px] text-[#64748B]">
+                    Belum ada reservasi aktif yang terkonfirmasi. Ajukan
+                    permintaan jadwal melalui Kalender Mahasiswa untuk memulai.
+                  </p>
+                ) : (
+                  reservationRows.map((reservation) => (
+                    <div
+                      key={reservation.id}
+                      className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        {reservation.mediaId ? (
+                          <CatalogImage
+                            mediaId={reservation.mediaId}
+                            alt={reservation.title}
+                            size={40}
+                            className="shrink-0 rounded-xl"
+                          />
+                        ) : (
+                          <span
+                            className={cn(
+                              "flex size-10 shrink-0 items-center justify-center rounded-xl",
+                              toneClasses[
+                                reservation.tone as keyof typeof toneClasses
+                              ].soft,
+                            )}
+                          >
+                            <CalendarDays
+                              className="size-4"
+                              aria-hidden="true"
+                            />
+                          </span>
+                        )}
+                        <div className="min-w-0">
+                          <p className="truncate text-[13px] font-semibold text-[#212121]">
+                            {reservation.title}
+                          </p>
+                          <p className="mt-1 truncate text-[11px] text-[#64748B]">
+                            {reservation.detail}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between gap-4 sm:justify-end">
+                        <p className="text-[11px] font-medium text-[#64748B]">
+                          {reservation.time}
+                        </p>
+                        <StatusBadge
+                          tone={reservation.tone as keyof typeof toneClasses}
+                        >
+                          Terkonfirmasi
+                        </StatusBadge>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="requests"
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                className="mt-6 divide-y divide-[#EEEEEE]"
+              >
+                {requestRows.length === 0 ? (
+                  <p className="py-6 text-[12px] text-[#64748B]">
+                    Belum ada permintaan di Kalender Mahasiswa. Buka kalender
+                    untuk memilih tanggal dan mengajukan perizinan.
+                  </p>
+                ) : (
+                  requestRows.map((request) => (
+                    <div
+                      key={request.key}
+                      className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        {request.mediaId && (
+                          <CatalogImage
+                            mediaId={request.mediaId}
+                            alt={request.title}
+                            size={36}
+                            className="shrink-0 rounded-lg"
+                          />
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-[#212121]">
+                            {request.title}
+                          </p>
+                          <p className="mt-1 text-[11px] text-[#64748B]">
+                            {request.id} · {request.detail}
+                          </p>
+                        </div>
+                      </div>
+                      <StatusBadge
+                        tone={request.tone as keyof typeof toneClasses}
+                      >
+                        {request.status}
+                      </StatusBadge>
+                    </div>
+                  ))
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div id="research" className="dashboard-card p-5 sm:p-6">
+          <SectionTitle
+            title="Aktivitas Penelitian & Riset"
+            action={
+              <Link
+                href="/student/calendar"
+                className="text-[12px] font-semibold text-[#64748B] hover:text-[#212121]"
+              >
+                Buka Kalender
+              </Link>
+            }
+          />
+          <div className="mt-5 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+            <div className="flex items-start justify-between gap-3">
+              <span className="flex size-9 items-center justify-center rounded-lg bg-[#FEF7E6] text-[#8D6500]">
+                <GraduationCap className="size-4" aria-hidden="true" />
+              </span>
+              <span className="text-[11px] font-semibold text-[#048444]">
+                Aktif
+              </span>
+            </div>
+            <h3 className="mt-4 text-[15px] font-bold text-[#1E293B] tracking-tight">
+              {myEvents[0]?.title ?? "Aktivitas Penelitian & Praktikum"}
+            </h3>
+            <p className="mt-1 text-[11px] leading-5 text-[#64748B]">
+              {myEvents[0]?.supervisor
+                ? `Penelitian · Pembimbing: ${myEvents[0].supervisor}`
+                : (myEvents[0]?.purpose ?? "Penelitian laboratorium aktif")}
+            </p>
+            <div className="mt-5 flex items-center justify-between border-t border-[#E2E8F0] pt-3 text-[11px]">
+              <span className="text-[#64748B]">
+                {myEvents.length} pengajuan terdaftar
+              </span>
+              <span className="font-semibold text-[#1E293B]">
+                {(() => {
+                  const evt =
+                    myEvents.find(
+                      (e) => e.status === "ACTIVE" || e.status === "APPROVED",
+                    ) ?? myEvents[0];
+                  if (!evt?.startAt) return "Oktober 2026";
+                  try {
+                    const s = new Date(evt.startAt);
+                    const e = new Date(evt.endAt);
+                    const sStr = new Intl.DateTimeFormat("id-ID", {
+                      timeZone: "Asia/Jakarta",
+                      day: "numeric",
+                      month: "short",
+                    }).format(s);
+                    const eStr = new Intl.DateTimeFormat("id-ID", {
+                      timeZone: "Asia/Jakarta",
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    }).format(e);
+                    return `${sStr} – ${eStr}`;
+                  } catch {
+                    return "Oktober 2026";
+                  }
+                })()}
+              </span>
+            </div>
+          </div>
+          <Link
+            href="/student/calendar"
+            className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#E2E8F0] bg-white text-[12px] font-bold text-[#1E293B] transition hover:bg-[#F8FAFC] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+          >
+            Lihat Kalender Saya{" "}
+            <ChevronRight className="size-4" aria-hidden="true" />
+          </Link>
+        </div>
+      </section>
+
+      <section className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div id="requests" className="dashboard-card p-5 sm:p-6">
+          <SectionTitle
+            title="Alur Pengajuan Reservasi"
+            action={
+              <span className="rounded-full bg-[#F1F0EC] px-2.5 py-1 text-[10px] font-semibold text-[#64748B]">
+                Panduan
+              </span>
+            }
+          />
+          <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+            <div>
+              <p className="text-[14px] font-bold text-[#1E293B]">
+                Pilih jadwal, tentukan instrumen, lalu kirim pengajuan.
+              </p>
+              <p className="mt-1 max-w-[480px] text-[12px] leading-5 text-[#64748B]">
+                Pengajuan akan masuk ke antrean PLP untuk diverifikasi sebelum
+                jadwal resmi ruangan diterbitkan.
+              </p>
+            </div>
+            <Link
+              href="/student/calendar"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#212121] transition hover:bg-[#F7B742] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+            >
+              Buka Kalender{" "}
+              <ChevronRight className="size-4" aria-hidden="true" />
+            </Link>
+          </div>
+          <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-medium text-[#64748B]">
+            <span className="rounded-lg bg-[#F8FAFC] border border-slate-200/60 px-3 py-2">
+              1. Pilih Tanggal
+            </span>
+            <span className="text-[#94A3B8] self-center" aria-hidden="true">
+              →
+            </span>
+            <span className="rounded-lg bg-[#F8FAFC] border border-slate-200/60 px-3 py-2">
+              2. Pilih Instrumen & Bahan
+            </span>
+            <span className="text-[#94A3B8] self-center" aria-hidden="true">
+              →
+            </span>
+            <span className="rounded-lg bg-[#F8FAFC] border border-slate-200/60 px-3 py-2">
+              3. Verifikasi PLP
+            </span>
+          </div>
+        </div>
+        <div id="incidents" className="dashboard-card p-5 sm:p-6">
+          <SectionTitle
+            title="Laporan Kendala Laboratorium"
+            action={
+              <Link
+                href="/student/incidents"
+                className="text-[11px] font-bold text-[#9E3636] hover:underline"
+              >
+                Lihat Semua
+              </Link>
+            }
+          />
+          {latestIncident ? (
+            <div className="mt-5 flex items-start gap-3 rounded-xl border border-[#F5D0D0] bg-[#FFF7F7] p-4">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#FDE9E9] text-[#F45959]">
+                <ShieldAlert className="size-4" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-[#1E293B]">
+                  {latestIncident.title}
+                </p>
+                <p className="mt-1 text-[11px] leading-5 text-[#64748B]">
+                  {latestIncident.roomName ?? latestIncident.equipmentCode} ·{" "}
+                  {latestIncident.status.replaceAll("_", " ").toLowerCase()}
+                </p>
+                <Link
+                  href="/student/incidents"
+                  className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-[#9E3636] hover:underline"
+                >
+                  Lihat Rincian Kendala{" "}
+                  <ChevronRight className="size-3.5" aria-hidden="true" />
                 </Link>
               </div>
-              <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-medium text-[#64748B]">
-                <span className="rounded-lg bg-[#F8FAFC] border border-slate-200/60 px-3 py-2">
-                  1. Pilih Tanggal
-                </span>
-                <span className="text-[#94A3B8] self-center" aria-hidden="true">
-                  →
-                </span>
-                <span className="rounded-lg bg-[#F8FAFC] border border-slate-200/60 px-3 py-2">
-                  2. Pilih Instrumen & Bahan
-                </span>
-                <span className="text-[#94A3B8] self-center" aria-hidden="true">
-                  →
-                </span>
-                <span className="rounded-lg bg-[#F8FAFC] border border-slate-200/60 px-3 py-2">
-                  3. Verifikasi PLP
-                </span>
+            </div>
+          ) : (
+            <div className="mt-5 flex items-start gap-3 rounded-xl border border-[#E2E8F0] bg-[#FAFAF8] p-4">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#E5F5ED] text-[#048444]">
+                <ShieldAlert className="size-4" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-[#1E293B]">
+                  Tidak ada laporan kendala aktif
+                </p>
+                <p className="mt-1 text-[11px] leading-5 text-[#64748B]">
+                  Laporkan segera jika menemukan kerusakan alat atau tumpahan
+                  bahan untuk menjaga keselamatan lab bersama.
+                </p>
+                <Link
+                  href="/student/incidents/new"
+                  className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-[#9E3636] hover:underline"
+                >
+                  Lapor Kendala Baru{" "}
+                  <ChevronRight className="size-3.5" aria-hidden="true" />
+                </Link>
               </div>
             </div>
-            <div id="incidents" className="dashboard-card p-5 sm:p-6">
-              <SectionTitle
-                title="Laporan Kendala Laboratorium"
-                action={
-                  <Link
-                    href="/student/incidents"
-                    className="text-[11px] font-bold text-[#9E3636] hover:underline"
-                  >
-                    Lihat Semua
-                  </Link>
-                }
-              />
-              {latestIncident ? (
-                <div className="mt-5 flex items-start gap-3 rounded-xl border border-[#F5D0D0] bg-[#FFF7F7] p-4">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#FDE9E9] text-[#F45959]">
-                    <ShieldAlert className="size-4" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-semibold text-[#1E293B]">
-                      {latestIncident.title}
-                    </p>
-                    <p className="mt-1 text-[11px] leading-5 text-[#64748B]">
-                      {latestIncident.roomName ?? latestIncident.equipmentCode} ·{" "}
-                      {latestIncident.status.replaceAll("_", " ").toLowerCase()}
-                    </p>
-                    <Link
-                      href="/student/incidents"
-                      className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-[#9E3636] hover:underline"
-                    >
-                      Lihat Rincian Kendala{" "}
-                      <ChevronRight className="size-3.5" aria-hidden="true" />
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-5 flex items-start gap-3 rounded-xl border border-[#E2E8F0] bg-[#FAFAF8] p-4">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#E5F5ED] text-[#048444]">
-                    <ShieldAlert className="size-4" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-semibold text-[#1E293B]">
-                      Tidak ada laporan kendala aktif
-                    </p>
-                    <p className="mt-1 text-[11px] leading-5 text-[#64748B]">
-                      Laporkan segera jika menemukan kerusakan alat atau tumpahan bahan untuk menjaga keselamatan lab bersama.
-                    </p>
-                    <Link
-                      href="/student/incidents/new"
-                      className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-[#9E3636] hover:underline"
-                    >
-                      Lapor Kendala Baru{" "}
-                      <ChevronRight className="size-3.5" aria-hidden="true" />
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
+          )}
+        </div>
+      </section>
 
-          <div id="notifications" className="sr-only" aria-live="polite">
-            Notifications are available from the header.
-          </div>
+      <div id="notifications" className="sr-only" aria-live="polite">
+        Notifications are available from the header.
+      </div>
     </div>
   );
 }

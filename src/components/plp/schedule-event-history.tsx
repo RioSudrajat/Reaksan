@@ -16,7 +16,11 @@ import {
 import { cn } from "cn";
 import { StatusBadge } from "@/components/status-badge";
 import type { ScheduleEvent, RequestStatus } from "@/components/schedule-data";
-import { requestStatusLabels, monthName, parseJakartaDate } from "@/components/schedule-data";
+import {
+  requestStatusLabels,
+  monthName,
+  parseJakartaDate,
+} from "@/components/schedule-data";
 import { exportScheduleEventsToPdf } from "@/lib/schedule-pdf";
 
 export type StatusFilterOption = "ALL" | RequestStatus;
@@ -83,7 +87,9 @@ const statusFilterTabs: { id: StatusFilterOption; label: string }[] = [
   { id: "COMPLETED", label: "Selesai" },
 ];
 
-function statusToTone(status: RequestStatus): "yellow" | "green" | "neutral" | "rose" | "dark" {
+function statusToTone(
+  status: RequestStatus,
+): "yellow" | "green" | "neutral" | "rose" | "dark" {
   switch (status) {
     case "APPROVED":
     case "CONFIRMED":
@@ -153,23 +159,47 @@ function eventInMonth(
     try {
       start = parseJakartaDate(event.startAt);
     } catch {
-      start = new Date(targetMonth.year, targetMonth.month, Math.min(event.startDay, event.endDay));
+      start = new Date(
+        targetMonth.year,
+        targetMonth.month,
+        Math.min(event.startDay, event.endDay),
+      );
     }
   } else {
-    start = new Date(targetMonth.year, targetMonth.month, Math.min(event.startDay, event.endDay));
+    start = new Date(
+      targetMonth.year,
+      targetMonth.month,
+      Math.min(event.startDay, event.endDay),
+    );
   }
 
   if (event.endAt) {
     try {
       end = parseJakartaDate(event.endAt);
     } catch {
-      end = new Date(targetMonth.year, targetMonth.month, Math.max(event.startDay, event.endDay));
+      end = new Date(
+        targetMonth.year,
+        targetMonth.month,
+        Math.max(event.startDay, event.endDay),
+      );
     }
   } else {
-    end = new Date(targetMonth.year, targetMonth.month, Math.max(event.startDay, event.endDay));
+    end = new Date(
+      targetMonth.year,
+      targetMonth.month,
+      Math.max(event.startDay, event.endDay),
+    );
   }
 
-  const targetStart = new Date(targetMonth.year, targetMonth.month, 1, 0, 0, 0, 0);
+  const targetStart = new Date(
+    targetMonth.year,
+    targetMonth.month,
+    1,
+    0,
+    0,
+    0,
+    0,
+  );
   const targetEnd = new Date(
     targetMonth.year,
     targetMonth.month + 1,
@@ -179,7 +209,15 @@ function eventInMonth(
     59,
     999,
   );
-  const endOfDay = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999);
+  const endOfDay = new Date(
+    end.getFullYear(),
+    end.getMonth(),
+    end.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
   return start <= targetEnd && endOfDay >= targetStart;
 }
 
@@ -203,13 +241,16 @@ export function ScheduleEventHistory({
   onStatusChange?: (status: StatusFilterOption) => void;
 }) {
   const [internalSearch, setInternalSearch] = useState("");
-  const [internalStatus, setInternalStatus] = useState<StatusFilterOption>("ALL");
+  const [internalStatus, setInternalStatus] =
+    useState<StatusFilterOption>("ALL");
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const searchInputId = useId();
 
-  const search = controlledSearch !== undefined ? controlledSearch : internalSearch;
+  const search =
+    controlledSearch !== undefined ? controlledSearch : internalSearch;
   const setSearch = onSearchChange ?? setInternalSearch;
-  const selectedStatus = controlledStatus !== undefined ? controlledStatus : internalStatus;
+  const selectedStatus =
+    controlledStatus !== undefined ? controlledStatus : internalStatus;
   const setSelectedStatus = onStatusChange ?? setInternalStatus;
 
   // Strict month filtering: only show events that occur in the selected month
@@ -289,14 +330,18 @@ export function ScheduleEventHistory({
     });
 
     const csvContent =
-      "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+      "\uFEFF" +
+      [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     const periodName = `${monthName(month.month)}_${month.year}`;
     const roomSlug = currentRoomCode ? `_${currentRoomCode}` : "";
     link.href = url;
-    link.setAttribute("download", `laporan_jadwal_lab${roomSlug}_${periodName}.csv`);
+    link.setAttribute(
+      "download",
+      `laporan_jadwal_lab${roomSlug}_${periodName}.csv`,
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -307,7 +352,10 @@ export function ScheduleEventHistory({
   const roomDisplay = currentRoomName || "Semua Ruangan Lab";
 
   return (
-    <section className="mt-8 space-y-4" aria-label="Riwayat & Agenda Peminjaman Ruangan">
+    <section
+      className="mt-8 space-y-4"
+      aria-label="Riwayat & Agenda Peminjaman Ruangan"
+    >
       {/* Optimized Print CSS Header */}
       <style>{`
         @page {
@@ -367,7 +415,10 @@ export function ScheduleEventHistory({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#EEEEEE] pb-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="size-2 rounded-full bg-[#F9B129]" aria-hidden="true" />
+              <span
+                className="size-2 rounded-full bg-[#F9B129]"
+                aria-hidden="true"
+              />
               <h2 className="text-[16px] font-bold text-[#212121]">
                 Riwayat & Agenda Peminjaman
               </h2>
@@ -377,7 +428,11 @@ export function ScheduleEventHistory({
               </span>
             </div>
             <p className="mt-1 text-[12px] text-[#6B6B6B]">
-              Fasilitas: <strong className="font-semibold text-[#212121]">{roomDisplay}</strong> · {filteredEvents.length} permohonan terjadwal pada bulan ini.
+              Fasilitas:{" "}
+              <strong className="font-semibold text-[#212121]">
+                {roomDisplay}
+              </strong>{" "}
+              · {filteredEvents.length} permohonan terjadwal pada bulan ini.
             </p>
           </div>
 
@@ -391,9 +446,15 @@ export function ScheduleEventHistory({
               title="Unduh laporan jadwal langsung sebagai file PDF"
             >
               {downloadingPdf ? (
-                <Loader2 className="size-3.5 animate-spin text-[#F9B129]" aria-hidden="true" />
+                <Loader2
+                  className="size-3.5 animate-spin text-[#F9B129]"
+                  aria-hidden="true"
+                />
               ) : (
-                <FileDown className="size-3.5 text-[#F9B129]" aria-hidden="true" />
+                <FileDown
+                  className="size-3.5 text-[#F9B129]"
+                  aria-hidden="true"
+                />
               )}
               <span>{downloadingPdf ? "Menyiapkan PDF..." : "Unduh PDF"}</span>
             </button>
@@ -403,7 +464,10 @@ export function ScheduleEventHistory({
               onClick={handleExportCsv}
               className="inline-flex min-h-[36px] items-center gap-1.5 rounded-xl border border-[#E1E1E1] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#212121] transition hover:bg-[#F5F5F5] hover:border-[#212121]/30 cursor-pointer shadow-2xs focus-visible:outline-2 focus-visible:outline-[#F9B129]"
             >
-              <Download className="size-3.5 text-[#6B6B6B]" aria-hidden="true" />
+              <Download
+                className="size-3.5 text-[#6B6B6B]"
+                aria-hidden="true"
+              />
               <span>CSV</span>
             </button>
 
@@ -428,7 +492,8 @@ export function ScheduleEventHistory({
               const count =
                 tab.id === "ALL"
                   ? monthFilteredEvents.length
-                  : monthFilteredEvents.filter((e) => e.status === tab.id).length;
+                  : monthFilteredEvents.filter((e) => e.status === tab.id)
+                      .length;
 
               return (
                 <button
@@ -446,7 +511,9 @@ export function ScheduleEventHistory({
                   <span
                     className={cn(
                       "rounded-full px-1.5 py-0.2 font-mono text-[10px]",
-                      active ? "bg-white/20 text-white" : "bg-[#E1E1E1] text-[#212121]",
+                      active
+                        ? "bg-white/20 text-white"
+                        : "bg-[#E1E1E1] text-[#212121]",
                     )}
                   >
                     {count}
@@ -484,7 +551,10 @@ export function ScheduleEventHistory({
           <table className="w-full border-collapse text-left text-[12px]">
             <thead>
               <tr className="border-b border-[#EEEEEE] bg-[#FBFBFA] text-[11px] font-semibold text-[#6B6B6B]">
-                <th scope="col" className="w-14 px-2 py-2.5 text-center whitespace-nowrap">
+                <th
+                  scope="col"
+                  className="w-14 px-2 py-2.5 text-center whitespace-nowrap"
+                >
                   No
                 </th>
                 <th scope="col" className="px-3.5 py-2.5 min-w-[220px]">
@@ -502,7 +572,10 @@ export function ScheduleEventHistory({
                 <th scope="col" className="px-3.5 py-2.5 min-w-[110px]">
                   Status
                 </th>
-                <th scope="col" className="px-3.5 py-2.5 w-16 text-right print-hidden">
+                <th
+                  scope="col"
+                  className="px-3.5 py-2.5 w-16 text-right print-hidden"
+                >
                   Aksi
                 </th>
               </tr>
@@ -527,7 +600,9 @@ export function ScheduleEventHistory({
                 filteredEvents.map((evt, idx) => {
                   const days = calculateDays(evt.startAt, evt.endAt);
                   const tone = statusToTone(evt.status);
-                  const reqUrl = evt.requestId ? `/plp/requests/${evt.requestId}` : null;
+                  const reqUrl = evt.requestId
+                    ? `/plp/requests/${evt.requestId}`
+                    : null;
                   const equipCount = evt.equipment?.length || 0;
                   const primaryEquip = evt.equipment?.[0];
                   const matCount = evt.materials?.length || 0;
@@ -574,7 +649,10 @@ export function ScheduleEventHistory({
                       <td className="px-3.5 py-2.5">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-1 text-[#212121] font-medium">
-                            <User className="size-3 text-[#6B6B6B] shrink-0" aria-hidden="true" />
+                            <User
+                              className="size-3 text-[#6B6B6B] shrink-0"
+                              aria-hidden="true"
+                            />
                             <span>{evt.actor}</span>
                           </div>
                           {evt.supervisor && (
@@ -591,9 +669,12 @@ export function ScheduleEventHistory({
                         <div className="pdf-hidden print:hidden space-y-1">
                           {primaryEquip ? (
                             <div className="text-[11px] text-[#212121]">
-                              <span className="font-medium">{primaryEquip.name}</span>{" "}
+                              <span className="font-medium">
+                                {primaryEquip.name}
+                              </span>{" "}
                               <span className="font-mono text-[10px] text-[#6B6B6B]">
-                                [{primaryEquip.unitLabel || primaryEquip.unitId}]
+                                [{primaryEquip.unitLabel || primaryEquip.unitId}
+                                ]
                               </span>
                               {equipCount > 1 && (
                                 <span className="ml-1 text-[10px] text-[#AE7C1D] font-medium">
@@ -627,8 +708,13 @@ export function ScheduleEventHistory({
                           {evt.equipment && evt.equipment.length > 0 ? (
                             <div className="space-y-0.5">
                               {evt.equipment.map((eq, eqIdx) => (
-                                <div key={eqIdx} className="text-[10px] text-[#212121] leading-tight">
-                                  <span className="font-medium">• {eq.name}</span>{" "}
+                                <div
+                                  key={eqIdx}
+                                  className="text-[10px] text-[#212121] leading-tight"
+                                >
+                                  <span className="font-medium">
+                                    • {eq.name}
+                                  </span>{" "}
                                   <span className="font-mono text-[9px] text-[#6B6B6B]">
                                     [{eq.unitLabel || eq.unitId}]
                                   </span>
@@ -644,7 +730,10 @@ export function ScheduleEventHistory({
                           {evt.materials && evt.materials.length > 0 && (
                             <div className="space-y-0.5 pt-0.5 border-t border-[#EEEEEE]/70">
                               {evt.materials.map((mat, matIdx) => (
-                                <div key={matIdx} className="text-[10px] text-[#38529B] leading-tight">
+                                <div
+                                  key={matIdx}
+                                  className="text-[10px] text-[#38529B] leading-tight"
+                                >
                                   <span>• {mat.name}</span>{" "}
                                   <span className="font-mono text-[9px] font-semibold">
                                     ({mat.quantity} {mat.unit})
@@ -660,9 +749,13 @@ export function ScheduleEventHistory({
                       <td className="px-3.5 py-2.5">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-1 text-[#212121] font-medium text-[11px]">
-                            <Clock className="size-3 text-[#AE7C1D] shrink-0" aria-hidden="true" />
+                            <Clock
+                              className="size-3 text-[#AE7C1D] shrink-0"
+                              aria-hidden="true"
+                            />
                             <span className="tabular-nums">
-                              {formatDateShort(evt.startAt)} – {formatDateShort(evt.endAt)}
+                              {formatDateShort(evt.startAt)} –{" "}
+                              {formatDateShort(evt.endAt)}
                             </span>
                           </div>
                           <div className="text-[10px] font-mono text-[#6B6B6B]">
@@ -711,7 +804,10 @@ export function ScheduleEventHistory({
                             className="inline-flex items-center gap-0.5 rounded-lg border border-[#E1E1E1] bg-white px-2 py-1 text-[11px] font-semibold text-[#212121] transition hover:bg-[#FEF1CC] hover:border-[#F9B129] hover:text-[#AE7C1D]"
                           >
                             <span>Detail</span>
-                            <ArrowUpRight className="size-3" aria-hidden="true" />
+                            <ArrowUpRight
+                              className="size-3"
+                              aria-hidden="true"
+                            />
                           </Link>
                         ) : (
                           <span className="text-[11px] text-[#929292]">-</span>
@@ -732,14 +828,18 @@ export function ScheduleEventHistory({
         >
           <div>
             <p className="font-semibold">Dibuat Oleh:</p>
-            <p className="text-[#6B6B6B]">Pranata Laboratorium Pendidikan (PLP)</p>
+            <p className="text-[#6B6B6B]">
+              Pranata Laboratorium Pendidikan (PLP)
+            </p>
             <div className="mt-12 border-t border-dashed border-[#212121] pt-1 font-medium">
               Nama & Tanda Tangan Operator
             </div>
           </div>
           <div>
             <p className="font-semibold">Mengetahui:</p>
-            <p className="text-[#6B6B6B]">Koordinator Laboratorium / Kepala Lab</p>
+            <p className="text-[#6B6B6B]">
+              Koordinator Laboratorium / Kepala Lab
+            </p>
             <div className="mt-12 border-t border-dashed border-[#212121] pt-1 font-medium">
               Nama & NIP / Tanda Tangan
             </div>

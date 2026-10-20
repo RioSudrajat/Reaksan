@@ -15,10 +15,15 @@ import {
   formatDateTime,
 } from "@/components/workspace";
 import { requirePermission } from "@/lib/session";
-import { getRequestTrend, type RequestTrendRange } from "@/services/analytics.service";
+import {
+  getRequestTrend,
+  type RequestTrendRange,
+} from "@/services/analytics.service";
 import { getAdminDashboard } from "@/services/admin.service";
 
-export const metadata: Metadata = { title: "Dashboard Administrator · Reaksan" };
+export const metadata: Metadata = {
+  title: "Dashboard Administrator · Reaksan",
+};
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -148,7 +153,8 @@ export default async function AdminDashboardPage({
           footnote={
             <>
               Data diagregasikan dari seluruh jadwal laboratorium. Buka{" "}
-              <ChartLink href="/admin/schedule">jadwal & agenda</ChartLink> untuk detail operasional.
+              <ChartLink href="/admin/schedule">jadwal & agenda</ChartLink>{" "}
+              untuk detail operasional.
             </>
           }
         >

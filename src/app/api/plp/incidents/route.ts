@@ -30,21 +30,19 @@ export function GET(request: Request) {
 }
 
 export function POST(request: Request) {
-  return withApiPermission(
-    request,
-    { plp: ["view"] },
-    async (session) => {
-      const input = createIncidentSchema.parse(await readJson(request));
-      const { roomCodes } = await scopeForSession(session);
-      const created = await createIncident(session.user.id, input, {
-        allowStaffScope: true,
-        roomCodes,
-      });
-      return Response.json(
-        { data: created },
-        { status: 201, headers: { Location: `/api/plp/incidents/${created.code}` } },
-      );
-    },
-  );
+  return withApiPermission(request, { plp: ["view"] }, async (session) => {
+    const input = createIncidentSchema.parse(await readJson(request));
+    const { roomCodes } = await scopeForSession(session);
+    const created = await createIncident(session.user.id, input, {
+      allowStaffScope: true,
+      roomCodes,
+    });
+    return Response.json(
+      { data: created },
+      {
+        status: 201,
+        headers: { Location: `/api/plp/incidents/${created.code}` },
+      },
+    );
+  });
 }
-

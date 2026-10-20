@@ -27,7 +27,8 @@ export const chartColor: Record<ChartTone, string> = {
   muted: "#D9D9D9",
 };
 
-function Legend({  items,
+function Legend({
+  items,
 }: {
   items: { label: string; tone: ChartTone; value?: number | string }[];
 }) {
@@ -73,7 +74,12 @@ export function ChartPanel({
   className?: string;
 }) {
   return (
-    <Panel context={context} title={title} action={action} className={className}>
+    <Panel
+      context={context}
+      title={title}
+      action={action}
+      className={className}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         {range ? (
           <p className="text-[11px] font-medium text-[#6B6B6B]">{range}</p>
@@ -194,7 +200,11 @@ export function StackedBarChart({
               )}
               <span
                 className="w-full shrink-0 text-center text-[9.5px] sm:text-[10px] font-medium text-[#6B6B6B] leading-snug pb-0.5 line-clamp-2 px-0.5"
-                title={bucket.sublabel ? `${bucket.label} (${bucket.sublabel})` : bucket.label}
+                title={
+                  bucket.sublabel
+                    ? `${bucket.label} (${bucket.sublabel})`
+                    : bucket.label
+                }
               >
                 {bucket.label}
               </span>
@@ -557,7 +567,8 @@ export function DonutGauge({
         )}
         <ul className="grid gap-1">
           {segments.map((segment) => {
-            const pct = total > 0 ? Math.round((segment.value / total) * 100) : 0;
+            const pct =
+              total > 0 ? Math.round((segment.value / total) * 100) : 0;
             const content = (
               <div className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 transition hover:bg-[#F8F9FA]">
                 <div className="flex items-center gap-2 min-w-0">
@@ -614,7 +625,9 @@ export function DonutGauge({
               <tr key={segment.key}>
                 <td>{segment.label}</td>
                 <td>{segment.value}</td>
-                <td>{total > 0 ? Math.round((segment.value / total) * 100) : 0}%</td>
+                <td>
+                  {total > 0 ? Math.round((segment.value / total) * 100) : 0}%
+                </td>
               </tr>
             ))}
           </tbody>
@@ -642,7 +655,9 @@ export function AreaRunwayChart({
   overdueHref?: string;
   ariaLabel: string;
 }) {
-  const weekBuckets = buckets.filter((b) => b.key !== "overdue" && b.key !== "later");
+  const weekBuckets = buckets.filter(
+    (b) => b.key !== "overdue" && b.key !== "later",
+  );
   const values = weekBuckets.map((b) => b.value);
   const maxValue = Math.max(1, ...values);
 
@@ -654,7 +669,8 @@ export function AreaRunwayChart({
   const chartWidth = width - paddingX * 2;
   const chartHeight = height - paddingTop - paddingBottom;
 
-  const stepX = weekBuckets.length > 1 ? chartWidth / (weekBuckets.length - 1) : chartWidth;
+  const stepX =
+    weekBuckets.length > 1 ? chartWidth / (weekBuckets.length - 1) : chartWidth;
 
   const points = weekBuckets.map((b, idx) => {
     const x = paddingX + idx * stepX;
@@ -681,9 +697,13 @@ export function AreaRunwayChart({
       {overdueCount > 0 && (
         <div className="flex items-center justify-between rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-3.5 py-2">
           <div className="flex items-center gap-2">
-            <span className="size-2 rounded-full bg-[#DC2626] animate-pulse" aria-hidden="true" />
+            <span
+              className="size-2 rounded-full bg-[#DC2626] animate-pulse"
+              aria-hidden="true"
+            />
             <span className="text-[12px] font-bold text-[#991B1B]">
-              {overdueCount} batch bahan kimia telah melewati masa kadaluarsa (Overdue)
+              {overdueCount} batch bahan kimia telah melewati masa kadaluarsa
+              (Overdue)
             </span>
           </div>
           <Link
@@ -795,7 +815,9 @@ export function AreaRunwayChart({
             )}
             {weekBuckets.map((b, idx) => (
               <tr key={b.key}>
-                <td>Minggu ke-{idx + 1} ({b.label})</td>
+                <td>
+                  Minggu ke-{idx + 1} ({b.label})
+                </td>
                 <td>{b.value} batch</td>
               </tr>
             ))}

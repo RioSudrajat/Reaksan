@@ -63,7 +63,10 @@ export function PrintButton({
         title="Simpan / Unduh dokumen dalam format file PDF"
       >
         {downloading ? (
-          <Loader2 className="size-3.5 animate-spin text-[#F9B129]" aria-hidden="true" />
+          <Loader2
+            className="size-3.5 animate-spin text-[#F9B129]"
+            aria-hidden="true"
+          />
         ) : (
           <Download className="size-3.5 text-[#F9B129]" aria-hidden="true" />
         )}

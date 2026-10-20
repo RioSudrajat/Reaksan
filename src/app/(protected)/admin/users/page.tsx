@@ -11,10 +11,14 @@ import {
 import { auth } from "@/lib/auth";
 import { requirePermission } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Manajemen Pengguna · Admin Reaksan" };
+export const metadata: Metadata = {
+  title: "Manajemen Pengguna · Admin Reaksan",
+};
 
 export default async function AdminUsersPage() {
-  const { user: currentUser } = await requirePermission({ configuration: ["manage-any"] });
+  const { user: currentUser } = await requirePermission({
+    configuration: ["manage-any"],
+  });
   const result = await auth.api.listUsers({
     headers: await headers(),
     query: { limit: 100, sortBy: "createdAt", sortDirection: "desc" },

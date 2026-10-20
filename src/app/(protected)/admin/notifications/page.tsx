@@ -8,7 +8,9 @@ import {
   listNotifications,
 } from "@/services/notifications.service";
 
-export const metadata: Metadata = { title: "Notifikasi Sistem · Admin Reaksan" };
+export const metadata: Metadata = {
+  title: "Notifikasi Sistem · Admin Reaksan",
+};
 
 export default async function AdminNotificationsPage() {
   const { user } = await requirePermission({ configuration: ["manage-any"] });

@@ -37,11 +37,7 @@ import {
 import type { BadgeTone } from "@/components/status-badge";
 
 export type ReaksanPage =
-  | "calendar"
-  | "incidents"
-  | "notifications"
-  | "equipment"
-  | "materials";
+  "calendar" | "incidents" | "notifications" | "equipment" | "materials";
 
 const pageCopy: Record<
   ReaksanPage,
@@ -50,12 +46,14 @@ const pageCopy: Record<
   calendar: {
     eyebrow: "Ruang Kerja",
     title: "Kalender Saya",
-    description: "Pantau pengajuan dan jadwal reservasi laboratorium dalam satu tempat.",
+    description:
+      "Pantau pengajuan dan jadwal reservasi laboratorium dalam satu tempat.",
   },
   incidents: {
     eyebrow: "Bantuan & Layanan",
     title: "Laporan Kendala",
-    description: "Laporkan kendala fasilitas atau kerusakan alat agar lab tetap aman dan siap pakai.",
+    description:
+      "Laporkan kendala fasilitas atau kerusakan alat agar lab tetap aman dan siap pakai.",
   },
   notifications: {
     eyebrow: "Bantuan & Layanan",
@@ -66,12 +64,14 @@ const pageCopy: Record<
   equipment: {
     eyebrow: "Inventaris",
     title: "Instrumen & Alat",
-    description: "Ketersediaan instrumen serta lokasi laboratorium tempat alat berada.",
+    description:
+      "Ketersediaan instrumen serta lokasi laboratorium tempat alat berada.",
   },
   materials: {
     eyebrow: "Inventaris",
     title: "Bahan Kimia",
-    description: "Cek ketersediaan stok bahan kimia sebelum mengajukan permohonan.",
+    description:
+      "Cek ketersediaan stok bahan kimia sebelum mengajukan permohonan.",
   },
 };
 
@@ -236,7 +236,8 @@ function MyCalendarPage({
         toolbar={
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-[12px] font-medium text-[#64748B]">
-              Pilih blok jadwal untuk melihat status, catatan PLP, atau mengelola pengajuan.
+              Pilih blok jadwal untuk melihat status, catatan PLP, atau
+              mengelola pengajuan.
             </p>
             <CalendarRefresh />
           </div>
@@ -310,7 +311,8 @@ function IncidentsPage({ incidents }: { incidents: IncidentView[] }) {
             Tidak ada kendala aktif yang dilaporkan.
           </p>
           <p className="mt-1 text-[11px] text-[#64748B]">
-            Laporkan kerusakan alat atau kondisi tidak aman melalui tombol Laporkan Kendala di atas.
+            Laporkan kerusakan alat atau kondisi tidak aman melalui tombol
+            Laporkan Kendala di atas.
           </p>
         </div>
       ) : (
@@ -336,7 +338,9 @@ function IncidentsPage({ incidents }: { incidents: IncidentView[] }) {
                   {incidentStatusLabel[incident.status]}
                 </StatusBadge>
               </div>
-              <p className="mt-5 text-[14px] font-bold text-[#1E293B]">{incident.title}</p>
+              <p className="mt-5 text-[14px] font-bold text-[#1E293B]">
+                {incident.title}
+              </p>
               <p className="mt-1 text-[12px] text-[#64748B]">
                 {incident.equipmentName ?? incident.roomName}{" "}
                 {incident.roomName && incident.equipmentName
@@ -360,9 +364,14 @@ function IncidentsPage({ incidents }: { incidents: IncidentView[] }) {
         id="report-incident"
         className="mt-4 dashboard-card border-dashed p-5 sm:p-6"
       >
-        <h3 className="text-[16px] font-bold text-[#1E293B]">Pelaporan Kendala Laboratorium</h3>
+        <h3 className="text-[16px] font-bold text-[#1E293B]">
+          Pelaporan Kendala Laboratorium
+        </h3>
         <p className="mt-2 max-w-[600px] text-[12px] leading-5 text-[#64748B]">
-          Sertakan ruangan, instrumen terkait, serta kronologi kejadian secara jelas. Koordinator lab (PLP) akan menindaklanjuti untuk tindakan perbaikan atau kalibrasi. Pelaporan mahasiswa tidak otomatis mengubah status operasional instrumen secara sepihak.
+          Sertakan ruangan, instrumen terkait, serta kronologi kejadian secara
+          jelas. Koordinator lab (PLP) akan menindaklanjuti untuk tindakan
+          perbaikan atau kalibrasi. Pelaporan mahasiswa tidak otomatis mengubah
+          status operasional instrumen secara sepihak.
         </p>
         <Link
           href="/student/incidents/new"
@@ -430,7 +439,8 @@ function NotificationsPage({
             Belum ada notifikasi.
           </p>
           <p className="mt-1 text-[11px] text-[#64748B]">
-            Pembaruan pengajuan jadwal, persetujuan sesi bersama, dan laporan kendala akan muncul di sini.
+            Pembaruan pengajuan jadwal, persetujuan sesi bersama, dan laporan
+            kendala akan muncul di sini.
           </p>
         </div>
       ) : (
@@ -460,7 +470,9 @@ function NotificationsPage({
                   <Bell className="size-4" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <strong className="block text-[13px] text-[#1E293B]">{item.title}</strong>
+                  <strong className="block text-[13px] text-[#1E293B]">
+                    {item.title}
+                  </strong>
                   <span className="mt-1 block text-[12px] leading-5 text-[#64748B]">
                     {item.message}
                   </span>
@@ -520,7 +532,11 @@ function ResourceThumb({
           <div className="absolute inset-x-6 bottom-4 h-3 rounded-full bg-black/10 blur-sm" />
           <div className="relative flex size-20 items-center justify-center rounded-[28%] bg-white/70 shadow-[0_14px_24px_rgba(33,33,33,0.12)]">
             {isEquipment ? (
-              <EquipmentGlyph name={name} className="size-9" strokeWidth={1.6} />
+              <EquipmentGlyph
+                name={name}
+                className="size-9"
+                strokeWidth={1.6}
+              />
             ) : (
               <PackageSearch
                 className="size-9"
@@ -551,7 +567,9 @@ function InventoryPage({
 }) {
   const isEquipment = kind === "equipment";
   const [roomFilter, setRoomFilter] = useState(initialRoom ?? "all");
-  const [classificationFilter, setClassificationFilter] = useState<"ALL" | "INSTRUMENT" | "TOOL">("ALL");
+  const [classificationFilter, setClassificationFilter] = useState<
+    "ALL" | "INSTRUMENT" | "TOOL"
+  >("ALL");
   const rooms = catalog.rooms;
   const items: Array<{
     code: string;
@@ -574,7 +592,12 @@ function InventoryPage({
         room: asset.room,
         detail: asset.usage,
         stock: `${asset.availableUnits}/${asset.totalUnits} unit siap`,
-        status: asset.status === "Available" ? "Tersedia" : asset.status === "Maintenance" ? "Perbaikan" : asset.status,
+        status:
+          asset.status === "Available"
+            ? "Tersedia"
+            : asset.status === "Maintenance"
+              ? "Perbaikan"
+              : asset.status,
         tone: asset.tone,
         meta: asset.meta,
         mediaId: asset.imageMediaId,
@@ -600,7 +623,9 @@ function InventoryPage({
   const filtered = items.filter(
     (item) =>
       (roomFilter === "all" || item.roomId === roomFilter) &&
-      (!isEquipment || classificationFilter === "ALL" || item.classification === classificationFilter) &&
+      (!isEquipment ||
+        classificationFilter === "ALL" ||
+        item.classification === classificationFilter) &&
       `${item.name} ${item.code} ${item.room} ${item.detail}`
         .toLowerCase()
         .includes(searchTerm.toLowerCase()),
@@ -642,8 +667,7 @@ function InventoryPage({
             href="/student/calendar"
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#F9B129] px-4 text-[12px] font-bold text-[#1E293B] hover:bg-[#F7B742] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F9B129]"
           >
-            Ajukan Jadwal{" "}
-            <ChevronRight className="size-4" aria-hidden="true" />
+            Ajukan Jadwal <ChevronRight className="size-4" aria-hidden="true" />
           </Link>
         </div>
       </section>
@@ -694,9 +718,12 @@ function InventoryPage({
               className="mx-auto size-6 text-[#94A3B8]"
               aria-hidden="true"
             />
-            <p className="mt-3 text-[13px] font-semibold text-[#1E293B]">Tidak ada data yang sesuai</p>
+            <p className="mt-3 text-[13px] font-semibold text-[#1E293B]">
+              Tidak ada data yang sesuai
+            </p>
             <p className="mt-1 text-[11px] text-[#64748B]">
-              Coba kata kunci pencarian lain atau pilih filter ruangan yang berbeda.
+              Coba kata kunci pencarian lain atau pilih filter ruangan yang
+              berbeda.
             </p>
           </div>
         ) : (
@@ -750,7 +777,8 @@ function InventoryPage({
                     {item.stock}
                   </p>
                   <span className="mt-4 inline-flex min-h-10 items-center text-[11px] font-bold text-[#38529B] group-hover:text-[#283C72]">
-                    Lihat Ketersediaan <ChevronRight className="ml-1 size-3.5" />
+                    Lihat Ketersediaan{" "}
+                    <ChevronRight className="ml-1 size-3.5" />
                   </span>
                 </div>
               </Link>

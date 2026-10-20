@@ -3,7 +3,17 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Calendar, Clock, Download, ExternalLink, Loader2, MapPin, Package, Printer, User } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Download,
+  ExternalLink,
+  Loader2,
+  MapPin,
+  Package,
+  Printer,
+  User,
+} from "lucide-react";
 import { RequestStatusBadge, controlClass } from "@/components/workspace";
 import type { PlpScheduleEvent } from "@/services/plp.service";
 import { exportDailyRunSheetToPdf } from "@/lib/schedule-pdf";
@@ -112,11 +122,19 @@ export function DailyRunSheet({
             title="Unduh Daily Run Sheet langsung sebagai file PDF"
           >
             {downloading ? (
-              <Loader2 className="size-3.5 animate-spin text-[#F9B129]" aria-hidden="true" />
+              <Loader2
+                className="size-3.5 animate-spin text-[#F9B129]"
+                aria-hidden="true"
+              />
             ) : (
-              <Download className="size-3.5 text-[#F9B129]" aria-hidden="true" />
+              <Download
+                className="size-3.5 text-[#F9B129]"
+                aria-hidden="true"
+              />
             )}
-            <span>{downloading ? "Menyiapkan PDF..." : "Unduh Run Sheet PDF"}</span>
+            <span>
+              {downloading ? "Menyiapkan PDF..." : "Unduh Run Sheet PDF"}
+            </span>
           </button>
           <button
             type="button"
@@ -188,7 +206,9 @@ export function DailyRunSheet({
                     timeZone: "Asia/Jakarta",
                   }).format(new Date(`${date}T00:00:00+07:00`))}
                 </strong>
-                {currentRoom ? ` · Lab: ${rooms.find((r) => r.id === currentRoom)?.name ?? currentRoom}` : ""}
+                {currentRoom
+                  ? ` · Lab: ${rooms.find((r) => r.id === currentRoom)?.name ?? currentRoom}`
+                  : ""}
               </p>
             </div>
             <span className="text-[12px] font-semibold text-[#475569] tabular-nums">
@@ -199,12 +219,16 @@ export function DailyRunSheet({
 
         {events.length === 0 ? (
           <div className="py-12 text-center">
-            <Clock className="mx-auto size-8 text-[#94A3B8]" aria-hidden="true" />
+            <Clock
+              className="mx-auto size-8 text-[#94A3B8]"
+              aria-hidden="true"
+            />
             <p className="mt-2 text-[13px] font-semibold text-[#121826]">
               Tidak ada agenda operasional
             </p>
             <p className="mt-0.5 text-[12px] text-[#475569]">
-              Belum ada permohonan atau reservasi yang disetujui pada tanggal ini.
+              Belum ada permohonan atau reservasi yang disetujui pada tanggal
+              ini.
             </p>
           </div>
         ) : (
@@ -237,7 +261,9 @@ export function DailyRunSheet({
                       {event.actorName}
                     </span>
                     <span>·</span>
-                    <span className="font-mono text-[#64748B]">{event.code}</span>
+                    <span className="font-mono text-[#64748B]">
+                      {event.code}
+                    </span>
                     <span>·</span>
                     <span className="inline-flex items-center gap-1 font-medium text-[#121826]">
                       <Package className="size-3 text-[#64748B]" />
@@ -268,7 +294,9 @@ export function DailyRunSheet({
         >
           <div>
             <p className="font-semibold">Operator / Petugas Harian:</p>
-            <p className="text-[#64748B]">Pranata Laboratorium Pendidikan (PLP)</p>
+            <p className="text-[#64748B]">
+              Pranata Laboratorium Pendidikan (PLP)
+            </p>
             <div className="mt-12 border-t border-dashed border-[#121826] pt-1 font-medium">
               Nama & Tanda Tangan
             </div>

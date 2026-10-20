@@ -32,10 +32,7 @@ import {
 import { DashboardAgendaCard } from "@/components/plp/dashboard-agenda-card";
 import { UsageRankingPanel } from "@/components/plp/usage-ranking-panel";
 import { requirePermission } from "@/lib/session";
-import {
-  getRoomScope,
-  scopeRoomCodes,
-} from "@/services/access-scope.service";
+import { getRoomScope, scopeRoomCodes } from "@/services/access-scope.service";
 import {
   getEquipmentRoomDistribution,
   getExpiryTrend,
@@ -91,14 +88,15 @@ export default async function PlpDashboardPage({
   const isUnassigned = roomCodes !== null && roomCodes.length === 0;
   const singleRoomCode = isSingleRoom ? roomCodes[0] : undefined;
 
-  const [data, trend, risk, equipmentDist, expiryTrend, topUsage] = await Promise.all([
-    getPlpDashboard(user.id, roomCodes),
-    getRequestTrend({ days: trendDays, roomCodes }),
-    getMaterialRiskByRoom(roomCodes),
-    getEquipmentRoomDistribution(roomCodes),
-    getExpiryTrend(8, roomCodes),
-    getTopUsage({ days: 30, roomCodes }),
-  ]);
+  const [data, trend, risk, equipmentDist, expiryTrend, topUsage] =
+    await Promise.all([
+      getPlpDashboard(user.id, roomCodes),
+      getRequestTrend({ days: trendDays, roomCodes }),
+      getMaterialRiskByRoom(roomCodes),
+      getEquipmentRoomDistribution(roomCodes),
+      getExpiryTrend(8, roomCodes),
+      getTopUsage({ days: 30, roomCodes }),
+    ]);
 
   // Waktu & Tanggal Live WIB
   const now = new Date();
@@ -141,8 +139,7 @@ export default async function PlpDashboardPage({
     0,
   );
   const totalRetired = equipmentDist.buckets.reduce(
-    (sum, b) =>
-      sum + (b.segments.find((s) => s.key === "retired")?.value ?? 0),
+    (sum, b) => sum + (b.segments.find((s) => s.key === "retired")?.value ?? 0),
     0,
   );
   const grandTotalEquipment =
@@ -271,7 +268,12 @@ export default async function PlpDashboardPage({
             )}
           </div>
           <p className="mt-1 text-[12px] text-[#6B6B6B]">
-            {liveDateStr} · <span className="font-semibold text-[#212121]">{liveTimeStr} WIB</span> · Pusat triage operasional, logistik peminjaman, dan kendali keselamatan laboratorium.
+            {liveDateStr} ·{" "}
+            <span className="font-semibold text-[#212121]">
+              {liveTimeStr} WIB
+            </span>{" "}
+            · Pusat triage operasional, logistik peminjaman, dan kendali
+            keselamatan laboratorium.
           </p>
         </div>
 
@@ -293,7 +295,10 @@ export default async function PlpDashboardPage({
             Run Sheet Hari Ini
           </Link>
 
-          <QuickIncidentDialog triggerLabel="Lapor Insiden" triggerVariant="outline" />
+          <QuickIncidentDialog
+            triggerLabel="Lapor Insiden"
+            triggerVariant="outline"
+          />
         </div>
       </div>
 
@@ -302,12 +307,16 @@ export default async function PlpDashboardPage({
         <div className="mt-3.5 rounded-2xl border border-[#E1E1E1] bg-white p-3.5 sm:p-4 shadow-xs">
           <div className="flex items-start gap-3">
             <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#F5F5F5] text-[#991B1B] border border-[#E1E1E1]">
-              <AlertTriangle className="size-4 text-[#F45959]" aria-hidden="true" />
+              <AlertTriangle
+                className="size-4 text-[#F45959]"
+                aria-hidden="true"
+              />
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-[13px] font-bold text-[#212121]">
-                  Kendala Operasional Memerlukan Tindakan ({urgentAlertsCount} Isu)
+                  Kendala Operasional Memerlukan Tindakan ({urgentAlertsCount}{" "}
+                  Isu)
                 </p>
                 <span className="text-[10px] font-bold text-[#991B1B] bg-white px-2 py-0.5 rounded-md border border-[#F45959]/30">
                   Prioritas Hari Ini
@@ -319,7 +328,9 @@ export default async function PlpDashboardPage({
                     href="/plp/fulfillment/return"
                     className="inline-flex items-center gap-1.5 rounded-lg border border-[#E1E1E1] bg-white px-3 py-1 font-semibold text-[#991B1B] shadow-2xs transition hover:border-[#F45959]/60 hover:bg-[#F5F5F5]"
                   >
-                    <span>{urgentOverdue.length} pengembalian melewati batas waktu</span>
+                    <span>
+                      {urgentOverdue.length} pengembalian melewati batas waktu
+                    </span>
                     <ArrowRight className="size-3 text-[#F45959]" />
                   </Link>
                 )}
@@ -328,7 +339,10 @@ export default async function PlpDashboardPage({
                     href="/plp/incidents"
                     className="inline-flex items-center gap-1.5 rounded-lg border border-[#E1E1E1] bg-white px-3 py-1 font-semibold text-[#991B1B] shadow-2xs transition hover:border-[#F45959]/60 hover:bg-[#F5F5F5]"
                   >
-                    <span>{criticalIncidents.length} insiden kategori tinggi perlu ditinjau</span>
+                    <span>
+                      {criticalIncidents.length} insiden kategori tinggi perlu
+                      ditinjau
+                    </span>
                     <ArrowRight className="size-3 text-[#F45959]" />
                   </Link>
                 )}
@@ -388,7 +402,9 @@ export default async function PlpDashboardPage({
           </p>
           <p className="mt-1 text-[11px] text-[#6B6B6B] truncate">
             {urgentOverdue.length > 0 ? (
-              <span className="font-semibold text-[#991B1B]">{urgentOverdue.length} terlambat</span>
+              <span className="font-semibold text-[#991B1B]">
+                {urgentOverdue.length} terlambat
+              </span>
             ) : (
               "Jadwal kembali hari ini"
             )}
@@ -428,7 +444,9 @@ export default async function PlpDashboardPage({
           </p>
           <p className="mt-1 text-[11px] text-[#6B6B6B] truncate">
             {totalExpiredBatches > 0 ? (
-              <span className="font-semibold text-[#991B1B]">{totalExpiredBatches} batch kedaluwarsa</span>
+              <span className="font-semibold text-[#991B1B]">
+                {totalExpiredBatches} batch kedaluwarsa
+              </span>
             ) : totalExpiringBatches > 0 ? (
               <span>{totalExpiringBatches} batch segera habis</span>
             ) : (
@@ -480,10 +498,7 @@ export default async function PlpDashboardPage({
 
       {/* 5. VISUALISASI DATA: PALING SERING DIGUNAKAN (INSTRUMEN, ALAT, BAHAN) */}
       <div className="mt-5">
-        <UsageRankingPanel
-          data={topUsage}
-          singleRoomCode={singleRoomCode}
-        />
+        <UsageRankingPanel data={topUsage} singleRoomCode={singleRoomCode} />
       </div>
 
       {/* 6. TRIAGE WORKBOARD (4 TABS TERPADU) & AGENDA 48 JAM */}
@@ -540,10 +555,7 @@ export default async function PlpDashboardPage({
                 description="Tidak ada material low stock atau batch mendekati expiry di seluruh laboratorium saat ini."
               />
             ) : (
-              <HorizontalBarChart
-                rows={coordinatorRiskRows}
-                unit="isu"
-              />
+              <HorizontalBarChart rows={coordinatorRiskRows} unit="isu" />
             )}
           </ChartPanel>
         ) : (
@@ -557,7 +569,9 @@ export default async function PlpDashboardPage({
                   href={`/plp/inventory/materials?room=${encodeURIComponent(singleRoomCode ?? "")}&expiry=expired`}
                   className="rounded-xl border border-[#E1E1E1] bg-[#F5F5F5] p-3 transition hover:border-[#F45959]/50"
                 >
-                  <p className="text-[11px] font-semibold text-[#6B6B6B]">Batch Expired</p>
+                  <p className="text-[11px] font-semibold text-[#6B6B6B]">
+                    Batch Expired
+                  </p>
                   <p className="mt-1 text-[18px] font-bold text-[#991B1B] tabular-nums">
                     {singleRoomRisk?.expiredBatches ?? 0}
                   </p>
@@ -567,7 +581,9 @@ export default async function PlpDashboardPage({
                   href={`/plp/inventory/materials?room=${encodeURIComponent(singleRoomCode ?? "")}&expiry=soon`}
                   className="rounded-xl border border-[#E1E1E1] bg-[#F5F5F5] p-3 transition hover:border-[#F9B129] hover:bg-[#FEF1CC]/30"
                 >
-                  <p className="text-[11px] font-semibold text-[#6B6B6B]">Segera Expired</p>
+                  <p className="text-[11px] font-semibold text-[#6B6B6B]">
+                    Segera Expired
+                  </p>
                   <p className="mt-1 text-[18px] font-bold text-[#AE7C1D] tabular-nums">
                     {singleRoomRisk?.expiringBatches ?? 0}
                   </p>
@@ -577,7 +593,9 @@ export default async function PlpDashboardPage({
                   href={`/plp/inventory/materials?room=${encodeURIComponent(singleRoomCode ?? "")}&stock=low`}
                   className="rounded-xl border border-[#E1E1E1] bg-[#F5F5F5] p-3 transition hover:border-[#F9B129] hover:bg-[#FEF1CC]/30"
                 >
-                  <p className="text-[11px] font-semibold text-[#6B6B6B]">Low Stock</p>
+                  <p className="text-[11px] font-semibold text-[#6B6B6B]">
+                    Low Stock
+                  </p>
                   <p className="mt-1 text-[18px] font-bold text-[#212121] tabular-nums">
                     {singleRoomRisk?.lowStockMaterials ?? 0}
                   </p>
@@ -587,7 +605,9 @@ export default async function PlpDashboardPage({
                   href={`/plp/inventory/equipment?room=${encodeURIComponent(singleRoomCode ?? "")}&status=MAINTENANCE`}
                   className="rounded-xl border border-[#E1E1E1] bg-[#F5F5F5] p-3 transition hover:border-[#F9B129] hover:bg-[#FEF1CC]/30"
                 >
-                  <p className="text-[11px] font-semibold text-[#6B6B6B]">Alat Servis</p>
+                  <p className="text-[11px] font-semibold text-[#6B6B6B]">
+                    Alat Servis
+                  </p>
                   <p className="mt-1 text-[18px] font-bold text-[#212121] tabular-nums">
                     {totalAttention}
                   </p>
@@ -600,7 +620,8 @@ export default async function PlpDashboardPage({
                 </p>
                 {data.lowStock.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-[#E1E1E1] p-3 text-center text-[12px] text-[#6B6B6B]">
-                    Semua stok bahan di ruangan ini memenuhi batas minimum cadangan.
+                    Semua stok bahan di ruangan ini memenuhi batas minimum
+                    cadangan.
                   </div>
                 ) : (
                   <ul className="space-y-1.5">
@@ -614,8 +635,12 @@ export default async function PlpDashboardPage({
                             {mat.name}
                           </p>
                           <p className="text-[11px] text-[#6B6B6B]">
-                            Tersedia: <strong>{mat.available} {mat.unit}</strong>
-                            {mat.minimum !== null && ` (Min: ${mat.minimum} ${mat.unit})`}
+                            Tersedia:{" "}
+                            <strong>
+                              {mat.available} {mat.unit}
+                            </strong>
+                            {mat.minimum !== null &&
+                              ` (Min: ${mat.minimum} ${mat.unit})`}
                           </p>
                         </div>
                         <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md border border-[#E1E1E1] bg-[#F5F5F5] text-[#212121]">

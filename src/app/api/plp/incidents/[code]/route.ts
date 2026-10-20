@@ -1,5 +1,8 @@
 import { ApiError, withApiPermission } from "@/lib/api";
-import { assertIncidentInScope, scopeForSession } from "@/services/access-scope.service";
+import {
+  assertIncidentInScope,
+  scopeForSession,
+} from "@/services/access-scope.service";
 import { getAnyIncident } from "@/services/incidents.service";
 import { incidentCodeSchema } from "@/validators/incidents";
 

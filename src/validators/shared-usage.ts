@@ -9,7 +9,8 @@ export const createSharedUsageSchema = z
   })
   .strict()
   .refine(
-    (value) => new Date(value.startAt).getTime() < new Date(value.endAt).getTime(),
+    (value) =>
+      new Date(value.startAt).getTime() < new Date(value.endAt).getTime(),
     { path: ["endAt"], message: "End time must be after the start time." },
   );
 
@@ -20,6 +21,4 @@ export const respondSharedUsageSchema = z
 export const sharedUsageIdSchema = z.string().uuid();
 
 export type CreateSharedUsageInput = z.infer<typeof createSharedUsageSchema>;
-export type RespondSharedUsageInput = z.infer<
-  typeof respondSharedUsageSchema
->;
+export type RespondSharedUsageInput = z.infer<typeof respondSharedUsageSchema>;

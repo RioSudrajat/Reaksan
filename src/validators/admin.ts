@@ -140,7 +140,12 @@ export const assignmentInputSchema = z
 
 export const settingsInputSchema = z
   .object({
-    cancellation_lead_time_minutes: z.number().int().min(0).max(10080).optional(),
+    cancellation_lead_time_minutes: z
+      .number()
+      .int()
+      .min(0)
+      .max(10080)
+      .optional(),
     low_stock_ratio: z.number().min(0.1).max(10).optional(),
     timezone: z.string().trim().min(3).max(64).optional(),
     notification_policy: z

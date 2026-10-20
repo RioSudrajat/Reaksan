@@ -10,7 +10,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/app", destination: "/student", permanent: false },
-      { source: "/app/:path*", destination: "/student/:path*", permanent: false },
+      {
+        source: "/app/:path*",
+        destination: "/student/:path*",
+        permanent: false,
+      },
     ];
   },
   // Emits .next/standalone with a minimal server and only the traced runtime

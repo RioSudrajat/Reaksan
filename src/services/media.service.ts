@@ -61,34 +61,32 @@ export async function findReferencingRows(
   mediaId: string,
   exec: DbExecutor = db,
 ) {
-  const [
-    materials,
-    instrumentTypes,
-    instrumentAssets,
-    toolTypes,
-    toolAssets,
-  ] = await Promise.all([
-    exec
-      .select({ id: material.id, code: material.code, name: material.name })
-      .from(material)
-      .where(eq(material.imageMediaId, mediaId)),
-    exec
-      .select({ id: instrumentType.id, name: instrumentType.name })
-      .from(instrumentType)
-      .where(eq(instrumentType.imageMediaId, mediaId)),
-    exec
-      .select({ id: instrumentAsset.id, assetCode: instrumentAsset.assetCode })
-      .from(instrumentAsset)
-      .where(eq(instrumentAsset.imageMediaId, mediaId)),
-    exec
-      .select({ id: toolType.id, name: toolType.name })
-      .from(toolType)
-      .where(eq(toolType.imageMediaId, mediaId)),
-    exec
-      .select({ id: toolAsset.id, assetCode: toolAsset.assetCode })
-      .from(toolAsset)
-      .where(eq(toolAsset.imageMediaId, mediaId)),
-  ]);
+  const [materials, instrumentTypes, instrumentAssets, toolTypes, toolAssets] =
+    await Promise.all([
+      exec
+        .select({ id: material.id, code: material.code, name: material.name })
+        .from(material)
+        .where(eq(material.imageMediaId, mediaId)),
+      exec
+        .select({ id: instrumentType.id, name: instrumentType.name })
+        .from(instrumentType)
+        .where(eq(instrumentType.imageMediaId, mediaId)),
+      exec
+        .select({
+          id: instrumentAsset.id,
+          assetCode: instrumentAsset.assetCode,
+        })
+        .from(instrumentAsset)
+        .where(eq(instrumentAsset.imageMediaId, mediaId)),
+      exec
+        .select({ id: toolType.id, name: toolType.name })
+        .from(toolType)
+        .where(eq(toolType.imageMediaId, mediaId)),
+      exec
+        .select({ id: toolAsset.id, assetCode: toolAsset.assetCode })
+        .from(toolAsset)
+        .where(eq(toolAsset.imageMediaId, mediaId)),
+    ]);
   return {
     materials,
     instrumentTypes,
@@ -434,46 +432,45 @@ export function setEquipmentAssetImage(
 // Catalog pages use these maps because the shared admin list services do not
 // select the new image column.
 export async function listCatalogImageRefs() {
-  const [
-    materials,
-    instrumentTypes,
-    toolTypes,
-    instrumentAssets,
-    toolAssets,
-  ] = await Promise.all([
-    db
-      .select({ id: material.id, imageMediaId: material.imageMediaId })
-      .from(material),
-    db
-      .select({
-        id: instrumentType.id,
-        imageMediaId: instrumentType.imageMediaId,
-      })
-      .from(instrumentType),
-    db
-      .select({
-        id: toolType.id,
-        imageMediaId: toolType.imageMediaId,
-      })
-      .from(toolType),
-    db
-      .select({
-        id: instrumentAsset.id,
-        imageMediaId: sql<string | null>`COALESCE(${instrumentAsset.imageMediaId}, ${instrumentType.imageMediaId})`,
-      })
-      .from(instrumentAsset)
-      .leftJoin(
-        instrumentType,
-        eq(instrumentAsset.instrumentTypeId, instrumentType.id),
-      ),
-    db
-      .select({
-        id: toolAsset.id,
-        imageMediaId: sql<string | null>`COALESCE(${toolAsset.imageMediaId}, ${toolType.imageMediaId})`,
-      })
-      .from(toolAsset)
-      .leftJoin(toolType, eq(toolAsset.toolTypeId, toolType.id)),
-  ]);
+  const [materials, instrumentTypes, toolTypes, instrumentAssets, toolAssets] =
+    await Promise.all([
+      db
+        .select({ id: material.id, imageMediaId: material.imageMediaId })
+        .from(material),
+      db
+        .select({
+          id: instrumentType.id,
+          imageMediaId: instrumentType.imageMediaId,
+        })
+        .from(instrumentType),
+      db
+        .select({
+          id: toolType.id,
+          imageMediaId: toolType.imageMediaId,
+        })
+        .from(toolType),
+      db
+        .select({
+          id: instrumentAsset.id,
+          imageMediaId: sql<
+            string | null
+          >`COALESCE(${instrumentAsset.imageMediaId}, ${instrumentType.imageMediaId})`,
+        })
+        .from(instrumentAsset)
+        .leftJoin(
+          instrumentType,
+          eq(instrumentAsset.instrumentTypeId, instrumentType.id),
+        ),
+      db
+        .select({
+          id: toolAsset.id,
+          imageMediaId: sql<
+            string | null
+          >`COALESCE(${toolAsset.imageMediaId}, ${toolType.imageMediaId})`,
+        })
+        .from(toolAsset)
+        .leftJoin(toolType, eq(toolAsset.toolTypeId, toolType.id)),
+    ]);
 
   return {
     materials,

@@ -8,10 +8,7 @@ import { currentScheduleMonth } from "@/components/schedule-data";
 import { listRoomViews } from "@/services/catalog.service";
 import { loadScheduleCalendar, listPlpSchedule } from "@/services/plp.service";
 import { requirePermission } from "@/lib/session";
-import {
-  getRoomScope,
-  scopeRoomCodes,
-} from "@/services/access-scope.service";
+import { getRoomScope, scopeRoomCodes } from "@/services/access-scope.service";
 import { scheduleViewSchema } from "@/validators/plp";
 
 export const metadata: Metadata = { title: "Schedule" };

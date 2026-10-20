@@ -81,7 +81,10 @@ export async function listBatchStock(
   }));
 }
 
-export function stockTotalsForMaterial(rows: BatchStockRow[], materialId: string) {
+export function stockTotalsForMaterial(
+  rows: BatchStockRow[],
+  materialId: string,
+) {
   const batches = rows.filter((row) => row.materialId === materialId);
   const sum = (pick: (row: BatchStockRow) => number) =>
     batches.reduce((total, row) => total + pick(row), 0);

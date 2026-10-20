@@ -4,7 +4,9 @@ import { EmptyState, PageHeader, Panel } from "@/components/workspace";
 import { listLaboratories, listRoomsAdmin } from "@/services/admin.service";
 import { requirePermission } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Data Master Ruangan · Admin Reaksan" };
+export const metadata: Metadata = {
+  title: "Data Master Ruangan · Admin Reaksan",
+};
 
 const toneOptions = [
   { value: "yellow", label: "Kuning (Yellow)" },
@@ -45,20 +47,54 @@ export default async function AdminRoomsPage() {
               required: true,
               options: labOptions,
             },
-            { name: "code", label: "Kode Ruangan", required: true, placeholder: "lab-organik" },
-            { name: "name", label: "Nama Ruangan", required: true, placeholder: "Laboratorium Kimia Organik" },
-            { name: "shortName", label: "Nama Singkat", required: true, placeholder: "Kimia Organik" },
+            {
+              name: "code",
+              label: "Kode Ruangan",
+              required: true,
+              placeholder: "lab-organik",
+            },
+            {
+              name: "name",
+              label: "Nama Ruangan",
+              required: true,
+              placeholder: "Laboratorium Kimia Organik",
+            },
+            {
+              name: "shortName",
+              label: "Nama Singkat",
+              required: true,
+              placeholder: "Kimia Organik",
+            },
             { name: "floor", label: "Lantai Gedung", placeholder: "Lantai 1" },
-            { name: "tone", label: "Warna Denah", type: "select", options: toneOptions },
-            { name: "description", label: "Deskripsi", type: "textarea", placeholder: "Penjelasan fungsi ruangan dan kapasitas..." },
-            { name: "active", label: "Status Aktif", type: "checkbox", defaultValue: true },
+            {
+              name: "tone",
+              label: "Warna Denah",
+              type: "select",
+              options: toneOptions,
+            },
+            {
+              name: "description",
+              label: "Deskripsi",
+              type: "textarea",
+              placeholder: "Penjelasan fungsi ruangan dan kapasitas...",
+            },
+            {
+              name: "active",
+              label: "Status Aktif",
+              type: "checkbox",
+              defaultValue: true,
+            },
           ]}
           submitLabel="Simpan Ruangan"
           successMessage="Ruangan berhasil ditambahkan."
         />
       </Panel>
 
-      <Panel context={`${rooms.length} ruangan`} title="Daftar Ruangan Terdaftar" padded={false}>
+      <Panel
+        context={`${rooms.length} ruangan`}
+        title="Daftar Ruangan Terdaftar"
+        padded={false}
+      >
         {rooms.length === 0 ? (
           <div className="p-5">
             <EmptyState
@@ -99,8 +135,16 @@ export default async function AdminRoomsPage() {
                           options: labOptions,
                           defaultValue: room.laboratoryCode,
                         },
-                        { name: "code", label: "Kode", defaultValue: room.code },
-                        { name: "name", label: "Nama", defaultValue: room.name },
+                        {
+                          name: "code",
+                          label: "Kode",
+                          defaultValue: room.code,
+                        },
+                        {
+                          name: "name",
+                          label: "Nama",
+                          defaultValue: room.name,
+                        },
                         {
                           name: "shortName",
                           label: "Nama pendek",

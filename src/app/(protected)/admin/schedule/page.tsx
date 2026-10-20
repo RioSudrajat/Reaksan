@@ -8,7 +8,9 @@ import { loadScheduleCalendar } from "@/services/plp.service";
 import { requirePermission } from "@/lib/session";
 import { scheduleViewSchema } from "@/validators/plp";
 
-export const metadata: Metadata = { title: "Jadwal & Agenda Global · Admin Reaksan" };
+export const metadata: Metadata = {
+  title: "Jadwal & Agenda Global · Admin Reaksan",
+};
 
 type SearchParams = Record<string, string | string[] | undefined>;
 

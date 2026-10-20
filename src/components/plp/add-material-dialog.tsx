@@ -323,14 +323,21 @@ export function AddMaterialDialog({ rooms }: { rooms: RoomOption[] }) {
                           value={source}
                           onChange={(e) =>
                             setSource(
-                              e.target.value as "PURCHASE" | "GRANT_HIBAH" | "LEFTOVER",
+                              e.target.value as
+                                "PURCHASE" | "GRANT_HIBAH" | "LEFTOVER",
                             )
                           }
                           className={controlClass + " mt-1"}
                         >
-                          <option value="PURCHASE">Pengadaan Baru Laboratorium</option>
-                          <option value="GRANT_HIBAH">Hibah Dosen / Riset</option>
-                          <option value="LEFTOVER">Sisa Praktikum Mahasiswa</option>
+                          <option value="PURCHASE">
+                            Pengadaan Baru Laboratorium
+                          </option>
+                          <option value="GRANT_HIBAH">
+                            Hibah Dosen / Riset
+                          </option>
+                          <option value="LEFTOVER">
+                            Sisa Praktikum Mahasiswa
+                          </option>
                         </select>
                       </div>
 

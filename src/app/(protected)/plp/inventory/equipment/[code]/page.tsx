@@ -11,10 +11,7 @@ import {
 } from "@/components/workspace";
 import { getPlpEquipmentDetail } from "@/services/plp.service";
 import { requirePermission } from "@/lib/session";
-import {
-  getRoomScope,
-  scopeRoomCodes,
-} from "@/services/access-scope.service";
+import { getRoomScope, scopeRoomCodes } from "@/services/access-scope.service";
 import { UnitStatusAction } from "@/components/plp/unit-status-action";
 import { AddUnitDialog } from "@/components/plp/add-unit-dialog";
 import { DeleteConfirmButton } from "@/components/plp/delete-confirm-button";
@@ -63,7 +60,11 @@ export default async function PlpEquipmentDetailPage({
               disabled={asset.status === "IN_USE"}
               disabledReason="Aset sedang berstatus dipakai"
             />
-            <CatalogImage mediaId={asset.imageMediaId} alt={asset.name} size={72} />
+            <CatalogImage
+              mediaId={asset.imageMediaId}
+              alt={asset.name}
+              size={72}
+            />
           </div>
         }
       />
@@ -91,14 +92,33 @@ export default async function PlpEquipmentDetailPage({
                 <caption className="sr-only">Daftar unit asset</caption>
                 <thead>
                   <tr className="border-b border-[#EEEEEE] text-[11px] uppercase tracking-[0.08em] text-[#929292]">
-                    <th scope="col" className="px-3 py-2 font-semibold">Kode</th>
-                    <th scope="col" className="px-3 py-2 font-semibold">Tag QR</th>
-                    <th scope="col" className="px-3 py-2 font-semibold">Label</th>
-                    <th scope="col" className="px-3 py-2 font-semibold">Lokasi Meja/Rak</th>
-                    <th scope="col" className="px-3 py-2 font-semibold">Status</th>
-                    <th scope="col" className="px-3 py-2 font-semibold">Kondisi</th>
-                    <th scope="col" className="px-3 py-2 font-semibold">Catatan</th>
-                    <th scope="col" className="px-3 py-2 font-semibold text-right">Aksi</th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      Kode
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      Tag QR
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      Label
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      Lokasi Meja/Rak
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      Status
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      Kondisi
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      Catatan
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-2 font-semibold text-right"
+                    >
+                      Aksi
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -107,7 +127,10 @@ export default async function PlpEquipmentDetailPage({
                       key={unit.unitId}
                       className="border-b border-[#F1F0EC] last:border-0"
                     >
-                      <th scope="row" className="px-3 py-2 text-[12px] font-semibold text-[#212121]">
+                      <th
+                        scope="row"
+                        className="px-3 py-2 text-[12px] font-semibold text-[#212121]"
+                      >
                         {unit.code}
                       </th>
                       <td className="px-3 py-2 text-[12px]">
@@ -184,7 +207,10 @@ export default async function PlpEquipmentDetailPage({
                             description="Apakah Anda yakin ingin menghapus unit fisik ini dari inventaris?"
                             itemName={`Unit ${unit.code} (${unit.label})`}
                             buttonVariant="icon"
-                            disabled={unit.status === "IN_USE" || unit.status === "RESERVED"}
+                            disabled={
+                              unit.status === "IN_USE" ||
+                              unit.status === "RESERVED"
+                            }
                             disabledReason="Unit sedang dipinjam atau direservasi"
                           />
                         </div>

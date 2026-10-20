@@ -82,7 +82,10 @@ export function AddUnitDialog({
                 <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#64748B]">
                   {assetCode} · {assetName}
                 </p>
-                <h3 id="add-unit-title" className="text-[16px] font-bold text-[#121826]">
+                <h3
+                  id="add-unit-title"
+                  className="text-[16px] font-bold text-[#121826]"
+                >
                   Tambah Unit Fisik Baru
                 </h3>
               </div>
@@ -151,7 +154,9 @@ export function AddUnitDialog({
               </div>
 
               <div className="rounded-xl border border-dashed border-[#E5E7EB] bg-[#F8F9FA] p-3 text-[11px] text-[#475569]">
-                <p className="font-semibold text-[#121826]">🏷️ Tag QR Code Otomatis:</p>
+                <p className="font-semibold text-[#121826]">
+                  🏷️ Tag QR Code Otomatis:
+                </p>
                 <p className="mt-0.5">
                   Unit akan langsung diterbitkan QR Code unik:{" "}
                   <code className="rounded bg-white px-1.5 py-0.5 font-mono font-bold text-[#8D6500] border border-[#FDE68A]">
@@ -197,7 +202,9 @@ export function AddUnitDialog({
                     className={controlClass + " mt-1"}
                   >
                     <option value="GOOD">GOOD · Baik</option>
-                    <option value="MINOR_ISSUE">MINOR ISSUE · Masalah kecil</option>
+                    <option value="MINOR_ISSUE">
+                      MINOR ISSUE · Masalah kecil
+                    </option>
                     <option value="DAMAGED">DAMAGED · Rusak</option>
                     <option value="UNKNOWN">UNKNOWN · Belum dicek</option>
                   </select>

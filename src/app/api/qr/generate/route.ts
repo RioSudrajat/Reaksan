@@ -22,7 +22,9 @@ const qrGenerateSchema = z.object({
 });
 
 function checkQrAccess(user: { id: string; role?: string | null }) {
-  const userRoles = user.role ? user.role.split(",").map((r) => r.trim().toLowerCase()) : [];
+  const userRoles = user.role
+    ? user.role.split(",").map((r) => r.trim().toLowerCase())
+    : [];
   return (
     userRoles.includes("plp") ||
     userRoles.includes("admin") ||
@@ -39,16 +41,24 @@ export async function GET(request: Request) {
       (await hasPermission(user.id, { inventory: ["manage-any"] })) ||
       (await hasPermission(user.id, { plp: ["view"] }));
     if (!isAuthorized) {
-      throw new ApiError(403, "FORBIDDEN", "Hanya PLP atau Admin yang dapat mengelola QR Code.");
+      throw new ApiError(
+        403,
+        "FORBIDDEN",
+        "Hanya PLP atau Admin yang dapat mengelola QR Code.",
+      );
     }
 
     const url = new URL(request.url);
     const targetType = url.searchParams.get("targetType") ?? "UNIT";
-    const targetId = url.searchParams.get("targetId") ?? url.searchParams.get("code") ?? "ITEM";
+    const targetId =
+      url.searchParams.get("targetId") ??
+      url.searchParams.get("code") ??
+      "ITEM";
     const code = url.searchParams.get("code") ?? undefined;
     const name = url.searchParams.get("name") ?? undefined;
     const classification = url.searchParams.get("classification") ?? undefined;
-    const storageLocation = url.searchParams.get("storageLocation") ?? undefined;
+    const storageLocation =
+      url.searchParams.get("storageLocation") ?? undefined;
 
     if (targetType === "BATCH") {
       const result = await generateBatchQrCode(
@@ -93,7 +103,11 @@ export async function POST(request: Request) {
       (await hasPermission(user.id, { inventory: ["manage-any"] })) ||
       (await hasPermission(user.id, { plp: ["view"] }));
     if (!isAuthorized) {
-      throw new ApiError(403, "FORBIDDEN", "Hanya PLP atau Admin yang dapat mengelola QR Code.");
+      throw new ApiError(
+        403,
+        "FORBIDDEN",
+        "Hanya PLP atau Admin yang dapat mengelola QR Code.",
+      );
     }
 
     const json = await request.json().catch(() => ({}));
@@ -112,7 +126,11 @@ export async function POST(request: Request) {
 
     const targetId = parsed.targetId || parsed.code;
     if (!targetId) {
-      throw new ApiError(422, "VALIDATION_ERROR", "targetId atau code diperlukan untuk tipe UNIT, ASSET, atau BATCH.");
+      throw new ApiError(
+        422,
+        "VALIDATION_ERROR",
+        "targetId atau code diperlukan untuk tipe UNIT, ASSET, atau BATCH.",
+      );
     }
 
     if (parsed.targetType === "ASSET") {

@@ -203,10 +203,7 @@ export async function generateUnitQrCode(
     .select({ id: instrumentAsset.id })
     .from(instrumentAsset)
     .where(
-      or(
-        eq(instrumentAsset.id, unitId),
-        eq(instrumentAsset.assetCode, unitId),
-      ),
+      or(eq(instrumentAsset.id, unitId), eq(instrumentAsset.assetCode, unitId)),
     )
     .limit(1);
   if (instAsset) {
@@ -223,9 +220,7 @@ export async function generateUnitQrCode(
   const [tAsset] = await db
     .select({ id: toolAsset.id })
     .from(toolAsset)
-    .where(
-      or(eq(toolAsset.id, unitId), eq(toolAsset.assetCode, unitId)),
-    )
+    .where(or(eq(toolAsset.id, unitId), eq(toolAsset.assetCode, unitId)))
     .limit(1);
   if (tAsset) {
     return generateAssetQrCode(
@@ -317,9 +312,7 @@ export async function generateAssetQrCode(
     })
     .from(toolAsset)
     .innerJoin(toolType, eq(toolAsset.toolTypeId, toolType.id))
-    .where(
-      or(eq(toolAsset.id, assetId), eq(toolAsset.assetCode, assetId)),
-    )
+    .where(or(eq(toolAsset.id, assetId), eq(toolAsset.assetCode, assetId)))
     .limit(1);
 
   if (toolAssets.length > 0) {
@@ -518,9 +511,7 @@ export async function bulkGenerateMissingQrCodes(roomId?: string) {
     })
     .from(toolUnit)
     .innerJoin(toolAsset, eq(toolUnit.toolAssetId, toolAsset.id))
-    .where(
-      roomId ? eq(toolAsset.roomId, roomId) : isNull(toolUnit.qrCode),
-    );
+    .where(roomId ? eq(toolAsset.roomId, roomId) : isNull(toolUnit.qrCode));
 
   for (const unit of missingToolUnits) {
     const code = `RK-TOL-${unit.code}`;
@@ -539,9 +530,7 @@ export async function bulkGenerateMissingQrCodes(roomId?: string) {
     })
     .from(materialBatch)
     .where(
-      roomId
-        ? eq(materialBatch.roomId, roomId)
-        : isNull(materialBatch.qrCode),
+      roomId ? eq(materialBatch.roomId, roomId) : isNull(materialBatch.qrCode),
     );
 
   for (const batch of missingBatches) {

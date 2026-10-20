@@ -1615,7 +1615,6 @@ Legend:
 - **X** = Special action
 - **—** = No access
 
-
 | Module        | Student | PLP      | Admin |
 | ------------- | ------- | -------- | ----- |
 | Lab           | V       | V        | C/U   |
@@ -1633,7 +1632,6 @@ Legend:
 | Audit         | —       | V\*      | V     |
 | User          | Self    | Relevant | C/U   |
 | Configuration | —       | Limited  | C/U   |
-
 
 `*` = scoped access berdasarkan penugasan lab/ruangan.
 
@@ -1759,7 +1757,7 @@ request.studentId === currentUser.id
 > [!NOTE]
 > Halaman khusus untuk Dosen (`/lecturer/*`) dan Aslab (`/aslab/*`) telah dikeluarkan dari perencanaan MVP. Sistem berfokus penuh pada 3 role: Student (`/student/*`), PLP (`/plp/*`), dan Admin (`/admin/*`).
 
-```
+````
 
 ---
 
@@ -1781,7 +1779,7 @@ request.studentId === currentUser.id
 ├── configuration
 └── audit-logs
 
-```
+````
 
 ---
 
@@ -2438,7 +2436,6 @@ Success:
   "data": {},
   "meta": {}
 }
-
 ```
 
 Error:
@@ -2450,7 +2447,6 @@ Error:
     "message": "Equipment is already reserved for the selected time."
   }
 }
-
 ```
 
 Business error menggunakan machine-readable error code.

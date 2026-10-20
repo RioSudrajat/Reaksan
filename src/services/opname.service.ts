@@ -20,10 +20,7 @@ import {
 } from "@/db/schema";
 import { writeAudit } from "@/services/audit.service";
 import { recordStockTransaction } from "@/services/stock.service";
-import {
-  OpnameAddIntakeInput,
-  OpnameCountInput,
-} from "@/validators/opname";
+import { OpnameAddIntakeInput, OpnameCountInput } from "@/validators/opname";
 
 type OpnameStatus = (typeof stockOpnameSession.$inferSelect)["status"];
 
@@ -96,7 +93,9 @@ export async function createOpnameSession(
         condition: instrumentAsset.condition,
         typeName: instrumentType.name,
         unitCount: count(instrumentUnit.id),
-        sampleLocation: sql<string | null>`max(${instrumentUnit.storageLocation})`,
+        sampleLocation: sql<
+          string | null
+        >`max(${instrumentUnit.storageLocation})`,
       })
       .from(instrumentAsset)
       .innerJoin(
@@ -137,17 +136,9 @@ export async function createOpnameSession(
       .innerJoin(toolType, eq(toolAsset.toolTypeId, toolType.id))
       .leftJoin(
         toolUnit,
-        and(
-          eq(toolUnit.toolAssetId, toolAsset.id),
-          eq(toolUnit.active, true),
-        ),
+        and(eq(toolUnit.toolAssetId, toolAsset.id), eq(toolUnit.active, true)),
       )
-      .where(
-        and(
-          eq(toolAsset.roomId, roomRow.id),
-          eq(toolAsset.active, true),
-        ),
-      )
+      .where(and(eq(toolAsset.roomId, roomRow.id), eq(toolAsset.active, true)))
       .groupBy(
         toolAsset.id,
         toolAsset.assetCode,
@@ -155,7 +146,11 @@ export async function createOpnameSession(
         toolType.name,
       );
 
-    if (batches.length === 0 && instrumentAssets.length === 0 && toolAssets.length === 0)
+    if (
+      batches.length === 0 &&
+      instrumentAssets.length === 0 &&
+      toolAssets.length === 0
+    )
       throw new ApiError(
         409,
         "NO_ITEMS",
@@ -786,7 +781,9 @@ export async function getOpnameSessionDetail(id: string) {
             condition: instrumentAsset.condition,
             typeName: instrumentType.name,
             unitCount: count(instrumentUnit.id),
-            sampleLocation: sql<string | null>`max(${instrumentUnit.storageLocation})`,
+            sampleLocation: sql<
+              string | null
+            >`max(${instrumentUnit.storageLocation})`,
           })
           .from(instrumentAsset)
           .innerJoin(
@@ -819,7 +816,9 @@ export async function getOpnameSessionDetail(id: string) {
             condition: toolAsset.condition,
             typeName: toolType.name,
             unitCount: count(toolUnit.id),
-            sampleLocation: sql<string | null>`max(${toolUnit.storageLocation})`,
+            sampleLocation: sql<
+              string | null
+            >`max(${toolUnit.storageLocation})`,
           })
           .from(toolAsset)
           .innerJoin(toolType, eq(toolAsset.toolTypeId, toolType.id))
@@ -906,7 +905,10 @@ export async function getOpnameSessionDetail(id: string) {
       }
 
       if (toInsert.length > 0) {
-        await tx.insert(stockOpnameEntry).values(toInsert).onConflictDoNothing();
+        await tx
+          .insert(stockOpnameEntry)
+          .values(toInsert)
+          .onConflictDoNothing();
       }
     });
   }
@@ -974,18 +976,12 @@ export async function getOpnameSessionDetail(id: string) {
       instrumentType,
       eq(instrumentType.id, instrumentAsset.instrumentTypeId),
     )
-    .leftJoin(
-      toolUnit,
-      eq(toolUnit.id, stockOpnameEntry.toolUnitId),
-    )
+    .leftJoin(toolUnit, eq(toolUnit.id, stockOpnameEntry.toolUnitId))
     .leftJoin(
       toolAsset,
       sql`${toolAsset.id} = coalesce(${stockOpnameEntry.toolAssetId}, ${toolUnit.toolAssetId})`,
     )
-    .leftJoin(
-      toolType,
-      eq(toolType.id, toolAsset.toolTypeId),
-    )
+    .leftJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
     .innerJoin(user, eq(user.id, stockOpnameEntry.countedById))
     .where(
       and(
@@ -1030,10 +1026,10 @@ export async function getOpnameSessionDetail(id: string) {
     const condition = isMaterial
       ? null
       : (row.entryCondition ??
-          (isInstrument
-            ? (row.insAssetCondition ?? row.insUnitCondition)
-            : (row.toolAssetCondition ?? row.toolUnitCondition)) ??
-          "GOOD");
+        (isInstrument
+          ? (row.insAssetCondition ?? row.insUnitCondition)
+          : (row.toolAssetCondition ?? row.toolUnitCondition)) ??
+        "GOOD");
 
     return {
       id: row.id,
@@ -1070,7 +1066,8 @@ export async function getOpnameVarianceReport(id: string) {
   const session = await getOpnameSessionDetail(id);
   if (!session) return null;
   const batchesWithDifference = session.entries.filter(
-    (entry) => Math.abs(entry.difference) > 1e-9 || entry.condition === "DAMAGED",
+    (entry) =>
+      Math.abs(entry.difference) > 1e-9 || entry.condition === "DAMAGED",
   ).length;
   const positiveTotal = session.entries
     .filter((e) => e.itemType === "MATERIAL")
@@ -1195,10 +1192,7 @@ export async function reconcileOpnameDiscrepancies(
         instrumentUnit,
         eq(instrumentUnit.id, stockOpnameEntry.instrumentUnitId),
       )
-      .leftJoin(
-        toolUnit,
-        eq(toolUnit.id, stockOpnameEntry.toolUnitId),
-      )
+      .leftJoin(toolUnit, eq(toolUnit.id, stockOpnameEntry.toolUnitId))
       .where(eq(stockOpnameEntry.sessionId, sessionId))
       .for("update");
 
@@ -1281,7 +1275,9 @@ export async function reconcileOpnameDiscrepancies(
           await tx
             .update(instrumentUnit)
             .set({ storageLocation: entry.storageLocation })
-            .where(eq(instrumentUnit.instrumentAssetId, entry.instrumentAssetId));
+            .where(
+              eq(instrumentUnit.instrumentAssetId, entry.instrumentAssetId),
+            );
         }
 
         reconciledCount++;
@@ -1373,7 +1369,8 @@ export async function reconcileOpnameDiscrepancies(
       // --- RECONCILE INSTRUMENT UNITS (LEGACY INDIVIDUAL UNITS) ---
       if (entry.instrumentUnitId) {
         let needsUpdate = false;
-        const newCondition = entry.condition ?? entry.insUnitCurrentCondition ?? "GOOD";
+        const newCondition =
+          entry.condition ?? entry.insUnitCurrentCondition ?? "GOOD";
         let newStatus = entry.insUnitCurrentStatus ?? "AVAILABLE";
 
         if (counted === 0 && entry.insUnitCurrentStatus !== "MAINTENANCE") {
@@ -1381,7 +1378,10 @@ export async function reconcileOpnameDiscrepancies(
           needsUpdate = true;
         }
 
-        if (newCondition === "DAMAGED" && entry.insUnitCurrentStatus !== "DAMAGED") {
+        if (
+          newCondition === "DAMAGED" &&
+          entry.insUnitCurrentStatus !== "DAMAGED"
+        ) {
           newStatus = "DAMAGED";
           needsUpdate = true;
         } else if (newCondition !== entry.insUnitCurrentCondition) {
@@ -1398,7 +1398,9 @@ export async function reconcileOpnameDiscrepancies(
             .set({
               condition: newCondition,
               status: newStatus,
-              ...(entry.storageLocation ? { storageLocation: entry.storageLocation } : {}),
+              ...(entry.storageLocation
+                ? { storageLocation: entry.storageLocation }
+                : {}),
               updatedAt: new Date(),
             })
             .where(eq(instrumentUnit.id, entry.instrumentUnitId));
@@ -1411,7 +1413,8 @@ export async function reconcileOpnameDiscrepancies(
       // --- RECONCILE TOOL UNITS (LEGACY INDIVIDUAL UNITS) ---
       if (entry.toolUnitId) {
         let needsUpdate = false;
-        const newCondition = entry.condition ?? entry.toolUnitCurrentCondition ?? "GOOD";
+        const newCondition =
+          entry.condition ?? entry.toolUnitCurrentCondition ?? "GOOD";
         let newStatus = entry.toolUnitCurrentStatus ?? "AVAILABLE";
 
         if (counted === 0 && entry.toolUnitCurrentStatus !== "MAINTENANCE") {
@@ -1419,7 +1422,10 @@ export async function reconcileOpnameDiscrepancies(
           needsUpdate = true;
         }
 
-        if (newCondition === "DAMAGED" && entry.toolUnitCurrentStatus !== "DAMAGED") {
+        if (
+          newCondition === "DAMAGED" &&
+          entry.toolUnitCurrentStatus !== "DAMAGED"
+        ) {
           newStatus = "DAMAGED";
           needsUpdate = true;
         } else if (newCondition !== entry.toolUnitCurrentCondition) {
@@ -1436,7 +1442,9 @@ export async function reconcileOpnameDiscrepancies(
             .set({
               condition: newCondition,
               status: newStatus,
-              ...(entry.storageLocation ? { storageLocation: entry.storageLocation } : {}),
+              ...(entry.storageLocation
+                ? { storageLocation: entry.storageLocation }
+                : {}),
               updatedAt: new Date(),
             })
             .where(eq(toolUnit.id, entry.toolUnitId));
@@ -1533,4 +1541,3 @@ export async function reconcileOpnameDiscrepancies(
     };
   });
 }
-

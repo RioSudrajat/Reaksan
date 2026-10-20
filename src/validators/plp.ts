@@ -42,10 +42,19 @@ function emptyToUndefined(val: unknown) {
 
 export const listPlpRequestsSchema = z
   .object({
-    status: z.preprocess(emptyToUndefined, z.enum(requestStatusValues).optional()),
+    status: z.preprocess(
+      emptyToUndefined,
+      z.enum(requestStatusValues).optional(),
+    ),
     room: z.preprocess(emptyToUndefined, entityCodeSchema.optional()),
-    student: z.preprocess(emptyToUndefined, z.string().trim().max(160).optional()),
-    activity: z.preprocess(emptyToUndefined, z.string().trim().max(160).optional()),
+    student: z.preprocess(
+      emptyToUndefined,
+      z.string().trim().max(160).optional(),
+    ),
+    activity: z.preprocess(
+      emptyToUndefined,
+      z.string().trim().max(160).optional(),
+    ),
     from: z.preprocess(emptyToUndefined, isoDate.optional()),
     to: z.preprocess(emptyToUndefined, isoDate.optional()),
     limit: z.preprocess(
@@ -78,10 +87,19 @@ export const completeRequestSchema = z
 
 export const listPlpIncidentsSchema = z
   .object({
-    status: z.preprocess(emptyToUndefined, z.enum(incidentStatusValues).optional()),
-    severity: z.preprocess(emptyToUndefined, z.enum(incidentSeverityValues).optional()),
+    status: z.preprocess(
+      emptyToUndefined,
+      z.enum(incidentStatusValues).optional(),
+    ),
+    severity: z.preprocess(
+      emptyToUndefined,
+      z.enum(incidentSeverityValues).optional(),
+    ),
     room: z.preprocess(emptyToUndefined, entityCodeSchema.optional()),
-    search: z.preprocess(emptyToUndefined, z.string().trim().max(160).optional()),
+    search: z.preprocess(
+      emptyToUndefined,
+      z.string().trim().max(160).optional(),
+    ),
     limit: z.preprocess(
       (val) => (val === "" || val === undefined ? 25 : val),
       z.coerce.number().int().min(1).max(100).default(25),
@@ -169,9 +187,18 @@ export const scheduleQuerySchema = z
 
 export const historyQuerySchema = z
   .object({
-    entity: z.preprocess(emptyToUndefined, z.string().trim().max(64).optional()),
-    action: z.preprocess(emptyToUndefined, z.string().trim().max(64).optional()),
-    actor: z.preprocess(emptyToUndefined, z.string().trim().max(160).optional()),
+    entity: z.preprocess(
+      emptyToUndefined,
+      z.string().trim().max(64).optional(),
+    ),
+    action: z.preprocess(
+      emptyToUndefined,
+      z.string().trim().max(64).optional(),
+    ),
+    actor: z.preprocess(
+      emptyToUndefined,
+      z.string().trim().max(160).optional(),
+    ),
     from: z.preprocess(emptyToUndefined, isoDate.optional()),
     to: z.preprocess(emptyToUndefined, isoDate.optional()),
     limit: z.preprocess(
@@ -258,13 +285,17 @@ export const plpMaterialCreateInputSchema = z
           .positive("Kuantitas harus lebih dari 0.")
           .max(1_000_000),
         expiryDate: isoDate.optional().nullable(),
-        source: z.enum(["PURCHASE", "GRANT_HIBAH", "LEFTOVER"]).default("PURCHASE"),
+        source: z
+          .enum(["PURCHASE", "GRANT_HIBAH", "LEFTOVER"])
+          .default("PURCHASE"),
       })
       .optional(),
   })
   .strict();
 
-export type PlpMaterialCreateInput = z.infer<typeof plpMaterialCreateInputSchema>;
+export type PlpMaterialCreateInput = z.infer<
+  typeof plpMaterialCreateInputSchema
+>;
 
 export const plpEquipmentUnitInputSchema = z
   .object({
@@ -326,8 +357,5 @@ export type PlpEquipmentAssetInput = z.infer<
   typeof plpEquipmentAssetInputSchema
 >;
 export type PlpEquipmentUnitInput = z.infer<typeof plpEquipmentUnitInputSchema>;
-export type PlpMaterialBatchInput = z.infer<
-  typeof plpMaterialBatchInputSchema
->;
+export type PlpMaterialBatchInput = z.infer<typeof plpMaterialBatchInputSchema>;
 export type PlpStockAdjustInput = z.infer<typeof plpStockAdjustInputSchema>;
-

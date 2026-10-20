@@ -27,10 +27,7 @@ import { AddAssetDialog } from "@/components/plp/add-asset-dialog";
 import { DeleteConfirmButton } from "@/components/plp/delete-confirm-button";
 import { AutoSubmitSelect } from "@/components/auto-submit-select";
 import { requirePermission } from "@/lib/session";
-import {
-  getRoomScope,
-  scopeRoomCodes,
-} from "@/services/access-scope.service";
+import { getRoomScope, scopeRoomCodes } from "@/services/access-scope.service";
 import { inventoryQuerySchema } from "@/validators/plp";
 
 export const metadata: Metadata = { title: "Equipment Inventory" };
@@ -73,7 +70,8 @@ export default async function PlpEquipmentInventoryPage({
   const params = await searchParams;
   const limit = 50;
   const page = Math.max(1, Number(pick(params, "page")) || 1);
-  const defaultRoom = roomCodes && roomCodes.length === 1 ? roomCodes[0] : undefined;
+  const defaultRoom =
+    roomCodes && roomCodes.length === 1 ? roomCodes[0] : undefined;
   const classification = "TOOL";
   const query = inventoryQuerySchema.parse({
     room: pick(params, "room") || defaultRoom,
@@ -151,7 +149,6 @@ export default async function PlpEquipmentInventoryPage({
           />
         }
       />
-
 
       <div className="mb-5 grid gap-5 xl:grid-cols-2">
         <ChartPanel
@@ -323,7 +320,9 @@ export default async function PlpEquipmentInventoryPage({
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
                           <span className="rounded-md border border-[#E5E7EB] bg-[#F8F9FA] px-1.5 py-0.5 text-[9px] font-semibold text-[#64748B]">
-                            {asset.classification === "TOOL" ? "Alat / Glassware" : "Instrumen"}
+                            {asset.classification === "TOOL"
+                              ? "Alat / Glassware"
+                              : "Instrumen"}
                           </span>
                           <p className="text-[13px] font-semibold text-[#121826]">
                             {asset.name}
@@ -335,7 +334,13 @@ export default async function PlpEquipmentInventoryPage({
                       </div>
                     </div>
                     <p className="mt-2 text-[12px] text-[#121826]">
-                      <span className={asset.availableUnits > 0 ? "font-bold text-[#16A34A]" : "font-bold text-[#DC2626]"}>
+                      <span
+                        className={
+                          asset.availableUnits > 0
+                            ? "font-bold text-[#16A34A]"
+                            : "font-bold text-[#DC2626]"
+                        }
+                      >
                         Tersedia {asset.availableUnits}/{asset.unitCount} unit
                       </span>{" "}
                       ·{" "}
@@ -345,21 +350,35 @@ export default async function PlpEquipmentInventoryPage({
                     </p>
                     <p className="mt-0.5 text-[11px] text-[#64748B]">
                       {asset.unitCount === 0 ? (
-                        <span className="text-[#DC2626]">Belum ada unit terdaftar · </span>
+                        <span className="text-[#DC2626]">
+                          Belum ada unit terdaftar ·{" "}
+                        </span>
                       ) : asset.unitCount - asset.availableUnits > 0 ? (
                         <span>
-                          {asset.unitCount - asset.availableUnits} tidak tersedia (
+                          {asset.unitCount - asset.availableUnits} tidak
+                          tersedia (
                           {[
-                            asset.inUseUnits > 0 ? `${asset.inUseUnits} dipakai` : null,
-                            asset.reservedUnits > 0 ? `${asset.reservedUnits} dipesan` : null,
-                            asset.maintenanceUnits > 0 ? `${asset.maintenanceUnits} maint` : null,
-                          ].filter(Boolean).join(", ") || "non-aktif"}
+                            asset.inUseUnits > 0
+                              ? `${asset.inUseUnits} dipakai`
+                              : null,
+                            asset.reservedUnits > 0
+                              ? `${asset.reservedUnits} dipesan`
+                              : null,
+                            asset.maintenanceUnits > 0
+                              ? `${asset.maintenanceUnits} maint`
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(", ") || "non-aktif"}
                           ) ·{" "}
                         </span>
                       ) : (
-                        <span className="text-[#16A34A]">Semua unit siap pakai · </span>
+                        <span className="text-[#16A34A]">
+                          Semua unit siap pakai ·{" "}
+                        </span>
                       )}
-                      Kondisi {asset.condition.replaceAll("_", " ").toLowerCase()}
+                      Kondisi{" "}
+                      {asset.condition.replaceAll("_", " ").toLowerCase()}
                       {asset.activeRequests > 0
                         ? ` · ${asset.activeRequests} permohonan aktif`
                         : asset.totalRequests > 0
@@ -373,15 +392,29 @@ export default async function PlpEquipmentInventoryPage({
 
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full border-collapse text-left">
-                <caption className="sr-only">Inventori equipment per asset</caption>
+                <caption className="sr-only">
+                  Inventori equipment per asset
+                </caption>
                 <thead>
                   <tr className="border-b border-[#E5E7EB] text-[11px] uppercase tracking-[0.08em] text-[#94A3B8]">
-                    <th scope="col" className="px-4 py-3 font-semibold">Asset</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Room</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Penggunaan</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Ketersediaan Unit</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Kondisi</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Aksi</th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Asset
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Room
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Penggunaan
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Ketersediaan Unit
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Kondisi
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Aksi
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -400,7 +433,9 @@ export default async function PlpEquipmentInventoryPage({
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="rounded-md border border-[#E5E7EB] bg-[#F8F9FA] px-1.5 py-0.5 text-[9px] font-semibold text-[#64748B]">
-                                {asset.classification === "TOOL" ? "Alat / Glassware" : "Instrumen"}
+                                {asset.classification === "TOOL"
+                                  ? "Alat / Glassware"
+                                  : "Instrumen"}
                               </span>
                               <p className="text-[13px] font-semibold text-[#121826]">
                                 {asset.name}
@@ -419,7 +454,9 @@ export default async function PlpEquipmentInventoryPage({
                                   {asset.totalRequests} permohonan terkait
                                 </span>
                               ) : (
-                                <span className="text-[#94A3B8]">Belum ada permohonan</span>
+                                <span className="text-[#94A3B8]">
+                                  Belum ada permohonan
+                                </span>
                               )}
                             </p>
                           </div>
@@ -436,27 +473,50 @@ export default async function PlpEquipmentInventoryPage({
                       <td className="px-4 py-3 text-[12px] text-[#121826] [font-variant-numeric:tabular-nums]">
                         <div className="space-y-0.5">
                           <div className="font-mono text-[12px] font-bold tabular-nums">
-                            <span className={asset.availableUnits > 0 ? "text-[#16A34A]" : "text-[#DC2626]"}>
-                              Tersedia {asset.availableUnits}/{asset.unitCount} unit
+                            <span
+                              className={
+                                asset.availableUnits > 0
+                                  ? "text-[#16A34A]"
+                                  : "text-[#DC2626]"
+                              }
+                            >
+                              Tersedia {asset.availableUnits}/{asset.unitCount}{" "}
+                              unit
                             </span>
                           </div>
                           {asset.unitCount === 0 ? (
-                            <p className="text-[10px] text-[#DC2626] leading-tight">Belum ada unit terdaftar</p>
+                            <p className="text-[10px] text-[#DC2626] leading-tight">
+                              Belum ada unit terdaftar
+                            </p>
                           ) : asset.unitCount - asset.availableUnits > 0 ? (
                             <p className="text-[10px] text-[#6B6B6B] leading-tight">
-                              {asset.unitCount - asset.availableUnits} tidak tersedia
-                              {asset.inUseUnits > 0 ? ` (${asset.inUseUnits} dipakai` : ""}
-                              {asset.reservedUnits > 0 ? `${asset.inUseUnits > 0 ? ", " : " ("}${asset.reservedUnits} dipesan` : ""}
-                              {asset.maintenanceUnits > 0 ? `${asset.inUseUnits > 0 || asset.reservedUnits > 0 ? ", " : " ("}${asset.maintenanceUnits} maint` : ""}
-                              {(asset.inUseUnits > 0 || asset.reservedUnits > 0 || asset.maintenanceUnits > 0) ? ")" : ""}
+                              {asset.unitCount - asset.availableUnits} tidak
+                              tersedia
+                              {asset.inUseUnits > 0
+                                ? ` (${asset.inUseUnits} dipakai`
+                                : ""}
+                              {asset.reservedUnits > 0
+                                ? `${asset.inUseUnits > 0 ? ", " : " ("}${asset.reservedUnits} dipesan`
+                                : ""}
+                              {asset.maintenanceUnits > 0
+                                ? `${asset.inUseUnits > 0 || asset.reservedUnits > 0 ? ", " : " ("}${asset.maintenanceUnits} maint`
+                                : ""}
+                              {asset.inUseUnits > 0 ||
+                              asset.reservedUnits > 0 ||
+                              asset.maintenanceUnits > 0
+                                ? ")"
+                                : ""}
                             </p>
                           ) : (
-                            <p className="text-[10px] text-[#16A34A]">Semua unit siap pakai</p>
+                            <p className="text-[10px] text-[#16A34A]">
+                              Semua unit siap pakai
+                            </p>
                           )}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-[12px] text-[#121826]">
-                        {conditionMeta[asset.condition]?.label ?? asset.condition.replaceAll("_", " ")}
+                        {conditionMeta[asset.condition]?.label ??
+                          asset.condition.replaceAll("_", " ")}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">

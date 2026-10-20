@@ -3,10 +3,7 @@ import { redirect } from "next/navigation";
 import { WorkspaceShell } from "@/components/workspace-shell";
 import { plpNav } from "@/components/plp/nav";
 import { requirePermission } from "@/lib/session";
-import {
-  getRoomScope,
-  scopeRoomCodes,
-} from "@/services/access-scope.service";
+import { getRoomScope, scopeRoomCodes } from "@/services/access-scope.service";
 import { getPlpBadgeCounts } from "@/services/plp.service";
 
 export const runtime = "nodejs";

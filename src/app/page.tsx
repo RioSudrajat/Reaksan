@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { ArrowRight, Moon, ShieldCheck, FlaskConical, Users } from "lucide-react";
+import {
+  ArrowRight,
+  Moon,
+  ShieldCheck,
+  FlaskConical,
+  Users,
+} from "lucide-react";
 import { getSession } from "@/lib/session";
 import { landingPathForRole } from "@/lib/landing";
 import { ReaksanLogo } from "@/components/reaksan-logo";
@@ -7,7 +13,9 @@ import { LandingLabIllustration } from "@/components/illustrations/landing-lab-i
 
 export default async function Home() {
   const session = await getSession();
-  const targetPath = session ? landingPathForRole(session.user.role) : "/sign-in";
+  const targetPath = session
+    ? landingPathForRole(session.user.role)
+    : "/sign-in";
   const userRoleLabel =
     session?.user.role === "admin"
       ? "Admin"
@@ -53,7 +61,10 @@ export default async function Home() {
         <div className="lg:col-span-6 flex flex-col items-start gap-6 lg:pr-4">
           {/* Institutional Header - Clean Typographic Kicker (No Pill Badge) */}
           <div className="flex items-center gap-3">
-            <span className="h-0.5 w-6 rounded-full bg-[#F9B129]" aria-hidden="true" />
+            <span
+              className="h-0.5 w-6 rounded-full bg-[#F9B129]"
+              aria-hidden="true"
+            />
             <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#8D6500]">
               Departemen Kimia FMIPA Unpad
             </span>
@@ -66,7 +77,11 @@ export default async function Home() {
 
           {/* Main Description */}
           <p className="text-base sm:text-lg text-[#6B6B6B] leading-relaxed">
-            Reaksan Unpad adalah sebuah sistem manajemen laboratorium terpadu Departemen Kimia Universitas Padjadjaran yang dirancang untuk mempermudah civitas akademika dalam peminjaman ruang laboratorium riset, instrumen analitik canggih, peralatan khusus, dan pengelolaan bahan kimia secara digital, tertib, dan transparan.
+            Reaksan Unpad adalah sebuah sistem manajemen laboratorium terpadu
+            Departemen Kimia Universitas Padjadjaran yang dirancang untuk
+            mempermudah civitas akademika dalam peminjaman ruang laboratorium
+            riset, instrumen analitik canggih, peralatan khusus, dan pengelolaan
+            bahan kimia secara digital, tertib, dan transparan.
           </p>
 
           {/* Role Feature Pills */}
@@ -114,7 +129,11 @@ export default async function Home() {
               href={targetPath}
               className="inline-flex items-center gap-3 px-8 py-3.5 rounded-full bg-[#F9B129] text-[#212121] font-bold shadow-md hover:bg-[#E5A020] hover:shadow-lg active:scale-95 transition-all text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9B129] focus-visible:ring-offset-2"
             >
-              <span>{session ? `Masuk ke Workspace (${userRoleLabel})` : "Masuk ke Sistem Reaksan"}</span>
+              <span>
+                {session
+                  ? `Masuk ke Workspace (${userRoleLabel})`
+                  : "Masuk ke Sistem Reaksan"}
+              </span>
               <ArrowRight className="w-5 h-5" />
             </Link>
 

@@ -1,16 +1,16 @@
 import "server-only";
 import { and, asc, eq, inArray, ne, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import {
-  materialBatch,
-  room,
-} from "@/db/schema";
+import { materialBatch, room } from "@/db/schema";
 import {
   listMaterialRows,
   type MaterialAggregateRow,
   listRoomRows,
 } from "@/services/catalog.service";
-import { listBatchStock, stockTotalsForMaterial } from "@/services/stock.service";
+import {
+  listBatchStock,
+  stockTotalsForMaterial,
+} from "@/services/stock.service";
 import { getAppSettings } from "@/services/settings.service";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -62,7 +62,11 @@ function jakartaDateParts(date: Date) {
   }).formatToParts(date);
   const pick = (type: string) =>
     parts.find((part) => part.type === type)?.value ?? "01";
-  return { year: Number(pick("year")), month: Number(pick("month")), day: Number(pick("day")) };
+  return {
+    year: Number(pick("year")),
+    month: Number(pick("month")),
+    day: Number(pick("day")),
+  };
 }
 
 function jakartaMidnight(date: Date) {
@@ -146,7 +150,9 @@ export async function getRequestTrend(options: {
       `${year}-${String(month).padStart(2, "0")}-01T00:00:00+07:00`,
     );
   } else {
-    from = new Date(jakartaMidnight(to).getTime() - (options.days - 1) * DAY_MS);
+    from = new Date(
+      jakartaMidnight(to).getTime() - (options.days - 1) * DAY_MS,
+    );
   }
   const scopedCodes =
     options.roomCodes !== undefined
@@ -254,7 +260,8 @@ export async function getRequestTrend(options: {
     buckets,
     total: buckets.reduce(
       (sum, bucket) =>
-        sum + bucket.segments.reduce((inner, segment) => inner + segment.value, 0),
+        sum +
+        bucket.segments.reduce((inner, segment) => inner + segment.value, 0),
       0,
     ),
   };
@@ -311,17 +318,15 @@ export async function getMaterialRiskByRoom(roomCodes?: string[] | null) {
     const material = materialById.get(batch.materialId);
     const roomRow = roomById.get(batch.roomId);
     if (!material || !roomRow) continue;
-    const entry =
-      riskByRoom.get(batch.roomId) ??
-      {
-        roomId: batch.roomId,
-        roomCode: roomRow.code,
-        roomName: roomRow.name,
-        totalBatches: 0,
-        lowStockMaterials: 0,
-        expiredBatches: 0,
-        expiringBatches: 0,
-      };
+    const entry = riskByRoom.get(batch.roomId) ?? {
+      roomId: batch.roomId,
+      roomCode: roomRow.code,
+      roomName: roomRow.name,
+      totalBatches: 0,
+      lowStockMaterials: 0,
+      expiredBatches: 0,
+      expiringBatches: 0,
+    };
     entry.totalBatches += 1;
     if (lowStockMaterials.get(`${batch.materialId}:${batch.roomId}`))
       entry.lowStockMaterials += 1;
@@ -354,7 +359,10 @@ export async function getEquipmentRoomDistribution(
       ? sql`true`
       : roomCodes.length === 0
         ? sql`false`
-        : sql`r.code IN (${sql.join(roomCodes.map((code) => sql`${code}`), sql`, `)})`;
+        : sql`r.code IN (${sql.join(
+            roomCodes.map((code) => sql`${code}`),
+            sql`, `,
+          )})`;
 
   const result = await db.execute<{
     roomCode: string;
@@ -412,19 +420,36 @@ export async function getEquipmentRoomDistribution(
       label: row.roomName,
       href: `/plp/inventory/equipment?room=${encodeURIComponent(row.roomCode)}`,
       segments: [
-        { key: "available", label: "Tersedia", value: Number(row.available), tone: "green" as const },
-        { key: "reserved", label: "Dipesan / dipakai", value: Number(row.reserved), tone: "blue" as const },
-        { key: "attention", label: "Perlu perhatian", value: Number(row.attention), tone: "rose" as const },
-        { key: "retired", label: "Pensiun", value: Number(row.retired), tone: "neutral" as const },
+        {
+          key: "available",
+          label: "Tersedia",
+          value: Number(row.available),
+          tone: "green" as const,
+        },
+        {
+          key: "reserved",
+          label: "Dipesan / dipakai",
+          value: Number(row.reserved),
+          tone: "blue" as const,
+        },
+        {
+          key: "attention",
+          label: "Perlu perhatian",
+          value: Number(row.attention),
+          tone: "rose" as const,
+        },
+        {
+          key: "retired",
+          label: "Pensiun",
+          value: Number(row.retired),
+          tone: "neutral" as const,
+        },
       ],
     })),
   };
 }
 
-export async function getExpiryTrend(
-  weeks = 8,
-  roomCodes?: string[] | null,
-) {
+export async function getExpiryTrend(weeks = 8, roomCodes?: string[] | null) {
   const conditions = [
     eq(materialBatch.active, true),
     ne(materialBatch.quantity, "0"),
@@ -471,7 +496,12 @@ export async function getExpiryTrend(
     sublabel: "sebelum minggu ini",
     href: "/plp/inventory/materials",
     segments: [
-      { key: "overdue", label: "Batch terlewat expiry", value: overdue, tone: "rose" },
+      {
+        key: "overdue",
+        label: "Batch terlewat expiry",
+        value: overdue,
+        tone: "rose",
+      },
     ],
   });
 
@@ -510,7 +540,12 @@ export async function getExpiryTrend(
     sublabel: "di luar 8 minggu",
     href: "/plp/inventory/materials",
     segments: [
-      { key: "later", label: "Batch dengan expiry jauh", value: later, tone: "neutral" },
+      {
+        key: "later",
+        label: "Batch dengan expiry jauh",
+        value: later,
+        tone: "neutral",
+      },
     ],
   });
 
@@ -519,7 +554,8 @@ export async function getExpiryTrend(
     .filter((bucket) => bucket.key !== "later")
     .reduce(
       (sum, bucket) =>
-        sum + bucket.segments.reduce((inner, segment) => inner + segment.value, 0),
+        sum +
+        bucket.segments.reduce((inner, segment) => inner + segment.value, 0),
       0,
     );
 

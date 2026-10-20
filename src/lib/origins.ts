@@ -8,7 +8,10 @@ import { env } from "@/lib/env";
 // separate sessions in two tabs because cookies are host-scoped.
 export function trustedOrigins(): string[] {
   const base = new URL(env.BETTER_AUTH_URL);
-  const origins = new Set<string>([base.origin, ...env.BETTER_AUTH_TRUSTED_ORIGINS]);
+  const origins = new Set<string>([
+    base.origin,
+    ...env.BETTER_AUTH_TRUSTED_ORIGINS,
+  ]);
   if (process.env.NODE_ENV !== "production") {
     const port = base.port ? `:${base.port}` : "";
     origins.add(`${base.protocol}//127.0.0.1${port}`);

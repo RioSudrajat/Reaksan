@@ -49,7 +49,9 @@ export async function updateAppSettings(
   actorId: string,
   input: SettingsInput,
 ): Promise<AppSettings> {
-  const entries = Object.entries(input).filter(([, value]) => value !== undefined);
+  const entries = Object.entries(input).filter(
+    ([, value]) => value !== undefined,
+  );
   return db.transaction(async (tx) => {
     for (const [key, value] of entries) {
       await tx

@@ -347,7 +347,15 @@ export function materialArt(kind, color) {
   const draw = materialShapes[kind];
   if (!draw) throw new Error(`Unknown material art kind: ${kind}`);
   const tone =
-    color === BLUE ? "blue" : color === GREEN ? "green" : color === AMBER ? "yellow" : color === NEUTRAL ? "cream" : "cream";
+    color === BLUE
+      ? "blue"
+      : color === GREEN
+        ? "green"
+        : color === AMBER
+          ? "yellow"
+          : color === NEUTRAL
+            ? "cream"
+            : "cream";
   return svg(draw(color), artTones[tone]);
 }
 
@@ -361,7 +369,8 @@ export const materialPalette = {
 
 function localRoot() {
   return path.resolve(
-    process.env.STORAGE_LOCAL_DIR?.trim() || path.join(root, ".data", "uploads"),
+    process.env.STORAGE_LOCAL_DIR?.trim() ||
+      path.join(root, ".data", "uploads"),
   );
 }
 

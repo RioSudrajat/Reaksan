@@ -133,13 +133,17 @@ export function UserRoleForm({
           className="rounded-xl border border-[#F3C7C7] bg-[#FEF2F2] p-3 text-[12px] text-[#991B1B] space-y-2 shadow-xs"
         >
           <div className="flex items-start gap-2">
-            <AlertTriangle className="size-4 shrink-0 text-[#DC2626] mt-0.5" aria-hidden="true" />
+            <AlertTriangle
+              className="size-4 shrink-0 text-[#DC2626] mt-0.5"
+              aria-hidden="true"
+            />
             <div>
               <p id={`delete-title-${userId}`} className="font-bold">
                 Hapus akun {email}?
               </p>
               <p className="mt-0.5 text-[11px] text-[#7F1D1D]">
-                Tindakan ini permanen. Akun dan seluruh data yang terhubung dengannya akan dihapus secara tuntas dari database PostgreSQL.
+                Tindakan ini permanen. Akun dan seluruh data yang terhubung
+                dengannya akan dihapus secara tuntas dari database PostgreSQL.
               </p>
             </div>
           </div>

@@ -135,7 +135,10 @@ export async function listLaboratories() {
   return db.select().from(laboratory).orderBy(asc(laboratory.code));
 }
 
-export async function createLaboratory(actorId: string, input: LaboratoryInput) {
+export async function createLaboratory(
+  actorId: string,
+  input: LaboratoryInput,
+) {
   return db.transaction(async (tx) => {
     await assertCodeFree(tx, "laboratory", input.code);
     const [created] = await tx
@@ -167,7 +170,11 @@ export async function updateLaboratory(
     const current = await requireRow(
       async () =>
         (
-          await tx.select().from(laboratory).where(eq(laboratory.id, id)).limit(1)
+          await tx
+            .select()
+            .from(laboratory)
+            .where(eq(laboratory.id, id))
+            .limit(1)
         )[0],
       "Laboratory not found.",
     );
@@ -191,7 +198,11 @@ export async function updateLaboratory(
       action: "UPDATE",
       entityType: "laboratory",
       entityId: id,
-      before: { code: current.code, name: current.name, active: current.active },
+      before: {
+        code: current.code,
+        name: current.name,
+        active: current.active,
+      },
       after: { code: updated.code, name: updated.name, active: updated.active },
     });
     return updated;
@@ -264,7 +275,8 @@ export async function updateRoom(
 ) {
   return db.transaction(async (tx) => {
     const current = await requireRow(
-      async () => (await tx.select().from(room).where(eq(room.id, id)).limit(1))[0],
+      async () =>
+        (await tx.select().from(room).where(eq(room.id, id)).limit(1))[0],
       "Room not found.",
     );
     if (input.code && input.code !== current.code)
@@ -307,7 +319,11 @@ export async function updateRoom(
       action: "UPDATE",
       entityType: "room",
       entityId: id,
-      before: { code: current.code, name: current.name, active: current.active },
+      before: {
+        code: current.code,
+        name: current.name,
+        active: current.active,
+      },
       after: { code: updated.code, name: updated.name, active: updated.active },
     });
     return updated;
@@ -349,7 +365,9 @@ export async function listEquipmentTypes() {
       .from(toolType)
       .orderBy(asc(toolType.name)),
   ]);
-  return [...instruments, ...tools].sort((a, b) => a.name.localeCompare(b.name));
+  return [...instruments, ...tools].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
 }
 
 export async function createEquipmentType(
@@ -427,9 +445,12 @@ export async function updateEquipmentType(
         .update(instrumentType)
         .set({
           name: input.name ?? inst.name,
-          category: input.category === undefined ? inst.category : input.category,
+          category:
+            input.category === undefined ? inst.category : input.category,
           description:
-            input.description === undefined ? inst.description : input.description,
+            input.description === undefined
+              ? inst.description
+              : input.description,
           usageType: input.usageType ?? inst.usageType,
           imageMediaId:
             input.imageMediaId === undefined
@@ -472,7 +493,9 @@ export async function updateEquipmentType(
         name: input.name ?? tool.name,
         category: input.category === undefined ? tool.category : input.category,
         description:
-          input.description === undefined ? tool.description : input.description,
+          input.description === undefined
+            ? tool.description
+            : input.description,
         usageType: input.usageType ?? tool.usageType,
         imageMediaId:
           input.imageMediaId === undefined
@@ -524,7 +547,9 @@ export async function listEquipmentAssetsAdmin() {
         unitCount: sql<number>`(SELECT count(*)::int FROM instrument_unit u WHERE u.instrument_asset_id = ${instrumentAsset.id} AND u.active = true)`,
         assetImageMediaId: instrumentAsset.imageMediaId,
         typeImageMediaId: instrumentType.imageMediaId,
-        imageMediaId: sql<string | null>`COALESCE(${instrumentAsset.imageMediaId}, ${instrumentType.imageMediaId})`,
+        imageMediaId: sql<
+          string | null
+        >`COALESCE(${instrumentAsset.imageMediaId}, ${instrumentType.imageMediaId})`,
       })
       .from(instrumentAsset)
       .innerJoin(
@@ -551,7 +576,9 @@ export async function listEquipmentAssetsAdmin() {
         unitCount: sql<number>`(SELECT count(*)::int FROM tool_unit u WHERE u.tool_asset_id = ${toolAsset.id} AND u.active = true)`,
         assetImageMediaId: toolAsset.imageMediaId,
         typeImageMediaId: toolType.imageMediaId,
-        imageMediaId: sql<string | null>`COALESCE(${toolAsset.imageMediaId}, ${toolType.imageMediaId})`,
+        imageMediaId: sql<
+          string | null
+        >`COALESCE(${toolAsset.imageMediaId}, ${toolType.imageMediaId})`,
       })
       .from(toolAsset)
       .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
@@ -596,8 +623,10 @@ export async function listEquipmentAssetsAdmin() {
     unitsByAsset.set(unit.equipmentAssetId, list);
   }
 
-  const allAssets = [...instAssets, ...toolAssetsList].sort((a, b) =>
-    a.roomName.localeCompare(b.roomName) || a.assetCode.localeCompare(b.assetCode),
+  const allAssets = [...instAssets, ...toolAssetsList].sort(
+    (a, b) =>
+      a.roomName.localeCompare(b.roomName) ||
+      a.assetCode.localeCompare(b.assetCode),
   );
 
   return allAssets.map((asset) => ({
@@ -614,7 +643,11 @@ export async function createEquipmentAsset(
     const roomRow = await requireRow(
       async () =>
         (
-          await tx.select().from(room).where(eq(room.code, input.roomCode)).limit(1)
+          await tx
+            .select()
+            .from(room)
+            .where(eq(room.code, input.roomCode))
+            .limit(1)
         )[0],
       "Room not found.",
     );
@@ -707,7 +740,11 @@ export async function updateEquipmentAsset(
         const roomRow = await requireRow(
           async () =>
             (
-              await tx.select().from(room).where(eq(room.code, roomCode)).limit(1)
+              await tx
+                .select()
+                .from(room)
+                .where(eq(room.code, roomCode))
+                .limit(1)
             )[0],
           "Room not found.",
         );
@@ -755,11 +792,7 @@ export async function updateEquipmentAsset(
     const toolCurrent = await requireRow(
       async () =>
         (
-          await tx
-            .select()
-            .from(toolAsset)
-            .where(eq(toolAsset.id, id))
-            .limit(1)
+          await tx.select().from(toolAsset).where(eq(toolAsset.id, id)).limit(1)
         )[0],
       "Equipment asset not found.",
     );
@@ -1041,11 +1074,7 @@ export async function updateEquipmentUnit(
     const toolUnitRow = await requireRow(
       async () =>
         (
-          await tx
-            .select()
-            .from(toolUnit)
-            .where(eq(toolUnit.id, id))
-            .limit(1)
+          await tx.select().from(toolUnit).where(eq(toolUnit.id, id)).limit(1)
         )[0],
       "Equipment unit not found.",
     );
@@ -1210,7 +1239,8 @@ export async function updateMaterial(
       .set({
         code: input.code ?? current.code,
         name: input.name ?? current.name,
-        category: input.category === undefined ? current.category : input.category,
+        category:
+          input.category === undefined ? current.category : input.category,
         baseUnit: input.baseUnit ?? current.baseUnit,
         description:
           input.description === undefined
@@ -1293,18 +1323,27 @@ export async function createMaterialBatch(
     const materialRow = await requireRow(
       async () =>
         (
-          await tx.select().from(material).where(eq(material.code, input.materialCode)).limit(1)
+          await tx
+            .select()
+            .from(material)
+            .where(eq(material.code, input.materialCode))
+            .limit(1)
         )[0],
       "Material not found.",
     );
     const roomRow = await requireRow(
       async () =>
         (
-          await tx.select().from(room).where(eq(room.code, input.roomCode)).limit(1)
+          await tx
+            .select()
+            .from(room)
+            .where(eq(room.code, input.roomCode))
+            .limit(1)
         )[0],
       "Room not found.",
     );
-    const lotPart = input.lotNumber ?? Date.now().toString(36).slice(-6).toUpperCase();
+    const lotPart =
+      input.lotNumber ?? Date.now().toString(36).slice(-6).toUpperCase();
     const qrCode = `RK-MAT-${lotPart}`;
     const [created] = await tx
       .insert(materialBatch)
@@ -1313,7 +1352,9 @@ export async function createMaterialBatch(
         roomId: roomRow.id,
         lotNumber: input.lotNumber ?? null,
         qrCode,
-        storageLocation: input.storageLocation ? input.storageLocation.trim() : null,
+        storageLocation: input.storageLocation
+          ? input.storageLocation.trim()
+          : null,
         quantity: input.quantity.toFixed(3),
         expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
         active: input.active ?? true,
@@ -1399,7 +1440,8 @@ export async function updateMaterialBatch(
         referenceType: "material_batch",
         referenceId: id,
         performedById: actorId,
-        reason: delta > 0 ? "Penambahan stok manual" : "Pengurangan stok manual",
+        reason:
+          delta > 0 ? "Penambahan stok manual" : "Pengurangan stok manual",
       });
     }
     await writeAudit(tx, {
@@ -1492,7 +1534,9 @@ async function assertAssignmentRules(
 ) {
   const member = await requireRow(
     async () =>
-      (await exec.select().from(user).where(eq(user.id, input.userId)).limit(1))[0],
+      (
+        await exec.select().from(user).where(eq(user.id, input.userId)).limit(1)
+      )[0],
     "User not found.",
   );
   assertAssignmentRoles(member.role ?? "", input.assignmentType);
@@ -1514,12 +1558,12 @@ async function assertAssignmentRules(
     .where(
       and(
         eq(assignment.userId, input.userId),
-        eq(assignment.scopeType, input.scopeType as "LABORATORY" | "ROOM" | "ACTIVITY"),
-        eq(assignment.scopeId, input.scopeId),
         eq(
-          assignment.assignmentType,
-          input.assignmentType as "PLP" | "PIC",
+          assignment.scopeType,
+          input.scopeType as "LABORATORY" | "ROOM" | "ACTIVITY",
         ),
+        eq(assignment.scopeId, input.scopeId),
+        eq(assignment.assignmentType, input.assignmentType as "PLP" | "PIC"),
         eq(assignment.active, true),
         input.excludeId ? ne(assignment.id, input.excludeId) : undefined,
       ),
@@ -1573,7 +1617,10 @@ export async function listAssignments() {
     .orderBy(asc(user.name));
 }
 
-export async function createAssignment(actorId: string, input: AssignmentInput) {
+export async function createAssignment(
+  actorId: string,
+  input: AssignmentInput,
+) {
   const created = await db.transaction(async (tx) => {
     const member = await assertAssignmentRules(tx, {
       userId: input.userId,
@@ -1622,7 +1669,11 @@ export async function updateAssignment(
     const current = await requireRow(
       async () =>
         (
-          await tx.select().from(assignment).where(eq(assignment.id, id)).limit(1)
+          await tx
+            .select()
+            .from(assignment)
+            .where(eq(assignment.id, id))
+            .limit(1)
         )[0],
       "Assignment not found.",
     );
@@ -1753,7 +1804,9 @@ export async function deleteUserAccount(
     await tx.execute(
       sql`DELETE FROM reservation WHERE request_id IN ${userRequestIds}`,
     );
-    await tx.delete(resourceRequest).where(eq(resourceRequest.studentId, targetUserId));
+    await tx
+      .delete(resourceRequest)
+      .where(eq(resourceRequest.studentId, targetUserId));
 
     // 3. Clean up direct shared usage and reservations
     await tx.execute(
@@ -1830,18 +1883,12 @@ export async function deleteUserAccount(
     );
 
     // 7. Delete user's cascading auth tables
-    await tx.execute(
-      sql`DELETE FROM session WHERE user_id = ${targetUserId}`,
-    );
-    await tx.execute(
-      sql`DELETE FROM account WHERE user_id = ${targetUserId}`,
-    );
+    await tx.execute(sql`DELETE FROM session WHERE user_id = ${targetUserId}`);
+    await tx.execute(sql`DELETE FROM account WHERE user_id = ${targetUserId}`);
     await tx.execute(
       sql`DELETE FROM notification WHERE recipient_id = ${targetUserId}`,
     );
-    await tx.execute(
-      sql`DELETE FROM notes WHERE user_id = ${targetUserId}`,
-    );
+    await tx.execute(sql`DELETE FROM notes WHERE user_id = ${targetUserId}`);
 
     // 8. Delete the user record permanently from database
     await tx.delete(user).where(eq(user.id, targetUserId));

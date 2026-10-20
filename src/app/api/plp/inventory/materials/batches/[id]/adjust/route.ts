@@ -12,7 +12,10 @@ export function POST(request: Request, context: Context) {
     request,
     { inventory: ["manage-any"] },
     async (session) => {
-      const id = z.string().uuid().parse((await context.params).id);
+      const id = z
+        .string()
+        .uuid()
+        .parse((await context.params).id);
       const input = plpStockAdjustInputSchema.parse(await readJson(request));
       const { scope } = await scopeForSession(session);
       const updated = await adjustPlpMaterialStock(

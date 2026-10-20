@@ -33,7 +33,8 @@ export const createRequestSchema = z
   })
   .strict()
   .refine(
-    (value) => new Date(value.startAt).getTime() < new Date(value.endAt).getTime(),
+    (value) =>
+      new Date(value.startAt).getTime() < new Date(value.endAt).getTime(),
     { path: ["endAt"], message: "End time must be after the start time." },
   )
   .refine(

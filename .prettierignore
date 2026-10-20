@@ -8,3 +8,7 @@ playwright-report
 test-results
 *.tsbuildinfo
 .env*
+.agents
+.cursor
+.github/skills
+tools

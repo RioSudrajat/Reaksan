@@ -77,13 +77,22 @@ export function BarcodeScannerModal({
       if (matched) {
         setIsSuccess(true);
         const displayName =
-          matched.materialName ?? matched.name ?? matched.code ?? matched.materialCode;
+          matched.materialName ??
+          matched.name ??
+          matched.code ??
+          matched.materialCode;
         const displayCode =
-          matched.qrCode ?? matched.code ?? matched.materialCode ?? matched.lotNumber;
+          matched.qrCode ??
+          matched.code ??
+          matched.materialCode ??
+          matched.lotNumber;
         setMessage(`Ditemukan: ${displayName} (${displayCode})`);
 
         const targetId =
-          matched.materialBatchId ?? matched.equipmentUnitId ?? matched.id ?? "";
+          matched.materialBatchId ??
+          matched.equipmentUnitId ??
+          matched.id ??
+          "";
         onItemSelect(targetId);
 
         setTimeout(() => {
@@ -110,7 +119,11 @@ export function BarcodeScannerModal({
       try {
         setCameraError(null);
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 640 } },
+          video: {
+            facingMode: "environment",
+            width: { ideal: 640 },
+            height: { ideal: 640 },
+          },
         });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -195,7 +208,8 @@ export function BarcodeScannerModal({
                   Akselerator Scan QR Code
                 </h3>
                 <p className="mt-1 text-[12px] text-[#475569]">
-                  Posisikan stiker QR Code pada frame target kamera atau gunakan gun scanner.
+                  Posisikan stiker QR Code pada frame target kamera atau gunakan
+                  gun scanner.
                 </p>
               </div>
               <button
@@ -304,7 +318,8 @@ export function BarcodeScannerModal({
             </form>
 
             <div className="mt-4 border-t border-[#E5E7EB] pt-3 text-[11px] text-[#64748B]">
-              💡 Tips: Mendukung scanning QR Code stiker fisik, barcode kemasan bahan, maupun pencarian teks langsung.
+              💡 Tips: Mendukung scanning QR Code stiker fisik, barcode kemasan
+              bahan, maupun pencarian teks langsung.
             </div>
           </div>
         </div>

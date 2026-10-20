@@ -46,10 +46,16 @@ test("inventory queries calculate real unit and batch availability ratios", asyn
       LIMIT 20
     `);
 
-    assert.ok(unitStatsRes.rowCount > 0, "Expected equipment assets with unit stats");
+    assert.ok(
+      unitStatsRes.rowCount > 0,
+      "Expected equipment assets with unit stats",
+    );
     for (const row of unitStatsRes.rows) {
       assert.ok(row.totalUnits >= 0, "Total units must be non-negative");
-      assert.ok(row.availableUnits <= row.totalUnits, "Available units cannot exceed total units");
+      assert.ok(
+        row.availableUnits <= row.totalUnits,
+        "Available units cannot exceed total units",
+      );
       const unavailable = row.totalUnits - row.availableUnits;
       assert.equal(
         unavailable >= row.inUseUnits + row.reservedUnits,
@@ -74,7 +80,10 @@ test("inventory queries calculate real unit and batch availability ratios", asyn
 
     assert.ok(matBatchesRes.rowCount > 0, "Expected material batches");
     for (const row of matBatchesRes.rows) {
-      assert.ok(row.availableBatches <= row.totalBatches, "Available batches cannot exceed total batches");
+      assert.ok(
+        row.availableBatches <= row.totalBatches,
+        "Available batches cannot exceed total batches",
+      );
     }
 
     // 3. Verify stock transactions, reserved balances, and total capacity consistency
@@ -104,11 +113,17 @@ test("inventory queries calculate real unit and batch availability ratios", asyn
       assert.ok(physical >= 0, "Physical stock cannot be negative");
       assert.ok(reserved >= 0, "Reserved stock cannot be negative");
       assert.ok(issued >= 0, "Issued stock cannot be negative");
-      assert.ok(reserved <= physical, "Reserved stock cannot exceed physical stock");
+      assert.ok(
+        reserved <= physical,
+        "Reserved stock cannot exceed physical stock",
+      );
       const available = physical - reserved;
       assert.ok(available >= 0, "Available stock cannot be negative");
       const totalCapacity = physical + issued;
-      assert.ok(totalCapacity >= physical, "Total capacity must be at least physical stock");
+      assert.ok(
+        totalCapacity >= physical,
+        "Total capacity must be at least physical stock",
+      );
     }
   } finally {
     await pool.end();
@@ -137,7 +152,10 @@ test("PDF export algorithmic page height and signature positioning", () => {
     assert.ok(spaceLeftOnCurrent >= neededHeight, "Should fit on page 1");
     const chosenTargetSigTop = currentPageBottom - sigHeight - bottomPadding;
     const totalPages = currentPage + 1; // 1 page
-    const finalMarginTop = Math.max(16, Math.floor(chosenTargetSigTop - prevContentBottom));
+    const finalMarginTop = Math.max(
+      16,
+      Math.floor(chosenTargetSigTop - prevContentBottom),
+    );
 
     assert.equal(totalPages, 1, "Short report must stay on 1 page");
     // Verify signature bottom lands exactly at page boundary minus bottom padding
@@ -163,7 +181,10 @@ test("PDF export algorithmic page height and signature positioning", () => {
     const nextPgBottom = (currentPage + 2) * pageHeightInDom; // ~1509.02px
     const chosenTargetSigTop = nextPgBottom - sigHeight - bottomPadding;
     const totalPages = currentPage + 2; // 2 pages
-    const finalMarginTop = Math.max(16, Math.floor(chosenTargetSigTop - prevContentBottom));
+    const finalMarginTop = Math.max(
+      16,
+      Math.floor(chosenTargetSigTop - prevContentBottom),
+    );
 
     assert.equal(totalPages, 2, "Must cleanly break to page 2");
     const calculatedSigBottom = prevContentBottom + finalMarginTop + sigHeight;

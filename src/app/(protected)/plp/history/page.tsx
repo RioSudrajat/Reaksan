@@ -12,10 +12,7 @@ import {
 } from "@/components/workspace";
 import { listPlpHistory } from "@/services/plp.service";
 import { hasPermission, requirePermission } from "@/lib/session";
-import {
-  getRoomScope,
-  scopeRoomCodes,
-} from "@/services/access-scope.service";
+import { getRoomScope, scopeRoomCodes } from "@/services/access-scope.service";
 import { historyQuerySchema } from "@/validators/plp";
 
 export const metadata: Metadata = { title: "History" };

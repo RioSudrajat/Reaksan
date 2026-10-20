@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { AssignmentScopeFields } from "@/components/admin/assignment-scope-fields";
 import { CrudForm, EditDisclosure } from "@/components/admin/crud-form";
-import { EmptyState, PageHeader, Panel, formatDate } from "@/components/workspace";
+import {
+  EmptyState,
+  PageHeader,
+  Panel,
+  formatDate,
+} from "@/components/workspace";
 import { toDateInput } from "@/lib/date-input";
 import { auth } from "@/lib/auth";
 import { requirePermission } from "@/lib/session";
@@ -13,7 +18,9 @@ import {
   listRoomsAdmin,
 } from "@/services/admin.service";
 
-export const metadata: Metadata = { title: "Penugasan Staf & PLP · Admin Reaksan" };
+export const metadata: Metadata = {
+  title: "Penugasan Staf & PLP · Admin Reaksan",
+};
 
 const typeOptions = [
   { value: "PLP", label: "PLP (Penanggung Jawab Operasional Lab)" },
@@ -40,17 +47,27 @@ export default async function AdminAssignmentsPage() {
   const scopeData = {
     laboratories: laboratories
       .filter((item) => item.active)
-      .map((item) => ({ value: item.code, label: `${item.name} (${item.code})` })),
+      .map((item) => ({
+        value: item.code,
+        label: `${item.name} (${item.code})`,
+      })),
     rooms: rooms
       .filter((item) => item.active)
-      .map((item) => ({ value: item.code, label: `${item.name} (${item.code})` })),
+      .map((item) => ({
+        value: item.code,
+        label: `${item.name} (${item.code})`,
+      })),
     activities: activities.map((item) => ({
       value: item.id,
       label: `${item.title} · ${item.studentName}`,
     })),
   };
   const scopeFields = [
-    { name: "scopeType", label: "Cakupan Penugasan", type: "external" as const },
+    {
+      name: "scopeType",
+      label: "Cakupan Penugasan",
+      type: "external" as const,
+    },
     { name: "scopeId", label: "Target Wewenang", type: "external" as const },
   ];
 
@@ -85,8 +102,18 @@ export default async function AdminAssignmentsPage() {
             },
             { name: "startDate", label: "Tanggal Mulai", type: "date" },
             { name: "endDate", label: "Tanggal Berakhir", type: "date" },
-            { name: "notes", label: "Catatan Penugasan", type: "textarea", placeholder: "Nomor SK penugasan atau rincian wewenang..." },
-            { name: "active", label: "Status Aktif", type: "checkbox", defaultValue: true },
+            {
+              name: "notes",
+              label: "Catatan Penugasan",
+              type: "textarea",
+              placeholder: "Nomor SK penugasan atau rincian wewenang...",
+            },
+            {
+              name: "active",
+              label: "Status Aktif",
+              type: "checkbox",
+              defaultValue: true,
+            },
           ]}
           submitLabel="Simpan Penugasan"
           successMessage="Penugasan staf berhasil ditambahkan."
@@ -95,7 +122,11 @@ export default async function AdminAssignmentsPage() {
         </CrudForm>
       </Panel>
 
-      <Panel context={`${assignments.length} penugasan`} title="Daftar Penugasan Laboratorium" padded={false}>
+      <Panel
+        context={`${assignments.length} penugasan`}
+        title="Daftar Penugasan Laboratorium"
+        padded={false}
+      >
         {assignments.length === 0 ? (
           <div className="p-5">
             <EmptyState

@@ -133,4 +133,3 @@ Jangan menambahkan chart hanya agar dashboard terlihat penuh. Setiap grafik haru
 - Jalankan `npm run check`, `npm run build`, dan E2E semua role; audit visual pada desktop, tablet, mobile, teks panjang, fokus keyboard, dan zoom 200%.
 
 - QR/barcode scanning, procurement, dashboard BI kustom, permission editor dinamis, scheduler otomatis, dan posting stock opname otomatis tidak menjadi syarat finishing tahap ini. Lampiran SDS dapat menyusul setelah infrastruktur media tersedia.
-

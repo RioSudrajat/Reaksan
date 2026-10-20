@@ -58,7 +58,9 @@ export function RequestReviewPanel({
         method: "POST",
         body: { action, note },
       });
-      setSuccess(`Request berhasil di-${action === "approve" ? "setujui" : action === "revision" ? "minta revisi" : "tolak"}.`);
+      setSuccess(
+        `Request berhasil di-${action === "approve" ? "setujui" : action === "revision" ? "minta revisi" : "tolak"}.`,
+      );
       setAction(null);
       setNote("");
       router.refresh();
@@ -116,7 +118,9 @@ export function RequestReviewPanel({
 
       {action && (
         <div className="rounded-xl border border-[#E5E7EB] bg-[#F8F9FA] p-4">
-          <p className="text-[12px] text-[#64748B]">{actionCopy[action].hint}</p>
+          <p className="text-[12px] text-[#64748B]">
+            {actionCopy[action].hint}
+          </p>
           <label className="mt-3 block">
             <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#64748B]">
               {action === "approve" ? "Catatan (opsional)" : "Alasan"}
@@ -140,7 +144,9 @@ export function RequestReviewPanel({
             disabled={pending}
             className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] transition hover:bg-[#E5A700] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] shadow-xs disabled:opacity-60"
           >
-            {pending ? "Memproses..." : `Konfirmasi: ${actionCopy[action].label}`}
+            {pending
+              ? "Memproses..."
+              : `Konfirmasi: ${actionCopy[action].label}`}
           </button>
         </div>
       )}

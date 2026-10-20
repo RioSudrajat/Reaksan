@@ -1,7 +1,5 @@
 import "server-only";
-import type {
-  IncidentDto,
-} from "@/services/incidents.service";
+import type { IncidentDto } from "@/services/incidents.service";
 import type { RequestDto, ReservationDto } from "@/services/requests.service";
 import type { SharedUsageRequestDto } from "@/services/shared-usage.service";
 import type {
@@ -144,9 +142,7 @@ const reservationStatusMap: Record<ReservationDto["status"], RequestStatus> = {
   EXPIRED: "CANCELLED",
 };
 
-function requestStatusView(
-  status: RequestDto["status"],
-): RequestStatus {
+function requestStatusView(status: RequestDto["status"]): RequestStatus {
   switch (status) {
     case "DRAFT":
     case "SUBMITTED":
@@ -178,7 +174,8 @@ export function reservationToScheduleEvent(
 
   return {
     id: `${reservation.kind}-${reservation.id}`,
-    reservationId: reservation.kind === "reservation" ? reservation.id : undefined,
+    reservationId:
+      reservation.kind === "reservation" ? reservation.id : undefined,
     requestId: reservation.requestId,
     requestCode: reservation.requestCode,
     title:

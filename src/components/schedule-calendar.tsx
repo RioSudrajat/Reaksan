@@ -272,10 +272,7 @@ function CalendarGrid({
     row: number;
     col: number;
   }) => ReactNode;
-  renderWeekOverlay?: (context: {
-    row: number;
-    week: Date[];
-  }) => ReactNode;
+  renderWeekOverlay?: (context: { row: number; week: Date[] }) => ReactNode;
   rootRef: RefObject<HTMLDivElement | null>;
 }) {
   const weeks = useMemo(() => buildWeeks(view), [view]);
@@ -308,7 +305,11 @@ function CalendarGrid({
           aria-label={`${monthName(view.getMonth())} ${view.getFullYear()}`}
         >
           {weeks.map((week, row) => (
-            <div key={dateKey(week[0])} className="relative border-b border-[#E1E1E1]" role="row">
+            <div
+              key={dateKey(week[0])}
+              className="relative border-b border-[#E1E1E1]"
+              role="row"
+            >
               <div className="grid grid-cols-7 divide-x divide-[#E1E1E1]">
                 {week.map((date, col) => {
                   const inMonth = date.getMonth() === view.getMonth();
@@ -339,12 +340,19 @@ function CalendarGrid({
                       }
                       onPointerEnter={() => onCellPointerEnter?.(date, inMonth)}
                       onKeyDown={(event) =>
-                        onCellKeyDown?.(event, date, event.currentTarget, inMonth)
+                        onCellKeyDown?.(
+                          event,
+                          date,
+                          event.currentTarget,
+                          inMonth,
+                        )
                       }
                       className={cn(
                         "relative select-none p-1.5 pb-2 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#6E8EDA]",
                         "min-h-[142px] sm:min-h-[156px] flex flex-col justify-between",
-                        inMonth ? "bg-white hover:bg-[#FAFAF8]" : "bg-[#FBFBFA]",
+                        inMonth
+                          ? "bg-white hover:bg-[#FAFAF8]"
+                          : "bg-[#FBFBFA]",
                         inRange && "bg-[#E9EEFC]",
                       )}
                     >
@@ -784,7 +792,10 @@ export function ScheduleCalendar({
             type="button"
             onClick={() => {
               const target = todayKey ? new Date(todayKey) : new Date();
-              const nextMonth = { year: target.getFullYear(), month: target.getMonth() };
+              const nextMonth = {
+                year: target.getFullYear(),
+                month: target.getMonth(),
+              };
               setView(new Date(nextMonth.year, nextMonth.month, 1));
               onMonthChange?.(nextMonth);
               closeCard();
@@ -796,9 +807,16 @@ export function ScheduleCalendar({
           <button
             type="button"
             onClick={() => {
-              const nextDate = new Date(view.getFullYear(), view.getMonth() - 1, 1);
+              const nextDate = new Date(
+                view.getFullYear(),
+                view.getMonth() - 1,
+                1,
+              );
               setView(nextDate);
-              onMonthChange?.({ year: nextDate.getFullYear(), month: nextDate.getMonth() });
+              onMonthChange?.({
+                year: nextDate.getFullYear(),
+                month: nextDate.getMonth(),
+              });
               closeCard();
             }}
             className="flex size-10 items-center justify-center rounded-lg border border-[#E1E1E1] text-[#6B6B6B] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
@@ -809,9 +827,16 @@ export function ScheduleCalendar({
           <button
             type="button"
             onClick={() => {
-              const nextDate = new Date(view.getFullYear(), view.getMonth() + 1, 1);
+              const nextDate = new Date(
+                view.getFullYear(),
+                view.getMonth() + 1,
+                1,
+              );
               setView(nextDate);
-              onMonthChange?.({ year: nextDate.getFullYear(), month: nextDate.getMonth() });
+              onMonthChange?.({
+                year: nextDate.getFullYear(),
+                month: nextDate.getMonth(),
+              });
               closeCard();
             }}
             className="flex size-10 items-center justify-center rounded-lg border border-[#E1E1E1] text-[#6B6B6B] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
@@ -879,15 +904,22 @@ export function ScheduleCalendar({
                     className={cn(
                       "pointer-events-auto z-10 flex h-[22px] sm:h-[20px] items-center overflow-hidden border px-2 text-left text-[9.5px] font-semibold transition cursor-pointer shadow-2xs",
                       displayBarClasses[eventDisplayState(bar.event)],
-                      roundLeft ? "rounded-l-md ml-1" : "rounded-l-none ml-0 border-l-0 pl-1",
-                      roundRight ? "rounded-r-md mr-1" : "rounded-r-none mr-0 border-r-0 pr-1",
+                      roundLeft
+                        ? "rounded-l-md ml-1"
+                        : "rounded-l-none ml-0 border-l-0 pl-1",
+                      roundRight
+                        ? "rounded-r-md mr-1"
+                        : "rounded-r-none mr-0 border-r-0 pr-1",
                       selectedEventId === bar.event.id &&
                         "ring-2 ring-[#212121] ring-offset-1 z-20",
                     )}
                     title={`${bar.event.title}, ${eventDisplayState(bar.event)}, ${bar.event.time}`}
                   >
                     {bar.openStart && (
-                      <span className="mr-1 text-[8.5px] text-[#AE7C1D] shrink-0 font-bold" aria-hidden="true">
+                      <span
+                        className="mr-1 text-[8.5px] text-[#AE7C1D] shrink-0 font-bold"
+                        aria-hidden="true"
+                      >
                         ◀
                       </span>
                     )}
@@ -899,7 +931,10 @@ export function ScheduleCalendar({
                     />
                     <span className="truncate">{bar.event.title}</span>
                     {bar.openEnd && (
-                      <span className="ml-auto pl-1 text-[8.5px] text-[#AE7C1D] shrink-0 font-bold" aria-hidden="true">
+                      <span
+                        className="ml-auto pl-1 text-[8.5px] text-[#AE7C1D] shrink-0 font-bold"
+                        aria-hidden="true"
+                      >
                         ▶
                       </span>
                     )}
@@ -957,10 +992,7 @@ export function ScheduleCalendar({
           .map((state) => (
             <span key={state} className="inline-flex items-center gap-1.5">
               <span
-                className={cn(
-                  "size-2 rounded-full",
-                  displayDotClasses[state],
-                )}
+                className={cn("size-2 rounded-full", displayDotClasses[state])}
                 aria-hidden="true"
               />
               {displayLabels[state]}
@@ -1115,72 +1147,85 @@ export function ScheduleEventCard({
       </div>
       <dl className="mt-3 space-y-2 border-t border-[#F1F1F1] pt-3 text-[11px]">
         <div className="flex gap-3">
-          <dt className="w-16 shrink-0 font-semibold text-[#929292]">Pemohon</dt>
+          <dt className="w-16 shrink-0 font-semibold text-[#929292]">
+            Pemohon
+          </dt>
           <dd className="min-w-0 flex-1 text-[#212121]">{event.actor}</dd>
         </div>
         {roomName && (
           <div className="flex gap-3">
-            <dt className="w-16 shrink-0 font-semibold text-[#929292]">Ruangan</dt>
+            <dt className="w-16 shrink-0 font-semibold text-[#929292]">
+              Ruangan
+            </dt>
             <dd className="min-w-0 flex-1 text-[#212121]">{roomName}</dd>
           </div>
         )}
-        {event.equipment && event.equipment.filter((e) => e.classification === "INSTRUMENT").length > 0 && (
-          <div className="flex gap-3">
-            <dt className="w-16 shrink-0 font-semibold text-[#AE7C1D]">
-              Instrumen
-            </dt>
-            <dd className="min-w-0 flex-1 space-y-1 text-[#212121]">
-              {event.equipment
-                .filter((item) => item.classification === "INSTRUMENT")
-                .map((item) => (
-                  <span key={item.unitId} className="flex items-start gap-2">
-                    <ResourceThumb
-                      mediaId={item.imageMediaId}
-                      alt={item.name}
-                      size={22}
-                      className="mt-0.5"
-                    />
-                    <span className="min-w-0">
-                      <span className="font-medium text-[#212121]">{item.name}</span>
-                      <span className="text-[#929292]">
-                        {" "}
-                        · {item.unitLabel} · {item.unitId}
+        {event.equipment &&
+          event.equipment.filter((e) => e.classification === "INSTRUMENT")
+            .length > 0 && (
+            <div className="flex gap-3">
+              <dt className="w-16 shrink-0 font-semibold text-[#AE7C1D]">
+                Instrumen
+              </dt>
+              <dd className="min-w-0 flex-1 space-y-1 text-[#212121]">
+                {event.equipment
+                  .filter((item) => item.classification === "INSTRUMENT")
+                  .map((item) => (
+                    <span key={item.unitId} className="flex items-start gap-2">
+                      <ResourceThumb
+                        mediaId={item.imageMediaId}
+                        alt={item.name}
+                        size={22}
+                        className="mt-0.5"
+                      />
+                      <span className="min-w-0">
+                        <span className="font-medium text-[#212121]">
+                          {item.name}
+                        </span>
+                        <span className="text-[#929292]">
+                          {" "}
+                          · {item.unitLabel} · {item.unitId}
+                        </span>
                       </span>
                     </span>
-                  </span>
-                ))}
-            </dd>
-          </div>
-        )}
-        {event.equipment && event.equipment.filter((e) => e.classification !== "INSTRUMENT").length > 0 && (
-          <div className="flex gap-3">
-            <dt className="w-16 shrink-0 font-semibold text-[#6B6B6B]">
-              Alat
-            </dt>
-            <dd className="min-w-0 flex-1 space-y-1 text-[#212121]">
-              {event.equipment
-                .filter((item) => item.classification !== "INSTRUMENT")
-                .map((item) => (
-                  <span key={item.unitId} className="flex items-start gap-2">
-                    <ResourceThumb
-                      mediaId={item.imageMediaId}
-                      alt={item.name}
-                      size={22}
-                      className="mt-0.5"
-                    />
-                    <span className="min-w-0">
-                      <span className="font-medium text-[#212121]">{item.name}</span>
-                      <span className="text-[#929292]">
-                        {" "}
-                        · {item.unitLabel} · {item.unitId}
+                  ))}
+              </dd>
+            </div>
+          )}
+        {event.equipment &&
+          event.equipment.filter((e) => e.classification !== "INSTRUMENT")
+            .length > 0 && (
+            <div className="flex gap-3">
+              <dt className="w-16 shrink-0 font-semibold text-[#6B6B6B]">
+                Alat
+              </dt>
+              <dd className="min-w-0 flex-1 space-y-1 text-[#212121]">
+                {event.equipment
+                  .filter((item) => item.classification !== "INSTRUMENT")
+                  .map((item) => (
+                    <span key={item.unitId} className="flex items-start gap-2">
+                      <ResourceThumb
+                        mediaId={item.imageMediaId}
+                        alt={item.name}
+                        size={22}
+                        className="mt-0.5"
+                      />
+                      <span className="min-w-0">
+                        <span className="font-medium text-[#212121]">
+                          {item.name}
+                        </span>
+                        <span className="text-[#929292]">
+                          {" "}
+                          · {item.unitLabel} · {item.unitId}
+                        </span>
                       </span>
                     </span>
-                  </span>
-                ))}
-            </dd>
-          </div>
-        )}
-        {(!event.equipment || event.equipment.length === 0) && event.resourceId ? (
+                  ))}
+              </dd>
+            </div>
+          )}
+        {(!event.equipment || event.equipment.length === 0) &&
+        event.resourceId ? (
           <div className="flex gap-3">
             <dt className="w-16 shrink-0 font-semibold text-[#929292]">
               Sumber Daya
@@ -1218,7 +1263,9 @@ export function ScheduleEventCard({
             <dt className="w-16 shrink-0 font-semibold text-[#929292]">
               Pembimbing
             </dt>
-            <dd className="min-w-0 flex-1 text-[#212121]">{event.supervisor}</dd>
+            <dd className="min-w-0 flex-1 text-[#212121]">
+              {event.supervisor}
+            </dd>
           </div>
         )}
         {event.fieldPic && (
@@ -1324,9 +1371,7 @@ export function ScheduleEventCard({
           ))}
         </ol>
       )}
-      {actions && (
-        <div className="mt-4 flex flex-wrap gap-2">{actions}</div>
-      )}
+      {actions && <div className="mt-4 flex flex-wrap gap-2">{actions}</div>}
     </article>
   );
 }
@@ -1503,7 +1548,9 @@ function EquipmentPickerModal({
 }) {
   const catalog = useLabCatalog();
   const [query, setQuery] = useState("");
-  const [classificationFilter, setClassificationFilter] = useState<"ALL" | "INSTRUMENT" | "TOOL">(targetClassification ?? "ALL");
+  const [classificationFilter, setClassificationFilter] = useState<
+    "ALL" | "INSTRUMENT" | "TOOL"
+  >(targetClassification ?? "ALL");
   const effectiveFilter = targetClassification ?? classificationFilter;
   const [unitChoice, setUnitChoice] = useState<Record<string, string>>({});
   const list = catalog.equipment.filter(
@@ -1530,13 +1577,11 @@ function EquipmentPickerModal({
     if (!asset) return;
     const units = asset.units;
     const available = units.filter(
-      (unit) =>
-        unit.status === "Available" && !addedUnitIds.includes(unit.id),
+      (unit) => unit.status === "Available" && !addedUnitIds.includes(unit.id),
     );
     if (available.length === 0) return;
     const chosen =
-      available.find((unit) => unit.id === unitChoice[assetId]) ??
-      available[0];
+      available.find((unit) => unit.id === unitChoice[assetId]) ?? available[0];
     onChange([
       ...selected,
       {
@@ -1578,7 +1623,8 @@ function EquipmentPickerModal({
       footer={
         <>
           <span className="text-[11px] font-semibold text-[#6B6B6B]">
-            {activeSelected.length} unit{activeSelected.length === 1 ? "" : "s"} selected
+            {activeSelected.length} unit{activeSelected.length === 1 ? "" : "s"}{" "}
+            selected
           </span>
           <button
             type="button"
@@ -1698,7 +1744,9 @@ function EquipmentPickerModal({
                           : "bg-[#F5F5F5] text-[#6B6B6B] border border-[#E1E1E1]",
                       )}
                     >
-                      {asset.classification === "INSTRUMENT" ? "Instrumen" : "Alat"}
+                      {asset.classification === "INSTRUMENT"
+                        ? "Instrumen"
+                        : "Alat"}
                     </span>
                     <StatusBadge tone={asset.tone}>{asset.status}</StatusBadge>
                   </div>
@@ -1741,7 +1789,10 @@ function EquipmentPickerModal({
                         }))
                       }
                       disabled={disabled}
-                      className={cn(fieldClass, "h-10 max-w-[260px] min-w-0 flex-1")}
+                      className={cn(
+                        fieldClass,
+                        "h-10 max-w-[260px] min-w-0 flex-1",
+                      )}
                     >
                       {units.map((unit) => {
                         const added = addedUnitIds.includes(unit.id);
@@ -1931,8 +1982,8 @@ function MaterialPickerModal({
                     </span>
                     <span className="mt-0.5 block text-[10px] text-[#929292]">
                       {material.available} {material.unit} tersedia ·{" "}
-                      {material.physical} physical · {material.reserved} reserved
-                      · {material.rule}
+                      {material.physical} physical · {material.reserved}{" "}
+                      reserved · {material.rule}
                     </span>
                     <div className="mt-2 flex flex-wrap items-center gap-3">
                       <span
@@ -1994,7 +2045,10 @@ function MaterialPickerModal({
                                 value={selectedItem.quantity || ""}
                                 onChange={(event) => {
                                   const val = parseFloat(event.target.value);
-                                  setQuantity(material.id, isNaN(val) ? 0 : val);
+                                  setQuantity(
+                                    material.id,
+                                    isNaN(val) ? 0 : val,
+                                  );
                                 }}
                                 className="h-9 w-28 rounded-xl border border-[#E1E1E1] bg-white px-2.5 pr-8 text-[12px] font-semibold tabular-nums focus:border-[#38529B] focus:outline-none"
                               />
@@ -2029,7 +2083,11 @@ export type RequestFormDefaults = {
   fieldPic?: string;
 };
 
-function jakartaIso(day: number, time: string, month: { year: number; month: number }) {
+function jakartaIso(
+  day: number,
+  time: string,
+  month: { year: number; month: number },
+) {
   const date = `${month.year}-${String(month.month + 1).padStart(2, "0")}-${String(
     day,
   ).padStart(2, "0")}`;
@@ -2068,7 +2126,9 @@ export function ScheduleRequestForm({
   const [purpose, setPurpose] = useState(defaults?.purpose ?? "");
   const [supervisor, setSupervisor] = useState(defaults?.supervisor ?? "");
   const [fieldPic, setFieldPic] = useState(defaults?.fieldPic ?? "");
-  const [picker, setPicker] = useState<"instrument" | "tool" | "materials" | null>(null);
+  const [picker, setPicker] = useState<
+    "instrument" | "tool" | "materials" | null
+  >(null);
   const [sent, setSent] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -2110,26 +2170,33 @@ export function ScheduleRequestForm({
     setPending(true);
     setError(null);
     try {
-      await apiRequest(editingId ? `/api/requests/${editingId}` : "/api/requests", {
-        method: editingId ? "PATCH" : "POST",
-        body: {
-          title: title.trim(),
-          purpose: purpose.trim(),
-          roomCode: roomId,
-          startAt: jakartaIso(Math.min(range.start, range.end), startTime, month),
-          endAt: jakartaIso(Math.max(range.start, range.end), endTime, month),
-          supervisor: supervisor.trim(),
-          fieldPic: fieldPic.trim(),
-          equipment: equipment.map((item) => ({
-            unitCode: item.unitId,
+      await apiRequest(
+        editingId ? `/api/requests/${editingId}` : "/api/requests",
+        {
+          method: editingId ? "PATCH" : "POST",
+          body: {
+            title: title.trim(),
             purpose: purpose.trim(),
-          })),
-          materials: materials.map((item) => ({
-            materialCode: item.id,
-            quantity: item.quantity,
-          })),
+            roomCode: roomId,
+            startAt: jakartaIso(
+              Math.min(range.start, range.end),
+              startTime,
+              month,
+            ),
+            endAt: jakartaIso(Math.max(range.start, range.end), endTime, month),
+            supervisor: supervisor.trim(),
+            fieldPic: fieldPic.trim(),
+            equipment: equipment.map((item) => ({
+              unitCode: item.unitId,
+              purpose: purpose.trim(),
+            })),
+            materials: materials.map((item) => ({
+              materialCode: item.id,
+              quantity: item.quantity,
+            })),
+          },
         },
-      });
+      );
       setSent(true);
       router.refresh();
     } catch (caught) {
@@ -2420,7 +2487,8 @@ export function ScheduleRequestForm({
                             {item.name}
                           </strong>
                           <span className="block mt-0.5 text-[10px] text-[#6B6B6B]">
-                            {item.id} {option?.available ? `· ${option.available}` : ""}
+                            {item.id}{" "}
+                            {option?.available ? `· ${option.available}` : ""}
                           </span>
                         </div>
                         <button
@@ -2448,7 +2516,9 @@ export function ScheduleRequestForm({
                                 <button
                                   key={value}
                                   type="button"
-                                  onClick={() => setMaterialQuantity(item.id, value)}
+                                  onClick={() =>
+                                    setMaterialQuantity(item.id, value)
+                                  }
                                   className={cn(
                                     "rounded-md px-1.5 py-0.5 text-[10px] font-semibold transition",
                                     item.quantity === value
@@ -2478,7 +2548,10 @@ export function ScheduleRequestForm({
                             value={item.quantity || ""}
                             onChange={(event) => {
                               const val = parseFloat(event.target.value);
-                              setMaterialQuantity(item.id, isNaN(val) ? 0 : val);
+                              setMaterialQuantity(
+                                item.id,
+                                isNaN(val) ? 0 : val,
+                              );
                             }}
                             className="h-8 w-24 rounded-lg border border-[#E1E1E1] bg-white px-2 pr-7 text-[12px] font-semibold tabular-nums focus:border-[#38529B] focus:outline-none"
                           />
@@ -2747,9 +2820,12 @@ export function ScheduleEventPopover({
   const cancellable =
     mine &&
     event.kind === "request" &&
-    ["PENDING_PLP", "REQUEST_REVISION", "APPROVED", "READY_FOR_PICKUP"].includes(
-      event.status,
-    );
+    [
+      "PENDING_PLP",
+      "REQUEST_REVISION",
+      "APPROVED",
+      "READY_FOR_PICKUP",
+    ].includes(event.status);
   const canShare =
     !mine &&
     event.kind === "reservation" &&
@@ -2868,5 +2944,3 @@ export function ScheduleEventPopover({
     </>
   );
 }
-
-

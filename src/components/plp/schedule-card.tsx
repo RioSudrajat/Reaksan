@@ -14,12 +14,17 @@ import {
   Wrench,
 } from "lucide-react";
 import { cn } from "cn";
-import { ScheduleEventCard, type ScheduleCardContext } from "@/components/schedule-calendar";
+import {
+  ScheduleEventCard,
+  type ScheduleCardContext,
+} from "@/components/schedule-calendar";
 import { StatusBadge } from "@/components/status-badge";
 import type { RequestStatus, ScheduleEvent } from "@/components/schedule-data";
 import { requestStatusLabels } from "@/components/schedule-data";
 
-function statusToTone(status: RequestStatus): "yellow" | "green" | "neutral" | "rose" | "dark" {
+function statusToTone(
+  status: RequestStatus,
+): "yellow" | "green" | "neutral" | "rose" | "dark" {
   switch (status) {
     case "APPROVED":
     case "CONFIRMED":
@@ -52,9 +57,17 @@ export function PlpScheduleCard({
   const status = event.status as RequestStatus;
   const queue =
     status === "APPROVED" || status === "READY_FOR_PICKUP"
-      ? { href: "/plp/fulfillment/issue", label: "Issue queue", icon: PackageCheck }
+      ? {
+          href: "/plp/fulfillment/issue",
+          label: "Issue queue",
+          icon: PackageCheck,
+        }
       : status === "ACTIVE" || status === "OVERDUE" || status === "RETURNED"
-        ? { href: "/plp/fulfillment/return", label: "Return & inspeksi", icon: Undo2 }
+        ? {
+            href: "/plp/fulfillment/return",
+            label: "Return & inspeksi",
+            icon: Undo2,
+          }
         : null;
 
   return (
@@ -91,7 +104,10 @@ export function PlpScheduleCard({
                 href={queue.href}
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[#E1E1E1] bg-white px-3.5 text-[12px] font-semibold text-[#212121] transition hover:bg-[#FEF1CC] hover:border-[#F9B129] focus-visible:outline-2 focus-visible:outline-[#6E8EDA]"
               >
-                <queue.icon className="size-3.5 text-[#AE7C1D]" aria-hidden="true" />
+                <queue.icon
+                  className="size-3.5 text-[#AE7C1D]"
+                  aria-hidden="true"
+                />
                 {queue.label}
               </Link>
             )}
@@ -181,17 +197,28 @@ export function PlpDayOverviewCard({
 
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[#6B6B6B]">
                   <div className="flex items-center gap-1">
-                    <User className="size-3 text-[#929292]" aria-hidden="true" />
+                    <User
+                      className="size-3 text-[#929292]"
+                      aria-hidden="true"
+                    />
                     <span>{event.actor}</span>
                   </div>
                   <div className="flex items-center gap-1 font-mono text-[10.5px]">
-                    <Clock className="size-3 text-[#929292]" aria-hidden="true" />
+                    <Clock
+                      className="size-3 text-[#929292]"
+                      aria-hidden="true"
+                    />
                     <span>{event.time}</span>
                   </div>
                   {primaryEquip && (
                     <div className="flex items-center gap-1">
-                      <Wrench className="size-3 text-[#AE7C1D]" aria-hidden="true" />
-                      <span className="truncate max-w-[160px]">{primaryEquip.name}</span>
+                      <Wrench
+                        className="size-3 text-[#AE7C1D]"
+                        aria-hidden="true"
+                      />
+                      <span className="truncate max-w-[160px]">
+                        {primaryEquip.name}
+                      </span>
                       {equipCount > 1 && (
                         <span className="text-[10px] text-[#AE7C1D] font-medium">
                           +{equipCount - 1}
@@ -229,18 +256,18 @@ export function PlpDayOverviewCard({
 }
 
 // Master Card Renderer for ScheduleCalendar
-export function PlpCalendarCard({
-  context,
-}: {
-  context: ScheduleCardContext;
-}) {
+export function PlpCalendarCard({ context }: { context: ScheduleCardContext }) {
   // If user clicked directly on a specific event bar, open its detail popover immediately
   const initialEvent =
     context.source === "event" && context.eventId
-      ? context.events.find((item) => item.id === context.eventId) ?? context.events[0] ?? null
+      ? (context.events.find((item) => item.id === context.eventId) ??
+        context.events[0] ??
+        null)
       : null;
 
-  const [activeEvent, setActiveEvent] = useState<ScheduleEvent | null>(initialEvent);
+  const [activeEvent, setActiveEvent] = useState<ScheduleEvent | null>(
+    initialEvent,
+  );
 
   // If activeEvent is selected, show detail card with back navigation
   if (activeEvent) {
@@ -249,9 +276,7 @@ export function PlpCalendarCard({
         event={activeEvent}
         rangeLabel={context.label}
         onBack={
-          context.events.length > 1
-            ? () => setActiveEvent(null)
-            : undefined
+          context.events.length > 1 ? () => setActiveEvent(null) : undefined
         }
       />
     );
@@ -262,7 +287,9 @@ export function PlpCalendarCard({
     <PlpDayOverviewCard
       events={context.events}
       rangeLabel={context.label}
-      highlightedEventId={context.source === "event" ? context.eventId : undefined}
+      highlightedEventId={
+        context.source === "event" ? context.eventId : undefined
+      }
       onSelectEvent={(evt) => setActiveEvent(evt)}
     />
   );

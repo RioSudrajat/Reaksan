@@ -88,7 +88,10 @@ export function EquipmentFilterGrid({
       )}
       {items.length === 0 ? (
         <div className="mt-5 rounded-xl border border-dashed border-[#D8D8D8] bg-[#FAFAF8] p-6 text-center">
-          <Wrench className="mx-auto size-6 text-[#929292]" aria-hidden="true" />
+          <Wrench
+            className="mx-auto size-6 text-[#929292]"
+            aria-hidden="true"
+          />
           <p className="mt-3 text-[13px] font-semibold">
             No equipment tracked here yet
           </p>

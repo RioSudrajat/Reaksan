@@ -111,7 +111,10 @@ export function SignInSplitForm() {
           </Link>
 
           <div className="flex items-center gap-2">
-            <span className="h-0.5 w-4 rounded-full bg-[#F9B129]" aria-hidden="true" />
+            <span
+              className="h-0.5 w-4 rounded-full bg-[#F9B129]"
+              aria-hidden="true"
+            />
             <span className="text-xs font-bold uppercase tracking-[0.16em] text-[#8D6500]">
               Departemen Kimia FMIPA Unpad
             </span>
@@ -128,7 +131,9 @@ export function SignInSplitForm() {
               Laboratorium Riset & Praktikum Terpadu Kimia
             </h3>
             <p className="text-xs text-[#6B6B6B] mt-1.5 leading-relaxed">
-              Sistem terpusat koordinasi ruang laboratorium riset, instrumen analitik canggih, dan pengelolaan bahan kimia Departemen Kimia Universitas Padjadjaran.
+              Sistem terpusat koordinasi ruang laboratorium riset, instrumen
+              analitik canggih, dan pengelolaan bahan kimia Departemen Kimia
+              Universitas Padjadjaran.
             </p>
           </div>
         </div>
@@ -204,8 +209,10 @@ export function SignInSplitForm() {
               <div className="p-2.5 rounded-lg bg-[#FEF1CC] border border-[#FDE68A] text-[11px] text-[#8D6500] flex items-start gap-2">
                 <Info className="w-4 h-4 text-[#AE7C1D] shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold">Simulasi SSO Unpad:</span>{" "}
-                  Pada pengujian lokal ini, silakan klik tombol <strong>Pilih Akun Demo</strong> di bawah untuk langsung mencoba peran Mahasiswa, PLP, atau Admin.
+                  <span className="font-bold">Simulasi SSO Unpad:</span> Pada
+                  pengujian lokal ini, silakan klik tombol{" "}
+                  <strong>Pilih Akun Demo</strong> di bawah untuk langsung
+                  mencoba peran Mahasiswa, PLP, atau Admin.
                 </div>
               </div>
             )}
@@ -223,10 +230,7 @@ export function SignInSplitForm() {
           <form onSubmit={onSubmit} className="space-y-3.5">
             {/* Username / Email Field */}
             <div className="space-y-1">
-              <label
-                htmlFor="login-email"
-                className="sr-only"
-              >
+              <label htmlFor="login-email" className="sr-only">
                 Username atau Email
               </label>
               <div className="relative">
@@ -249,10 +253,7 @@ export function SignInSplitForm() {
 
             {/* Password Field */}
             <div className="space-y-1">
-              <label
-                htmlFor="login-password"
-                className="sr-only"
-              >
+              <label htmlFor="login-password" className="sr-only">
                 Password
               </label>
               <div className="relative">
@@ -274,7 +275,9 @@ export function SignInSplitForm() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#929292] hover:text-[#212121] transition-colors focus:outline-none"
-                  aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                  aria-label={
+                    showPassword ? "Sembunyikan password" : "Tampilkan password"
+                  }
                 >
                   {showPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -287,7 +290,10 @@ export function SignInSplitForm() {
 
             {/* Error Message */}
             {error && (
-              <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-[#F45959] text-xs flex items-center gap-2">
+              <div
+                role="alert"
+                className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-[#F45959] text-xs flex items-center gap-2"
+              >
                 <AlertCircle className="w-4 h-4 shrink-0 text-[#F45959]" />
                 <span>{error}</span>
               </div>
@@ -335,7 +341,10 @@ export function SignInSplitForm() {
               ))}
             </div>
             <p className="text-[10px] text-center text-[#929292] mt-2">
-              Password demo default: <code className="bg-[#FAF7F2] border border-[#E1E1E1] px-1.5 py-0.5 rounded text-[#212121] font-mono">Reaksan-demo-123!</code>
+              Password demo default:{" "}
+              <code className="bg-[#FAF7F2] border border-[#E1E1E1] px-1.5 py-0.5 rounded text-[#212121] font-mono">
+                Reaksan-demo-123!
+              </code>
             </p>
           </div>
         </div>

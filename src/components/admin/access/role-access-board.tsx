@@ -265,7 +265,9 @@ export function RoleAccessBoard({
                   onSaved={(id, roles) => {
                     setMembers((current) =>
                       current.map((item) =>
-                        item.id === id ? { ...item, role: roles.join(",") } : item,
+                        item.id === id
+                          ? { ...item, role: roles.join(",") }
+                          : item,
                       ),
                     );
                     router.refresh();

@@ -1,8 +1,5 @@
 import { readJson, withApiPermission } from "@/lib/api";
-import {
-  createLaboratory,
-  listLaboratories,
-} from "@/services/admin.service";
+import { createLaboratory, listLaboratories } from "@/services/admin.service";
 import { laboratoryInputSchema } from "@/validators/admin";
 
 export const runtime = "nodejs";

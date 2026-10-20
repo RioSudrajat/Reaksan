@@ -149,16 +149,16 @@ export async function loadIncidentDtos(
     })
     .from(incident)
     .innerJoin(user, eq(user.id, incident.reporterId))
-    .leftJoin(instrumentAsset, eq(instrumentAsset.id, incident.instrumentAssetId))
+    .leftJoin(
+      instrumentAsset,
+      eq(instrumentAsset.id, incident.instrumentAssetId),
+    )
     .leftJoin(
       instrumentType,
       eq(instrumentType.id, instrumentAsset.instrumentTypeId),
     )
     .leftJoin(toolAsset, eq(toolAsset.id, incident.toolAssetId))
-    .leftJoin(
-      toolType,
-      eq(toolType.id, toolAsset.toolTypeId),
-    )
+    .leftJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
     .leftJoin(room, eq(room.id, incident.roomId))
     .leftJoin(resourceRequest, eq(resourceRequest.id, incident.requestId))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
@@ -192,8 +192,12 @@ export async function loadIncidentDtos(
     .where(inArray(incidentResolution.incidentId, ids));
 
   return rows.map<IncidentDto>((row) => {
-    const assessment = assessmentRows.find((item) => item.incidentId === row.id);
-    const resolution = resolutionRows.find((item) => item.incidentId === row.id);
+    const assessment = assessmentRows.find(
+      (item) => item.incidentId === row.id,
+    );
+    const resolution = resolutionRows.find(
+      (item) => item.incidentId === row.id,
+    );
     return {
       id: row.id,
       code: row.code,
@@ -465,10 +469,11 @@ export async function createIncident(
       })
       .returning({ id: incident.id });
 
-    const resourceLabel =
-      assetRow?.name ?? roomRow?.name ?? "laboratorium";
+    const resourceLabel = assetRow?.name ?? roomRow?.name ?? "laboratorium";
     const staff = await listStaffRecipients(tx, roomId);
-    const actorRoleLabel = options?.allowStaffScope ? "Petugas lab" : "Mahasiswa";
+    const actorRoleLabel = options?.allowStaffScope
+      ? "Petugas lab"
+      : "Mahasiswa";
     await createNotifications(
       tx,
       staff
@@ -512,7 +517,10 @@ export async function countIncidentRows(
     .select({ count: sql<number>`count(*)::int` })
     .from(incident)
     .innerJoin(user, eq(user.id, incident.reporterId))
-    .leftJoin(instrumentAsset, eq(instrumentAsset.id, incident.instrumentAssetId))
+    .leftJoin(
+      instrumentAsset,
+      eq(instrumentAsset.id, incident.instrumentAssetId),
+    )
     .leftJoin(toolAsset, eq(toolAsset.id, incident.toolAssetId))
     .leftJoin(room, eq(room.id, incident.roomId))
     .where(conditions.length > 0 ? and(...conditions) : undefined);
@@ -560,8 +568,7 @@ export async function assessIncident(
       .where(eq(incident.code, code))
       .limit(1)
       .for("update");
-    if (!row)
-      throw new ApiError(404, "NOT_FOUND", "Incident not found.");
+    if (!row) throw new ApiError(404, "NOT_FOUND", "Incident not found.");
     await tx
       .insert(incidentAssessment)
       .values({
@@ -662,8 +669,7 @@ export async function resolveIncident(
       .where(eq(incident.code, code))
       .limit(1)
       .for("update");
-    if (!row)
-      throw new ApiError(404, "NOT_FOUND", "Incident not found.");
+    if (!row) throw new ApiError(404, "NOT_FOUND", "Incident not found.");
     await tx
       .insert(incidentResolution)
       .values({

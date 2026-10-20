@@ -27,10 +27,14 @@ export default async function PlpIncidentDetailPage({
   const scope = await getRoomScope(user.id, user.role);
   const incident = await getAnyIncident(code);
   if (!incident) notFound();
-  if (!scope.all && (!incident.roomCode || !scope.roomCodes.includes(incident.roomCode)))
+  if (
+    !scope.all &&
+    (!incident.roomCode || !scope.roomCodes.includes(incident.roomCode))
+  )
     notFound();
   const view = incidentToView(incident);
-  const critical = incident.severity === "CRITICAL" || incident.severity === "HIGH";
+  const critical =
+    incident.severity === "CRITICAL" || incident.severity === "HIGH";
 
   return (
     <>

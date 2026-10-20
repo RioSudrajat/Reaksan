@@ -67,11 +67,11 @@ The same doc covers **role-based access**: `src/lib/permissions.ts` declares res
 
 ## Reaksan workspaces
 
-| Workspace | Path | Who can open it |
-| --------- | ---- | --------------- |
-| Student | `/student` | Any signed-in account |
-| PLP | `/plp/dashboard` | `plp` and `admin` |
-| Admin | `/admin/dashboard` | `admin` |
+| Workspace | Path               | Who can open it       |
+| --------- | ------------------ | --------------------- |
+| Student   | `/student`         | Any signed-in account |
+| PLP       | `/plp/dashboard`   | `plp` and `admin`     |
+| Admin     | `/admin/dashboard` | `admin`               |
 
 The PLP workspace reviews requests, issues and returns resources, records inspection results, manages inventory views, incidents, and operational history. Every lab keeps its own equipment and material stock, and a PLP only sees the labs the admin assigned through `/admin/assignments`; a PLP without an assignment sees an empty workspace with a clear notice. The admin workspace owns master data, assignments, configuration, and audit logs, plus the runtime role-permission editor in **Peran & akses** (`/admin/roles`). Non-permitted accounts render the not-found page, and every API answers 403 before touching data.
 
@@ -108,9 +108,9 @@ Both hostnames hit the same app. In development the 127.0.0.1 alias of the confi
 | `npm run doctor`              | Check config, database connection, auth tables, and AI files             |
 | `npm run db:generate`         | Generate migration SQL after a schema edit                               |
 | `npm run db:migrate`          | Apply committed migrations                                               |
-| `npm run db:seed`             | Seed the lab catalog (5 labs, equipment, materials); safe to rerun        |
+| `npm run db:seed`             | Seed the lab catalog (5 labs, equipment, materials); safe to rerun       |
 | `npm run db:seed:fresh`       | Delete demo catalog and transactions, then seed again (accounts kept)    |
-| `npm run db:seed:accounts`    | Seed local demo accounts for every role (development only)                |
+| `npm run db:seed:accounts`    | Seed local demo accounts for every role (development only)               |
 | `npm run role:set`            | Grant a role: `npm run role:set -- you@example.com admin`                |
 | `npm run db:studio`           | Inspect the database with Drizzle Studio                                 |
 | `npm run check`               | Lint, typecheck, and tests against disposable PostgreSQL                 |

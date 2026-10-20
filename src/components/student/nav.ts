@@ -36,7 +36,8 @@ export function studentNav(counts?: {
           label: "Notifikasi",
           href: "/student/notifications",
           icon: "notifications",
-          badge: counts?.unread && counts.unread > 0 ? counts.unread : undefined,
+          badge:
+            counts?.unread && counts.unread > 0 ? counts.unread : undefined,
         },
       ],
     },

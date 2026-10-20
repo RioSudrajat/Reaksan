@@ -57,7 +57,14 @@ export const permissionGroups: Array<{
 }> = [
   {
     title: "Operasional lab",
-    resources: ["requests", "inventory", "schedule", "history", "incidents", "plp"],
+    resources: [
+      "requests",
+      "inventory",
+      "schedule",
+      "history",
+      "incidents",
+      "plp",
+    ],
   },
   {
     title: "Data master",

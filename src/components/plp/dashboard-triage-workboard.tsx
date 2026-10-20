@@ -195,7 +195,10 @@ export function DashboardTriageWorkboard({
               className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-[#E1E1E1] bg-white px-3 text-[11px] font-semibold text-[#212121] transition hover:bg-[#FEF1CC] hover:border-[#F9B129]/60 hover:text-[#AE7C1D] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F9B129]"
             >
               <span>{currentTabConfig.actionLabel}</span>
-              <ArrowRight className="size-3 text-[#929292]" aria-hidden="true" />
+              <ArrowRight
+                className="size-3 text-[#929292]"
+                aria-hidden="true"
+              />
             </Link>
           </div>
         </div>
@@ -227,13 +230,17 @@ export function DashboardTriageWorkboard({
                               <span className="font-mono text-[11px] font-bold text-[#6B6B6B]">
                                 {request.code}
                               </span>
-                              <span className="text-[11px] text-[#929292]">·</span>
+                              <span className="text-[11px] text-[#929292]">
+                                ·
+                              </span>
                               <span className="text-[12px] font-semibold text-[#212121]">
                                 {request.actorName}
                               </span>
                               {request.activityTitle && (
                                 <>
-                                  <span className="text-[11px] text-[#929292]">·</span>
+                                  <span className="text-[11px] text-[#929292]">
+                                    ·
+                                  </span>
                                   <span className="truncate text-[11px] text-[#6B6B6B]">
                                     {request.activityTitle}
                                   </span>
@@ -288,7 +295,9 @@ export function DashboardTriageWorkboard({
                               <span className="font-mono text-[11px] font-bold text-[#6B6B6B]">
                                 {request.code}
                               </span>
-                              <span className="text-[11px] text-[#929292]">·</span>
+                              <span className="text-[11px] text-[#929292]">
+                                ·
+                              </span>
                               <span className="text-[12px] font-semibold text-[#212121]">
                                 {request.actorName}
                               </span>
@@ -297,7 +306,8 @@ export function DashboardTriageWorkboard({
                               {request.title}
                             </p>
                             <p className="mt-1 text-[11px] text-[#6B6B6B] tabular-nums">
-                              {request.roomName} · Jadwal: {formatDateTime(request.startAt)}
+                              {request.roomName} · Jadwal:{" "}
+                              {formatDateTime(request.startAt)}
                             </p>
                           </div>
                         </div>
@@ -360,7 +370,9 @@ export function DashboardTriageWorkboard({
                                 <span className="font-mono text-[11px] font-bold text-[#6B6B6B]">
                                   {request.code}
                                 </span>
-                                <span className="text-[11px] text-[#929292]">·</span>
+                                <span className="text-[11px] text-[#929292]">
+                                  ·
+                                </span>
                                 <span className="text-[12px] font-semibold text-[#212121]">
                                   {request.actorName}
                                 </span>
@@ -429,7 +441,9 @@ export function DashboardTriageWorkboard({
                               <span className="font-mono text-[11px] font-bold text-[#6B6B6B] bg-white px-1.5 py-0.5 rounded border border-[#E1E1E1]">
                                 {unit.code}
                               </span>
-                              <span className="text-[11px] text-[#929292]">·</span>
+                              <span className="text-[11px] text-[#929292]">
+                                ·
+                              </span>
                               <span className="text-[12px] font-semibold text-[#212121]">
                                 {unit.assetName}
                               </span>
@@ -438,7 +452,8 @@ export function DashboardTriageWorkboard({
                               </span>
                             </div>
                             <p className="mt-1 text-[12px] text-[#6B6B6B]">
-                              {unit.notes || "Dalam antrean perbaikan / kalibrasi berkala"}
+                              {unit.notes ||
+                                "Dalam antrean perbaikan / kalibrasi berkala"}
                             </p>
                           </div>
                         </div>

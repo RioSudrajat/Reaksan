@@ -18,7 +18,9 @@ export function IncidentActions({ incident }: { incident: IncidentView }) {
   );
   const [equipmentCondition, setEquipmentCondition] = useState("");
   const [assessStatus, setAssessStatus] = useState("UNDER_ASSESSMENT");
-  const [resolution, setResolution] = useState(incident.resolution?.action ?? "");
+  const [resolution, setResolution] = useState(
+    incident.resolution?.action ?? "",
+  );
   const [resolutionNotes, setResolutionNotes] = useState(
     incident.resolution?.notes ?? "",
   );
@@ -104,7 +106,10 @@ export function IncidentActions({ incident }: { incident: IncidentView }) {
 
       <section>
         <p className="flex items-center gap-2 text-[13px] font-semibold text-[#121826]">
-          <ClipboardCheck className="size-4 text-[#8D6500]" aria-hidden="true" />
+          <ClipboardCheck
+            className="size-4 text-[#8D6500]"
+            aria-hidden="true"
+          />
           Assessment
         </p>
         {resolved && incident.assessment && (
@@ -170,7 +175,9 @@ export function IncidentActions({ incident }: { incident: IncidentView }) {
                 </span>
                 <select
                   value={equipmentCondition}
-                  onChange={(event) => setEquipmentCondition(event.target.value)}
+                  onChange={(event) =>
+                    setEquipmentCondition(event.target.value)
+                  }
                   className={controlClass}
                 >
                   <option value="">Tidak mengubah kondisi</option>
@@ -260,7 +267,9 @@ export function IncidentActions({ incident }: { incident: IncidentView }) {
                   className={controlClass}
                 >
                   <option value="AVAILABLE">AVAILABLE · siap dipakai</option>
-                  <option value="MAINTENANCE">MAINTENANCE · perlu perbaikan</option>
+                  <option value="MAINTENANCE">
+                    MAINTENANCE · perlu perbaikan
+                  </option>
                   <option value="DAMAGED">DAMAGED · rusak</option>
                   <option value="RETIRED">RETIRED · tidak dipakai lagi</option>
                 </select>

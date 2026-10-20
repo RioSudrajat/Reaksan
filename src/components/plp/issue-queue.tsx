@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { PackageCheck, Search, ShieldCheck } from "lucide-react";
 import { apiRequest, errorMessage } from "@/components/student-api";
 import { CatalogImage } from "@/components/catalog-image";
-import { RequestStatusBadge, formatRange, controlClass } from "@/components/workspace";
+import {
+  RequestStatusBadge,
+  formatRange,
+  controlClass,
+} from "@/components/workspace";
 import type { FulfillmentRequest } from "@/components/plp/types";
 
 function RequestSummary({ request }: { request: FulfillmentRequest }) {
@@ -58,7 +62,11 @@ function ItemLists({ request }: { request: FulfillmentRequest }) {
                 <span className="min-w-0">
                   {item.unitCode} · {item.assetName}{" "}
                   <span className="text-[11px] text-[#64748B]">
-                    ({item.usageType === "BORROWABLE" ? "borrowable" : "usage only"})
+                    (
+                    {item.usageType === "BORROWABLE"
+                      ? "borrowable"
+                      : "usage only"}
+                    )
                   </span>
                 </span>
               </li>
@@ -97,11 +105,7 @@ function ItemLists({ request }: { request: FulfillmentRequest }) {
   );
 }
 
-export function IssueQueue({
-  requests,
-}: {
-  requests: FulfillmentRequest[];
-}) {
+export function IssueQueue({ requests }: { requests: FulfillmentRequest[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -113,8 +117,14 @@ export function IssueQueue({
   const filtered = requests.filter((r) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    const eqText = r.equipment.map((e) => `${e.unitCode} ${e.assetName}`).join(" ").toLowerCase();
-    const matText = r.materials.map((m) => m.name).join(" ").toLowerCase();
+    const eqText = r.equipment
+      .map((e) => `${e.unitCode} ${e.assetName}`)
+      .join(" ")
+      .toLowerCase();
+    const matText = r.materials
+      .map((m) => m.name)
+      .join(" ")
+      .toLowerCase();
     return (
       r.code.toLowerCase().includes(q) ||
       r.actorName.toLowerCase().includes(q) ||
@@ -168,7 +178,10 @@ export function IssueQueue({
   if (requests.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-[#D9D9D9] bg-[#FAFAFA] px-5 py-10 text-center">
-        <PackageCheck className="mx-auto size-6 text-[#929292]" aria-hidden="true" />
+        <PackageCheck
+          className="mx-auto size-6 text-[#929292]"
+          aria-hidden="true"
+        />
         <p className="mt-3 text-[13px] font-semibold text-[#212121]">
           Tidak ada request siap di-issue
         </p>
@@ -216,79 +229,85 @@ export function IssueQueue({
       ) : (
         <ul className="space-y-3">
           {filtered.map((request) => (
-          <li key={request.id} className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-xs">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-[#121826]">
-                  {request.title}
-                </p>
-                <p className="mt-0.5 text-[11px] text-[#64748B]">
-                  {request.code}
-                </p>
+            <li
+              key={request.id}
+              className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-xs"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-[#121826]">
+                    {request.title}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-[#64748B]">
+                    {request.code}
+                  </p>
+                </div>
+                <RequestStatusBadge status={request.status} />
               </div>
-              <RequestStatusBadge status={request.status} />
-            </div>
-            <div className="mt-3">
-              <RequestSummary request={request} />
-              <ItemLists request={request} />
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              {request.status === "APPROVED" && (
-                <button
-                  type="button"
-                  onClick={() => ready(request)}
-                  disabled={pending}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#E5E7EB] bg-white px-4 text-[12px] font-semibold text-[#121826] transition hover:bg-[#FEF7E6] hover:border-[#FDE68A] hover:text-[#8D6500] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] disabled:opacity-60"
-                >
-                  Tandai siap diambil
-                </button>
-              )}
-              {request.status === "READY_FOR_PICKUP" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveId(activeId === request.id ? null : request.id);
-                    setVerified(false);
-                    setError("");
-                  }}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] shadow-xs transition hover:bg-[#EAA805] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
-                >
-                  <PackageCheck className="size-4" aria-hidden="true" />
-                  Konfirmasi serahkan
-                </button>
-              )}
-            </div>
-
-            {activeId === request.id && (
-              <div className="mt-3 rounded-xl border border-[#FDE68A] bg-[#FEF7E6] p-3.5">
-                <label className="flex items-start gap-2.5 text-[12px] text-[#8D6500]">
-                  <input
-                    type="checkbox"
-                    checked={verified}
-                    onChange={(event) => setVerified(event.target.checked)}
-                    className="mt-0.5 size-4 rounded border-[#D1D5DB] text-[#FDB913] focus:ring-[#FDB913]"
-                  />
-                  <span className="flex items-start gap-2">
-                    <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[#8D6500]" aria-hidden="true" />
-                    Saya sudah memverifikasi identitas {request.actorName} dan
-                    menyerahkan jumlah material sesuai daftar.
-                  </span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => issue(request)}
-                  disabled={pending}
-                  className="mt-3 inline-flex min-h-10 items-center rounded-lg bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] shadow-xs transition hover:bg-[#EAA805] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] disabled:opacity-60"
-                >
-                  {pending ? "Memproses..." : "Serahkan sekarang"}
-                </button>
+              <div className="mt-3">
+                <RequestSummary request={request} />
+                <ItemLists request={request} />
               </div>
-            )}
-          </li>
-        ))}
-      </ul>
-    )}
-  </div>
-);
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {request.status === "APPROVED" && (
+                  <button
+                    type="button"
+                    onClick={() => ready(request)}
+                    disabled={pending}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#E5E7EB] bg-white px-4 text-[12px] font-semibold text-[#121826] transition hover:bg-[#FEF7E6] hover:border-[#FDE68A] hover:text-[#8D6500] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] disabled:opacity-60"
+                  >
+                    Tandai siap diambil
+                  </button>
+                )}
+                {request.status === "READY_FOR_PICKUP" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveId(activeId === request.id ? null : request.id);
+                      setVerified(false);
+                      setError("");
+                    }}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] shadow-xs transition hover:bg-[#EAA805] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
+                  >
+                    <PackageCheck className="size-4" aria-hidden="true" />
+                    Konfirmasi serahkan
+                  </button>
+                )}
+              </div>
+
+              {activeId === request.id && (
+                <div className="mt-3 rounded-xl border border-[#FDE68A] bg-[#FEF7E6] p-3.5">
+                  <label className="flex items-start gap-2.5 text-[12px] text-[#8D6500]">
+                    <input
+                      type="checkbox"
+                      checked={verified}
+                      onChange={(event) => setVerified(event.target.checked)}
+                      className="mt-0.5 size-4 rounded border-[#D1D5DB] text-[#FDB913] focus:ring-[#FDB913]"
+                    />
+                    <span className="flex items-start gap-2">
+                      <ShieldCheck
+                        className="mt-0.5 size-4 shrink-0 text-[#8D6500]"
+                        aria-hidden="true"
+                      />
+                      Saya sudah memverifikasi identitas {request.actorName} dan
+                      menyerahkan jumlah material sesuai daftar.
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => issue(request)}
+                    disabled={pending}
+                    className="mt-3 inline-flex min-h-10 items-center rounded-lg bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] shadow-xs transition hover:bg-[#EAA805] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] disabled:opacity-60"
+                  >
+                    {pending ? "Memproses..." : "Serahkan sekarang"}
+                  </button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }

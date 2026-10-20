@@ -103,7 +103,9 @@ export function RolePermissionEditor({
                     </p>
                     <div className="mt-2 grid gap-1 sm:grid-cols-2">
                       {actions.map((action) => {
-                        const checked = (draft[resource] ?? []).includes(action);
+                        const checked = (draft[resource] ?? []).includes(
+                          action,
+                        );
                         return (
                           <label
                             key={action}

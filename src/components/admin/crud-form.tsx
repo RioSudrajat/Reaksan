@@ -48,14 +48,16 @@ function setPath(
 function readValue(field: CrudField, form: HTMLFormElement) {
   const item = form.elements.namedItem(field.name);
   if (!item) return undefined;
-  let element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null =
-    null;
+  let element:
+    HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null = null;
   if (typeof RadioNodeList !== "undefined" && item instanceof RadioNodeList) {
-    const list = Array.from(item) as (HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement)[];
-    element =
-      list.find((el) => Boolean(el.value?.trim())) ?? list[0] ?? null;
+    const list = Array.from(item) as (
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    )[];
+    element = list.find((el) => Boolean(el.value?.trim())) ?? list[0] ?? null;
   } else {
-    element = item as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+    element = item as
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
   }
   if (!element) return undefined;
   if (field.type === "checkbox") {

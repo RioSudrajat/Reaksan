@@ -25,10 +25,22 @@ export const adminNav: NavGroup[] = [
   {
     label: "Operasional & Sistem",
     items: [
-      { label: "Penugasan PLP", href: "/admin/assignments", icon: "assignments" },
-      { label: "Konfigurasi Sistem", href: "/admin/configuration", icon: "configuration" },
+      {
+        label: "Penugasan PLP",
+        href: "/admin/assignments",
+        icon: "assignments",
+      },
+      {
+        label: "Konfigurasi Sistem",
+        href: "/admin/configuration",
+        icon: "configuration",
+      },
       { label: "Log Audit", href: "/admin/audit-logs", icon: "audit" },
-      { label: "Notifikasi", href: "/admin/notifications", icon: "notifications" },
+      {
+        label: "Notifikasi",
+        href: "/admin/notifications",
+        icon: "notifications",
+      },
     ],
   },
 ];

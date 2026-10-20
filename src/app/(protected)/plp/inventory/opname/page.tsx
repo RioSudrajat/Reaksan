@@ -13,10 +13,7 @@ import {
   formatDateTime,
 } from "@/components/workspace";
 import { requirePermission } from "@/lib/session";
-import {
-  getRoomScope,
-  scopeRoomCodes,
-} from "@/services/access-scope.service";
+import { getRoomScope, scopeRoomCodes } from "@/services/access-scope.service";
 import { listRoomViews } from "@/services/catalog.service";
 import { listOpnameSessions } from "@/services/opname.service";
 import { opnameListQuerySchema } from "@/validators/opname";
@@ -143,7 +140,9 @@ export default async function OpnameSessionsPage({
                       <span className="text-[12px] font-semibold text-[#121826]">
                         {session.roomName}
                       </span>
-                      <StatusBadge tone={statusTone[session.status] ?? "neutral"}>
+                      <StatusBadge
+                        tone={statusTone[session.status] ?? "neutral"}
+                      >
                         {statusLabel[session.status] ?? session.status}
                       </StatusBadge>
                     </div>

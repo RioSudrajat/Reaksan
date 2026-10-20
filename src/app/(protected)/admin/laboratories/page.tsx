@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
 import { CrudForm, EditDisclosure } from "@/components/admin/crud-form";
-import { EmptyState, PageHeader, Panel, formatDate } from "@/components/workspace";
+import {
+  EmptyState,
+  PageHeader,
+  Panel,
+  formatDate,
+} from "@/components/workspace";
 import { listLaboratories } from "@/services/admin.service";
 import { requirePermission } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Data Master Laboratorium · Admin Reaksan" };
+export const metadata: Metadata = {
+  title: "Data Master Laboratorium · Admin Reaksan",
+};
 
 export default async function AdminLaboratoriesPage() {
   await requirePermission({ labs: ["manage-any"] });
@@ -18,21 +25,49 @@ export default async function AdminLaboratoriesPage() {
         description="Laboratorium induk yang menaungi berbagai ruangan praktikum dan riset Departemen Kimia FMIPA Unpad. Nonaktifkan status alih-alih menghapus data agar integritas riwayat tetap terjaga."
       />
 
-      <Panel context="Formulir" title="Tambah Laboratorium Baru" className="mb-5">
+      <Panel
+        context="Formulir"
+        title="Tambah Laboratorium Baru"
+        className="mb-5"
+      >
         <CrudForm
           endpoint="/api/admin/laboratories"
           fields={[
-            { name: "code", label: "Kode Lab", required: true, placeholder: "chem-lab" },
-            { name: "name", label: "Nama Laboratorium", required: true, placeholder: "cth. Laboratorium Kimia Fisik" },
-            { name: "description", label: "Deskripsi", type: "textarea", placeholder: "Penjelasan fungsi dan cakupan laboratorium..." },
-            { name: "active", label: "Status Aktif", type: "checkbox", defaultValue: true },
+            {
+              name: "code",
+              label: "Kode Lab",
+              required: true,
+              placeholder: "chem-lab",
+            },
+            {
+              name: "name",
+              label: "Nama Laboratorium",
+              required: true,
+              placeholder: "cth. Laboratorium Kimia Fisik",
+            },
+            {
+              name: "description",
+              label: "Deskripsi",
+              type: "textarea",
+              placeholder: "Penjelasan fungsi dan cakupan laboratorium...",
+            },
+            {
+              name: "active",
+              label: "Status Aktif",
+              type: "checkbox",
+              defaultValue: true,
+            },
           ]}
           submitLabel="Simpan Laboratorium"
           successMessage="Laboratorium berhasil ditambahkan."
         />
       </Panel>
 
-      <Panel context={`${laboratories.length} laboratorium`} title="Daftar Laboratorium Terdaftar" padded={false}>
+      <Panel
+        context={`${laboratories.length} laboratorium`}
+        title="Daftar Laboratorium Terdaftar"
+        padded={false}
+      >
         {laboratories.length === 0 ? (
           <div className="p-5">
             <EmptyState

@@ -87,7 +87,10 @@ export function ReceiveBatchDialog({
                 <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#64748B]">
                   {materialCode} · {materialName}
                 </p>
-                <h3 id="receive-batch-title" className="text-[16px] font-bold text-[#121826]">
+                <h3
+                  id="receive-batch-title"
+                  className="text-[16px] font-bold text-[#121826]"
+                >
                   Penerimaan Batch Material Baru
                 </h3>
               </div>
@@ -180,7 +183,9 @@ export function ReceiveBatchDialog({
               </div>
 
               <p className="rounded-xl border border-[#E5E7EB] bg-[#F8F9FA] p-3 text-[11px] leading-5 text-[#64748B]">
-                Stok yang baru diterima akan otomatis dicatat ke buku besar transaksi (*ledger*) dengan tipe <strong>RECEIVE</strong> dan menambah stok fisik ruangan.
+                Stok yang baru diterima akan otomatis dicatat ke buku besar
+                transaksi (*ledger*) dengan tipe <strong>RECEIVE</strong> dan
+                menambah stok fisik ruangan.
               </p>
 
               {error && (

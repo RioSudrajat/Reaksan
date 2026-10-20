@@ -74,12 +74,12 @@ NEXT.JS FULLSTACK APPLICATION
 
 Client tidak boleh menjadi sumber kebenaran untuk:
 
-* availability;
-* reservation;
-* stock;
-* approval;
-* permission;
-* equipment status.
+- availability;
+- reservation;
+- stock;
+- approval;
+- permission;
+- equipment status.
 
 Client hanya menampilkan state dari server.
 
@@ -109,10 +109,10 @@ reserveEquipment()
 
 Database harus membantu menjaga:
 
-* foreign key;
-* unique constraint;
-* check constraint jika memungkinkan;
-* transaction integrity.
+- foreign key;
+- unique constraint;
+- check constraint jika memungkinkan;
+- transaction integrity.
 
 ---
 
@@ -577,10 +577,7 @@ export const room = pgTable(
       .notNull(),
   },
   (table) => [
-    unique("room_laboratory_code_unique").on(
-      table.laboratoryId,
-      table.code,
-    ),
+    unique("room_laboratory_code_unique").on(table.laboratoryId, table.code),
     index("room_laboratory_idx").on(table.laboratoryId),
   ],
 );
@@ -1070,9 +1067,7 @@ export const sharedUsageRequest = pgTable(
       withTimezone: true,
     }).notNull(),
     purpose: text("purpose"),
-    status: sharedUsageRequestStatusEnum("status")
-      .default("PENDING")
-      .notNull(),
+    status: sharedUsageRequestStatusEnum("status").default("PENDING").notNull(),
     respondedAt: timestamp("responded_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -1192,9 +1187,7 @@ export const returnTransaction = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("return_transaction_asset_idx").on(table.equipmentAssetId),
-  ],
+  (table) => [index("return_transaction_asset_idx").on(table.equipmentAssetId)],
 );
 ```
 
@@ -2165,9 +2158,9 @@ type CreateIncidentDto = {
 
 Validation:
 
-* equipment exists;
-* equipment is accessible;
-* request/reservation relationship valid if supplied.
+- equipment exists;
+- equipment is accessible;
+- request/reservation relationship valid if supplied.
 
 ---
 
@@ -2421,32 +2414,15 @@ components/
 TanStack Query keys:
 
 ```typescript
-['laboratories']
-
-['rooms', roomId]
-
-['equipment-assets']
-['equipment-assets', assetId]
-['equipment-availability', assetId]
-
-['materials']
-['materials', materialId]
-['material-stock', materialId]
-
-['activities']
-['activities', activityId]
-
-['requests']
-['requests', requestId]
-
-['reservations', assetId]
-
-['shared-usage-requests']
-
-['incidents']
-['incidents', incidentId]
-
-['notifications']
+["laboratories"][("rooms", roomId)]["equipment-assets"][
+  ("equipment-assets", assetId)
+][("equipment-availability", assetId)]["materials"][("materials", materialId)][
+  ("material-stock", materialId)
+]["activities"][("activities", activityId)]["requests"][
+  ("requests", requestId)
+][("reservations", assetId)]["shared-usage-requests"]["incidents"][
+  ("incidents", incidentId)
+]["notifications"];
 ```
 
 Mutations harus melakukan invalidation terhadap query terkait.
@@ -2738,11 +2714,11 @@ Equipment Condition Changed
 
 Audit log:
 
-* append-oriented;
-* not user-editable;
-* not normally deletable;
-* timestamps server-generated;
-* actor identified where possible.
+- append-oriented;
+- not user-editable;
+- not normally deletable;
+- timestamps server-generated;
+- actor identified where possible.
 
 Before/after snapshots digunakan hanya jika diperlukan.
 
@@ -2883,11 +2859,11 @@ Distilled Water
 
 Setiap material memiliki:
 
-* base unit;
-* batch;
-* quantity;
-* expiry;
-* dispensing rule.
+- base unit;
+- batch;
+- quantity;
+- expiry;
+- dispensing rule.
 
 Nilai seed hanya untuk demo/testing dan bukan SOP laboratorium.
 
@@ -3474,12 +3450,12 @@ digunakan sebagai default display timezone bila diperlukan.
 
 Incident evidence:
 
-* image;
-* PDF jika diperlukan;
-* maximum size configurable;
-* MIME validation;
-* filename sanitization;
-* authorization check.
+- image;
+- PDF jika diperlukan;
+- maximum size configurable;
+- MIME validation;
+- filename sanitization;
+- authorization check.
 
 File URL tidak boleh dapat digunakan untuk mengakses incident evidence yang tidak authorized.
 
@@ -3682,12 +3658,12 @@ Equipment enters appropriate state.
 
 MVP server should log:
 
-* request ID;
-* HTTP method;
-* endpoint;
-* response status;
-* latency;
-* error code.
+- request ID;
+- HTTP method;
+- endpoint;
+- response status;
+- latency;
+- error code.
 
 Critical domain operations should include structured logs.
 
@@ -3759,11 +3735,11 @@ Availability query harus tetap efisien walaupun reservation bertambah.
 
 Gunakan:
 
-* proper indexes;
-* pagination;
-* selective Drizzle queries;
-* avoid N+1;
-* caching hanya bila diperlukan.
+- proper indexes;
+- pagination;
+- selective Drizzle queries;
+- avoid N+1;
+- caching hanya bila diperlukan.
 
 ---
 
@@ -3904,4 +3880,3 @@ RESOURCE
 ```
 
 Technical Design Specification v1 ini menjadi kontrak teknis sebelum implementation.
-

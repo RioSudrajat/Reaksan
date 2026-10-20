@@ -28,10 +28,7 @@ import { AddAssetDialog } from "@/components/plp/add-asset-dialog";
 import { DeleteConfirmButton } from "@/components/plp/delete-confirm-button";
 import { AutoSubmitSelect } from "@/components/auto-submit-select";
 import { requirePermission } from "@/lib/session";
-import {
-  getRoomScope,
-  scopeRoomCodes,
-} from "@/services/access-scope.service";
+import { getRoomScope, scopeRoomCodes } from "@/services/access-scope.service";
 import { inventoryQuerySchema } from "@/validators/plp";
 
 export const metadata: Metadata = { title: "Instrumen Laboratorium" };
@@ -84,7 +81,8 @@ export default async function PlpInstrumentsInventoryPage({
   const params = await searchParams;
   const limit = 50;
   const page = Math.max(1, Number(pick(params, "page")) || 1);
-  const defaultRoom = roomCodes && roomCodes.length === 1 ? roomCodes[0] : undefined;
+  const defaultRoom =
+    roomCodes && roomCodes.length === 1 ? roomCodes[0] : undefined;
   const query = inventoryQuerySchema.parse({
     room: pick(params, "room") || defaultRoom,
     classification: "INSTRUMENT",
@@ -355,7 +353,13 @@ export default async function PlpInstrumentsInventoryPage({
 
                     <div className="mt-2.5 space-y-1">
                       <div className="flex items-baseline justify-between gap-2">
-                        <span className={item.availableUnits > 0 ? "font-bold text-[13px] text-[#16A34A] tabular-nums" : "font-bold text-[13px] text-[#DC2626] tabular-nums"}>
+                        <span
+                          className={
+                            item.availableUnits > 0
+                              ? "font-bold text-[13px] text-[#16A34A] tabular-nums"
+                              : "font-bold text-[13px] text-[#DC2626] tabular-nums"
+                          }
+                        >
                           Tersedia {item.availableUnits}/{item.unitCount} unit
                         </span>
                         <StatusBadge
@@ -380,25 +384,46 @@ export default async function PlpInstrumentsInventoryPage({
                       </div>
 
                       {item.unitCount === 0 ? (
-                        <p className="text-[11px] text-[#DC2626]">Belum ada unit fisik terdaftar</p>
+                        <p className="text-[11px] text-[#DC2626]">
+                          Belum ada unit fisik terdaftar
+                        </p>
                       ) : item.unitCount - item.availableUnits > 0 ? (
                         <p className="text-[11px] text-[#64748B]">
-                          {item.unitCount - item.availableUnits} tidak tersedia (
+                          {item.unitCount - item.availableUnits} tidak tersedia
+                          (
                           {[
-                            item.inUseUnits > 0 ? `${item.inUseUnits} dipakai` : null,
-                            item.reservedUnits > 0 ? `${item.reservedUnits} booking` : null,
-                            item.maintenanceUnits > 0 ? `${item.maintenanceUnits} maint` : null,
-                          ].filter(Boolean).join(", ") || "non-aktif"}
+                            item.inUseUnits > 0
+                              ? `${item.inUseUnits} dipakai`
+                              : null,
+                            item.reservedUnits > 0
+                              ? `${item.reservedUnits} booking`
+                              : null,
+                            item.maintenanceUnits > 0
+                              ? `${item.maintenanceUnits} maint`
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(", ") || "non-aktif"}
                           )
                         </p>
                       ) : (
-                        <p className="text-[11px] text-[#16A34A]">Semua unit siap pakai</p>
+                        <p className="text-[11px] text-[#16A34A]">
+                          Semua unit siap pakai
+                        </p>
                       )}
 
                       <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-[#64748B]">
-                        <span>Kondisi {conditionMeta[item.condition]?.label ?? item.condition}</span>
+                        <span>
+                          Kondisi{" "}
+                          {conditionMeta[item.condition]?.label ??
+                            item.condition}
+                        </span>
                         <span>·</span>
-                        <span>{item.usageType === "BORROWABLE" ? "Dapat Dipinjam" : "Di Tempat"}</span>
+                        <span>
+                          {item.usageType === "BORROWABLE"
+                            ? "Dapat Dipinjam"
+                            : "Di Tempat"}
+                        </span>
                         <span>·</span>
                         {item.activeRequests > 0 ? (
                           <span className="font-semibold text-[#8D6500]">
@@ -407,7 +432,9 @@ export default async function PlpInstrumentsInventoryPage({
                         ) : item.totalRequests > 0 ? (
                           <span>{item.totalRequests} permohonan terkait</span>
                         ) : (
-                          <span className="text-[#94A3B8]">Belum ada permohonan</span>
+                          <span className="text-[#94A3B8]">
+                            Belum ada permohonan
+                          </span>
                         )}
                       </div>
                     </div>
@@ -419,16 +446,35 @@ export default async function PlpInstrumentsInventoryPage({
             {/* Desktop Table View */}
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full border-collapse text-left">
-                <caption className="sr-only">Daftar instrumen laboratorium</caption>
+                <caption className="sr-only">
+                  Daftar instrumen laboratorium
+                </caption>
                 <thead>
                   <tr className="border-b border-[#EEEEEE] text-[11px] uppercase tracking-[0.08em] text-[#929292]">
-                    <th scope="col" className="px-4 py-3 font-semibold">Instrumen</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Ruangan</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Ketersediaan Unit</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Kondisi</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Status Operasional</th>
-                    <th scope="col" className="px-4 py-3 font-semibold">Mode Pemakaian</th>
-                    <th scope="col" className="px-4 py-3 font-semibold text-right">Detail</th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Instrumen
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Ruangan
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Ketersediaan Unit
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Kondisi
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Status Operasional
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Mode Pemakaian
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-4 py-3 font-semibold text-right"
+                    >
+                      Detail
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#EEEEEE]">
@@ -461,7 +507,9 @@ export default async function PlpInstrumentsInventoryPage({
                                   {item.totalRequests} permohonan terkait
                                 </span>
                               ) : (
-                                <span className="text-[#929292]">Belum ada permohonan</span>
+                                <span className="text-[#929292]">
+                                  Belum ada permohonan
+                                </span>
                               )}
                             </p>
                           </div>
@@ -473,28 +521,53 @@ export default async function PlpInstrumentsInventoryPage({
                       <td className="px-4 py-3">
                         <div className="space-y-0.5">
                           <div className="font-mono text-[12px] font-bold tabular-nums">
-                            <span className={item.availableUnits > 0 ? "text-[#16A34A]" : "text-[#DC2626]"}>
-                              Tersedia {item.availableUnits}/{item.unitCount} unit
+                            <span
+                              className={
+                                item.availableUnits > 0
+                                  ? "text-[#16A34A]"
+                                  : "text-[#DC2626]"
+                              }
+                            >
+                              Tersedia {item.availableUnits}/{item.unitCount}{" "}
+                              unit
                             </span>
                           </div>
                           {item.unitCount === 0 ? (
-                            <p className="text-[10px] text-[#DC2626]">Belum ada unit terdaftar</p>
+                            <p className="text-[10px] text-[#DC2626]">
+                              Belum ada unit terdaftar
+                            </p>
                           ) : item.unitCount - item.availableUnits > 0 ? (
                             <p className="text-[10px] text-[#6B6B6B] leading-tight">
-                              {item.unitCount - item.availableUnits} tidak tersedia
-                              {item.inUseUnits > 0 ? ` (${item.inUseUnits} dipakai` : ""}
-                              {item.reservedUnits > 0 ? `${item.inUseUnits > 0 ? ", " : " ("}${item.reservedUnits} booking` : ""}
-                              {item.maintenanceUnits > 0 ? `${item.inUseUnits > 0 || item.reservedUnits > 0 ? ", " : " ("}${item.maintenanceUnits} maint` : ""}
-                              {(item.inUseUnits > 0 || item.reservedUnits > 0 || item.maintenanceUnits > 0) ? ")" : ""}
+                              {item.unitCount - item.availableUnits} tidak
+                              tersedia
+                              {item.inUseUnits > 0
+                                ? ` (${item.inUseUnits} dipakai`
+                                : ""}
+                              {item.reservedUnits > 0
+                                ? `${item.inUseUnits > 0 ? ", " : " ("}${item.reservedUnits} booking`
+                                : ""}
+                              {item.maintenanceUnits > 0
+                                ? `${item.inUseUnits > 0 || item.reservedUnits > 0 ? ", " : " ("}${item.maintenanceUnits} maint`
+                                : ""}
+                              {item.inUseUnits > 0 ||
+                              item.reservedUnits > 0 ||
+                              item.maintenanceUnits > 0
+                                ? ")"
+                                : ""}
                             </p>
                           ) : (
-                            <p className="text-[10px] text-[#16A34A]">Semua unit siap pakai</p>
+                            <p className="text-[10px] text-[#16A34A]">
+                              Semua unit siap pakai
+                            </p>
                           )}
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <StatusBadge tone={conditionMeta[item.condition]?.tone ?? "cream"}>
-                          {conditionMeta[item.condition]?.label ?? item.condition}
+                        <StatusBadge
+                          tone={conditionMeta[item.condition]?.tone ?? "cream"}
+                        >
+                          {conditionMeta[item.condition]?.label ??
+                            item.condition}
                         </StatusBadge>
                       </td>
                       <td className="px-4 py-3">
@@ -519,7 +592,9 @@ export default async function PlpInstrumentsInventoryPage({
                         </StatusBadge>
                       </td>
                       <td className="px-4 py-3 text-[12px] text-[#64748B]">
-                        {item.usageType === "BORROWABLE" ? "Dapat Dipinjam" : "Di Tempat"}
+                        {item.usageType === "BORROWABLE"
+                          ? "Dapat Dipinjam"
+                          : "Di Tempat"}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">

@@ -15,7 +15,10 @@ import {
   user,
 } from "@/db/schema";
 import type { DbExecutor } from "@/services/executor";
-import { stockTotalsForMaterial, listBatchStock } from "@/services/stock.service";
+import {
+  stockTotalsForMaterial,
+  listBatchStock,
+} from "@/services/stock.service";
 import { formatShortRangeLabel } from "@/components/schedule-data";
 import type {
   EquipmentUnitStatus,
@@ -44,7 +47,9 @@ export function asTone(value: string | null | undefined): ScheduleTone {
     : "cream";
 }
 
-export function equipmentStatusView(status: EquipmentStatus): EquipmentUnitStatus {
+export function equipmentStatusView(
+  status: EquipmentStatus,
+): EquipmentUnitStatus {
   switch (status) {
     case "AVAILABLE":
       return "Available";
@@ -272,7 +277,10 @@ export async function listMaterialRows(
       ? sql`true`
       : roomCodes.length === 0
         ? sql`false`
-        : sql`r.code IN (${sql.join(roomCodes.map((code) => sql`${code}`), sql`, `)})`;
+        : sql`r.code IN (${sql.join(
+            roomCodes.map((code) => sql`${code}`),
+            sql`, `,
+          )})`;
   const result = await exec.execute<MaterialAggregateRow>(sql`
     SELECT
       m.id, m.code, m.name, m.category, m.base_unit, m.image_media_id,
@@ -336,7 +344,11 @@ export function dispensingOptions(
   >,
   available: number,
 ) {
-  if (!row.minimum_quantity || !row.dispensing_increment || !row.maximum_quantity) {
+  if (
+    !row.minimum_quantity ||
+    !row.dispensing_increment ||
+    !row.maximum_quantity
+  ) {
     return [];
   }
   const minimum = Number(row.minimum_quantity);
@@ -346,7 +358,19 @@ export function dispensingOptions(
   const ceiling = Math.min(maximum, available);
   if (ceiling < minimum) return [];
 
-  const candidateChips = [minimum, 20, 25, 50, 80, 100, 150, 200, 250, 500, 1000];
+  const candidateChips = [
+    minimum,
+    20,
+    25,
+    50,
+    80,
+    100,
+    150,
+    200,
+    250,
+    500,
+    1000,
+  ];
   const set = new Set<number>();
 
   for (const val of candidateChips) {
@@ -364,14 +388,16 @@ export function dispensingOptions(
 }
 
 export function dispensingRuleLabel(row: MaterialAggregateRow) {
-  if (!row.minimum_quantity || !row.dispensing_increment) return "No dispensing rule";
+  if (!row.minimum_quantity || !row.dispensing_increment)
+    return "No dispensing rule";
   const unit = row.rule_unit ?? row.base_unit;
   return `${Number(row.minimum_quantity)} ${unit} minimum · ${Number(row.dispensing_increment)} ${unit} increment · ${Number(row.maximum_quantity)} ${unit} maximum`;
 }
 
 export function materialTone(available: number, minimum: number | null) {
   if (available <= 0) return "rose" as ScheduleTone;
-  if (minimum !== null && available < minimum * 2) return "yellow" as ScheduleTone;
+  if (minimum !== null && available < minimum * 2)
+    return "yellow" as ScheduleTone;
   return "green" as ScheduleTone;
 }
 
@@ -678,10 +704,7 @@ export async function listUnitRows(
       })
       .from(toolUnit)
       .where(
-        and(
-          inArray(toolUnit.toolAssetId, assetIds),
-          eq(toolUnit.active, true),
-        ),
+        and(inArray(toolUnit.toolAssetId, assetIds), eq(toolUnit.active, true)),
       ),
   ]);
 

@@ -1,6 +1,9 @@
 import { ApiError, withApiPermission } from "@/lib/api";
 import { getRoomScope, scopeForSession } from "@/services/access-scope.service";
-import { deletePlpEquipmentAsset, getPlpEquipmentDetail } from "@/services/plp.service";
+import {
+  deletePlpEquipmentAsset,
+  getPlpEquipmentDetail,
+} from "@/services/plp.service";
 import { entityCodeSchema } from "@/validators/catalog";
 
 export const runtime = "nodejs";
@@ -27,9 +30,12 @@ export function DELETE(request: Request, context: Context) {
     async (session) => {
       const code = entityCodeSchema.parse((await context.params).code);
       const scope = await getRoomScope(session.user.id, session.user.role);
-      const result = await deletePlpEquipmentAsset(session.user.id, scope, code);
+      const result = await deletePlpEquipmentAsset(
+        session.user.id,
+        scope,
+        code,
+      );
       return Response.json({ data: result });
     },
   );
 }
-

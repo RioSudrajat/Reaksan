@@ -88,26 +88,29 @@ export function OpnameCountForm({
 
   // Field states keyed by entry.id
   const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(entries.map((entry) => [entry.id, String(entry.counted)])),
+    Object.fromEntries(
+      entries.map((entry) => [entry.id, String(entry.counted)]),
+    ),
   );
   const [conditions, setConditions] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       entries.map((entry) => [entry.id, entry.condition ?? "GOOD"]),
     ),
   );
-  const [varianceReasons, setVarianceReasons] = useState<Record<string, string>>(
-    () =>
-      Object.fromEntries(
-        entries.map((entry) => [
-          entry.id,
-          entry.varianceReason ??
-            (entry.entrySource === "GRANT_HIBAH"
-              ? "GRANT_INTAKE"
-              : entry.entrySource === "LEFTOVER_RETURN"
-                ? "RETURNED_LEFTOVER"
-                : "NORMAL_EVAPORATION"),
-        ]),
-      ),
+  const [varianceReasons, setVarianceReasons] = useState<
+    Record<string, string>
+  >(() =>
+    Object.fromEntries(
+      entries.map((entry) => [
+        entry.id,
+        entry.varianceReason ??
+          (entry.entrySource === "GRANT_HIBAH"
+            ? "GRANT_INTAKE"
+            : entry.entrySource === "LEFTOVER_RETURN"
+              ? "RETURNED_LEFTOVER"
+              : "NORMAL_EVAPORATION"),
+      ]),
+    ),
   );
   const [storageLocations, setStorageLocations] = useState<
     Record<string, string>
@@ -216,7 +219,15 @@ export function OpnameCountForm({
 
       return true;
     });
-  }, [entries, activeTab, search, shelfFilter, statusFilter, values, conditions]);
+  }, [
+    entries,
+    activeTab,
+    search,
+    shelfFilter,
+    statusFilter,
+    values,
+    conditions,
+  ]);
 
   // Barcode / Scanner Match Handler
   function handleScannerSelect(selectedId: string) {
@@ -333,11 +344,13 @@ export function OpnameCountForm({
           }`}
         >
           <span>Semua Stok</span>
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-            activeTab === "ALL"
-              ? "bg-[#121826] text-white"
-              : "bg-[#E5E7EB] text-[#64748B]"
-          }`}>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              activeTab === "ALL"
+                ? "bg-[#121826] text-white"
+                : "bg-[#E5E7EB] text-[#64748B]"
+            }`}
+          >
             {entries.length}
           </span>
         </button>
@@ -353,11 +366,13 @@ export function OpnameCountForm({
         >
           <Flame className="size-3.5 text-[#DC2626]" />
           <span>Bahan Kimia</span>
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-            activeTab === "MATERIAL"
-              ? "bg-[#121826] text-white"
-              : "border border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]"
-          }`}>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              activeTab === "MATERIAL"
+                ? "bg-[#121826] text-white"
+                : "border border-[#FECACA] bg-[#FEF2F2] text-[#DC2626]"
+            }`}
+          >
             {materialCount}
           </span>
         </button>
@@ -372,11 +387,13 @@ export function OpnameCountForm({
           }`}
         >
           <span>Alat Praktikum (Glassware)</span>
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-            activeTab === "TOOL"
-              ? "bg-[#121826] text-white"
-              : "border border-[#FDE68A] bg-[#FEF7E6] text-[#8D6500]"
-          }`}>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              activeTab === "TOOL"
+                ? "bg-[#121826] text-white"
+                : "border border-[#FDE68A] bg-[#FEF7E6] text-[#8D6500]"
+            }`}
+          >
             {toolCount}
           </span>
         </button>
@@ -392,11 +409,13 @@ export function OpnameCountForm({
         >
           <Wrench className="size-3.5 text-[#121826]" />
           <span>Instrumen Lab</span>
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-            activeTab === "INSTRUMENT"
-              ? "bg-[#121826] text-white"
-              : "border border-[#E5E7EB] bg-white text-[#121826]"
-          }`}>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              activeTab === "INSTRUMENT"
+                ? "bg-[#121826] text-white"
+                : "border border-[#E5E7EB] bg-white text-[#121826]"
+            }`}
+          >
             {instrumentCount}
           </span>
         </button>
@@ -593,11 +612,16 @@ export function OpnameCountForm({
                     <div className="flex flex-col items-end gap-1">
                       <QrTagDialog
                         item={{
-                          targetType: isMaterial ? "BATCH" : (entry.equipmentAssetId ? "ASSET" : "UNIT"),
+                          targetType: isMaterial
+                            ? "BATCH"
+                            : entry.equipmentAssetId
+                              ? "ASSET"
+                              : "UNIT",
                           targetId:
                             (isMaterial
                               ? entry.materialBatchId
-                              : (entry.equipmentAssetId ?? entry.equipmentUnitId)) ?? entry.id,
+                              : (entry.equipmentAssetId ??
+                                entry.equipmentUnitId)) ?? entry.id,
                           code: entry.materialCode,
                           name: entry.materialName,
                           classification: entry.itemType,
@@ -758,16 +782,25 @@ export function OpnameCountForm({
                   <th scope="col" className="px-3 py-3 font-semibold">
                     Baseline
                   </th>
-                  <th scope="col" className="px-3 py-3 font-semibold min-w-[130px]">
+                  <th
+                    scope="col"
+                    className="px-3 py-3 font-semibold min-w-[130px]"
+                  >
                     Jumlah Fisik
                   </th>
                   <th scope="col" className="px-3 py-3 font-semibold">
                     Selisih
                   </th>
-                  <th scope="col" className="px-3 py-3 font-semibold min-w-[160px]">
+                  <th
+                    scope="col"
+                    className="px-3 py-3 font-semibold min-w-[160px]"
+                  >
                     Kondisi / Alasan
                   </th>
-                  <th scope="col" className="px-4 py-3 font-semibold text-right">
+                  <th
+                    scope="col"
+                    className="px-4 py-3 font-semibold text-right"
+                  >
                     Aksi
                   </th>
                 </tr>
@@ -834,11 +867,16 @@ export function OpnameCountForm({
                       <td className="px-3 py-3">
                         <QrTagDialog
                           item={{
-                            targetType: isMaterial ? "BATCH" : (entry.equipmentAssetId ? "ASSET" : "UNIT"),
+                            targetType: isMaterial
+                              ? "BATCH"
+                              : entry.equipmentAssetId
+                                ? "ASSET"
+                                : "UNIT",
                             targetId:
                               (isMaterial
                                 ? entry.materialBatchId
-                                : (entry.equipmentAssetId ?? entry.equipmentUnitId)) ?? entry.id,
+                                : (entry.equipmentAssetId ??
+                                  entry.equipmentUnitId)) ?? entry.id,
                             code: entry.materialCode,
                             name: entry.materialName,
                             classification: entry.itemType,
@@ -930,8 +968,7 @@ export function OpnameCountForm({
                         ) : hasDiff ? (
                           <select
                             value={
-                              varianceReasons[entry.id] ??
-                              "NORMAL_EVAPORATION"
+                              varianceReasons[entry.id] ?? "NORMAL_EVAPORATION"
                             }
                             onChange={(e) =>
                               setVarianceReasons((curr) => ({

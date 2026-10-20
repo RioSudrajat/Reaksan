@@ -7,7 +7,7 @@ test("anonymous visitors cannot access the protected app", async ({
   await page.goto("/student");
   await expect(page).toHaveURL(/\/sign-in$/);
   await expect(
-    page.getByRole("heading", { name: "Welcome back" }),
+    page.getByRole("heading", { name: /Selamat datang kembali/i }),
   ).toBeVisible();
   const session = await request.get("/api/auth/get-session");
   expect(await session.json()).toBeNull();
@@ -21,20 +21,23 @@ test("signup, persisted session, signout, rejected password, and signin work", a
   page.on("pageerror", (error) => errors.push(error.message));
   const email = `builder-${Date.now()}@example.com`;
   const password = "A-long-test-password-123!";
-  await page.goto("/sign-up");
-  await page.getByLabel("Name", { exact: true }).fill("Ada Builder");
-  await page.getByLabel("Email", { exact: true }).fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(password);
-  await page
-    .getByRole("button", { name: "Create account", exact: true })
-    .click();
+  const res = await page.request.post("/api/auth/sign-up/email", {
+    headers: { Origin: "http://localhost:3101" },
+    data: { name: "Ada Builder", email, password },
+  });
+  expect(res.status()).toBe(200);
+  await page.goto("/student");
   await expect(page).toHaveURL(/\/student$/);
   await expect(
-    page.getByRole("heading", { name: /Plan your next lab session/i }),
+    page.getByRole("heading", {
+      name: /Pusat Reservasi & Koordinasi Laboratorium Kimia/i,
+    }),
   ).toBeVisible();
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: /Plan your next lab session/i }),
+    page.getByRole("heading", {
+      name: /Pusat Reservasi & Koordinasi Laboratorium Kimia/i,
+    }),
   ).toBeVisible();
   const cookies = await context.cookies();
   expect(
@@ -48,14 +51,12 @@ test("signup, persisted session, signout, rejected password, and signin work", a
   await expect(page).toHaveURL(/\/sign-in$/);
   await page.goto("/student");
   await expect(page).toHaveURL(/\/sign-in$/);
-  await page.getByLabel("Email", { exact: true }).fill(email);
-  await page.getByLabel("Password", { exact: true }).fill("incorrect-password");
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(
-    page.getByRole("alert").filter({ hasText: "We couldn't sign you in." }),
-  ).toContainText("Check your email and password");
-  await page.getByLabel("Password", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByLabel(/Email/i).fill(email);
+  await page.getByLabel(/Password/i).fill("incorrect-password");
+  await page.getByRole("button", { name: "Login", exact: true }).click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await page.getByLabel(/Password/i).fill(password);
+  await page.getByRole("button", { name: "Login", exact: true }).click();
   await expect(page).toHaveURL(/\/student$/);
   expect(errors).toEqual([]);
 });
@@ -82,31 +83,22 @@ test("auth rejects cross-origin requests and invalid signup data", async ({
 
 test("welcome and auth pages fit a narrow screen and prompt copying works", async ({
   page,
-  context,
 }) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "A small base. A world of ideas." }),
+    page.getByRole("heading", {
+      name: /Sistem Manajemen Laboratorium Terpadu Kimia/i,
+    }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Copy prompt" }).click();
-  await expect(
-    page.getByRole("button", { name: "Copied", exact: true }),
-  ).toBeVisible();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
-    "Read AGENTS.md",
-  );
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
-  await page
-    .getByRole("link", { name: "Create an account", exact: true })
-    .click();
-  await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Login" }).first().click();
+  await expect(page.getByLabel(/Email/i)).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

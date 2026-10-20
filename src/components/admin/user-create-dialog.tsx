@@ -20,9 +20,21 @@ import { apiRequest, errorMessage } from "@/components/student-api";
 import { roleLabels } from "@/lib/permission-copy";
 
 const roleOptions = [
-  { value: "user", label: "Mahasiswa", desc: "Akses reservasi instrumen & izin praktikum/penelitian" },
-  { value: "plp", label: "PLP Laboratorium", desc: "Operator lab, validasi peminjaman, stok bahan & insiden" },
-  { value: "admin", label: "Administrator", desc: "Akses master data, penugasan, akun & konfigurasi sistem" },
+  {
+    value: "user",
+    label: "Mahasiswa",
+    desc: "Akses reservasi instrumen & izin praktikum/penelitian",
+  },
+  {
+    value: "plp",
+    label: "PLP Laboratorium",
+    desc: "Operator lab, validasi peminjaman, stok bahan & insiden",
+  },
+  {
+    value: "admin",
+    label: "Administrator",
+    desc: "Akses master data, penugasan, akun & konfigurasi sistem",
+  },
 ];
 
 export function UserCreateDialog() {
@@ -94,7 +106,9 @@ export function UserCreateDialog() {
         },
       });
 
-      setSuccess(`Akun untuk ${name.trim()} (${email.trim()}) berhasil didaftarkan!`);
+      setSuccess(
+        `Akun untuk ${name.trim()} (${email.trim()}) berhasil didaftarkan!`,
+      );
       setName("");
       setEmail("");
       setPassword("");
@@ -141,7 +155,8 @@ export function UserCreateDialog() {
                   Tambah Akun Pengguna Baru
                 </h2>
                 <p className="mt-1 text-[12px] text-[#6B6B6B]">
-                  Pendaftaran akun dikelola terpusat oleh Admin. Pengguna dapat langsung login dengan kredensial ini.
+                  Pendaftaran akun dikelola terpusat oleh Admin. Pengguna dapat
+                  langsung login dengan kredensial ini.
                 </p>
               </div>
               <button
@@ -219,7 +234,8 @@ export function UserCreateDialog() {
                   htmlFor="user-role"
                   className="block text-[12px] font-bold text-[#212121]"
                 >
-                  Peran / Akses Workspace <span className="text-[#DC2626]">*</span>
+                  Peran / Akses Workspace{" "}
+                  <span className="text-[#DC2626]">*</span>
                 </label>
                 <div className="relative mt-1.5">
                   <select
@@ -271,13 +287,22 @@ export function UserCreateDialog() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-[#929292] hover:text-[#212121]"
-                    aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                    aria-label={
+                      showPassword
+                        ? "Sembunyikan password"
+                        : "Tampilkan password"
+                    }
                   >
-                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    {showPassword ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
                   </button>
                 </div>
                 <p className="mt-1 text-[11px] text-[#6B6B6B]">
-                  Sampaikan kredensial ini kepada pengguna secara aman. Pengguna dapat mengubah kata sandinya setelah login.
+                  Sampaikan kredensial ini kepada pengguna secara aman. Pengguna
+                  dapat mengubah kata sandinya setelah login.
                 </p>
               </div>
 
