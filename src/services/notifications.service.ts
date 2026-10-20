@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { notification, user } from "@/db/schema";
 import type { DbExecutor } from "@/services/executor";
@@ -49,19 +49,51 @@ export async function createNotifications(
   );
 }
 
-// PLP and admin accounts receive operational notifications. Roles are stored as
-// a comma-separated string by Better Auth's admin plugin.
-export async function listStaffRecipients(exec: DbExecutor) {
-  const rows = await exec
-    .select({ id: user.id })
-    .from(user)
-    .where(
-      and(
-        ne(user.banned, true),
-        or(sql`${user.role} LIKE '%plp%'`, sql`${user.role} LIKE '%admin%'`),
-      ),
-    );
-  return rows.map((row) => row.id);
+// Operational notifications go to admins (who oversee every lab) plus staff
+// whose active PLP/PIC assignment covers the room, either directly or through
+// the room's laboratory. This mirrors getRoomScope, so nobody is notified about
+// a lab they cannot open. Without a room (legacy callers) every PLP is included.
+export async function listStaffRecipients(
+  exec: DbExecutor,
+  roomId?: string | null,
+) {
+  const notBanned = sql`coalesce(${user.banned}, false) = false`;
+  if (!roomId) {
+    const rows = await exec
+      .select({ id: user.id })
+      .from(user)
+      .where(
+        and(
+          notBanned,
+          or(sql`${user.role} LIKE '%plp%'`, sql`${user.role} LIKE '%admin%'`),
+        ),
+      );
+    return rows.map((row) => row.id);
+  }
+  const result = await exec.execute<{ id: string }>(sql`
+    SELECT u.id AS id
+    FROM "user" u
+    WHERE coalesce(u.banned, false) = false
+      AND (
+        u.role LIKE '%admin%'
+        OR EXISTS (
+          SELECT 1
+          FROM assignment a
+          JOIN room r ON r.id = ${roomId}
+          LEFT JOIN laboratory l ON l.id = r.laboratory_id
+          WHERE a.user_id = u.id
+            AND a.active
+            AND a.assignment_type IN ('PLP', 'PIC')
+            AND (a.start_date IS NULL OR a.start_date <= now())
+            AND (a.end_date IS NULL OR a.end_date >= now())
+            AND (
+              (a.scope_type = 'ROOM' AND a.scope_id = r.code)
+              OR (a.scope_type = 'LABORATORY' AND a.scope_id = l.code)
+            )
+        )
+      )
+  `);
+  return result.rows.map((row) => row.id);
 }
 
 export async function listNotifications(

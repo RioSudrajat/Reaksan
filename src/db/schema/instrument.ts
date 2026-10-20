@@ -7,7 +7,6 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import {
-  equipmentClassificationEnum,
   equipmentConditionEnum,
   equipmentStatusEnum,
   equipmentUsageTypeEnum,
@@ -16,17 +15,16 @@ import { user } from "./user";
 import { room } from "./laboratory";
 import { media } from "./media";
 
-export const equipmentType = pgTable(
-  "equipment_type",
+export const instrumentType = pgTable(
+  "instrument_type",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
     category: text("category"),
-    classification: equipmentClassificationEnum("classification")
-      .default("INSTRUMENT")
-      .notNull(),
     description: text("description"),
-    usageType: equipmentUsageTypeEnum("usage_type").notNull(),
+    usageType: equipmentUsageTypeEnum("usage_type")
+      .default("USAGE_ONLY")
+      .notNull(),
     imageMediaId: uuid("image_media_id").references(() => media.id),
     active: boolean("active").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -37,19 +35,16 @@ export const equipmentType = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [
-    index("equipment_type_category_idx").on(table.category),
-    index("equipment_type_classification_idx").on(table.classification),
-  ],
+  (table) => [index("instrument_type_category_idx").on(table.category)],
 );
 
-export const equipmentAsset = pgTable(
-  "equipment_asset",
+export const instrumentAsset = pgTable(
+  "instrument_asset",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    equipmentTypeId: uuid("equipment_type_id")
+    instrumentTypeId: uuid("instrument_type_id")
       .notNull()
-      .references(() => equipmentType.id),
+      .references(() => instrumentType.id),
     roomId: uuid("room_id")
       .notNull()
       .references(() => room.id),
@@ -70,20 +65,20 @@ export const equipmentAsset = pgTable(
       .notNull(),
   },
   (table) => [
-    index("equipment_asset_type_idx").on(table.equipmentTypeId),
-    index("equipment_asset_room_idx").on(table.roomId),
-    index("equipment_asset_status_idx").on(table.status),
-    index("equipment_asset_room_status_idx").on(table.roomId, table.status),
+    index("instrument_asset_type_idx").on(table.instrumentTypeId),
+    index("instrument_asset_room_idx").on(table.roomId),
+    index("instrument_asset_status_idx").on(table.status),
+    index("instrument_asset_room_status_idx").on(table.roomId, table.status),
   ],
 );
 
-export const equipmentUnit = pgTable(
-  "equipment_unit",
+export const instrumentUnit = pgTable(
+  "instrument_unit",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    equipmentAssetId: uuid("equipment_asset_id")
+    instrumentAssetId: uuid("instrument_asset_id")
       .notNull()
-      .references(() => equipmentAsset.id),
+      .references(() => instrumentAsset.id),
     code: text("code").notNull().unique(),
     label: text("label").notNull(),
     qrCode: text("qr_code").unique(),
@@ -101,22 +96,22 @@ export const equipmentUnit = pgTable(
       .notNull(),
   },
   (table) => [
-    index("equipment_unit_asset_idx").on(table.equipmentAssetId),
-    index("equipment_unit_status_idx").on(table.status),
-    index("equipment_unit_qr_code_idx").on(table.qrCode),
-    index("equipment_unit_storage_location_idx").on(table.storageLocation),
+    index("instrument_unit_asset_idx").on(table.instrumentAssetId),
+    index("instrument_unit_status_idx").on(table.status),
+    index("instrument_unit_qr_code_idx").on(table.qrCode),
+    index("instrument_unit_storage_location_idx").on(table.storageLocation),
   ],
 );
 
-export const equipmentConditionHistory = pgTable(
-  "equipment_condition_history",
+export const instrumentConditionHistory = pgTable(
+  "instrument_condition_history",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    equipmentAssetId: uuid("equipment_asset_id")
+    instrumentAssetId: uuid("instrument_asset_id")
       .notNull()
-      .references(() => equipmentAsset.id),
-    equipmentUnitId: uuid("equipment_unit_id").references(
-      () => equipmentUnit.id,
+      .references(() => instrumentAsset.id),
+    instrumentUnitId: uuid("instrument_unit_id").references(
+      () => instrumentUnit.id,
     ),
     condition: equipmentConditionEnum("condition").notNull(),
     source: text("source").notNull(),
@@ -129,8 +124,8 @@ export const equipmentConditionHistory = pgTable(
       .notNull(),
   },
   (table) => [
-    index("equipment_condition_history_asset_created_idx").on(
-      table.equipmentAssetId,
+    index("instrument_condition_history_asset_created_idx").on(
+      table.instrumentAssetId,
       table.createdAt,
     ),
   ],

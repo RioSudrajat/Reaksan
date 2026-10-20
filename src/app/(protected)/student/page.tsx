@@ -11,18 +11,25 @@ import { buildCalendarEvents, incidentToView } from "@/services/view.service";
 
 export const metadata: Metadata = { title: "Dashboard Mahasiswa · Reaksan" };
 
-export default async function StudentDashboardPage() {
+export default async function StudentDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string }>;
+}) {
   const { user } = await requireSession();
-  const [catalog, requests, shared, incidents, unread] = await Promise.all([
-    buildLabCatalog(),
-    listMyRequests(user.id),
-    listConfirmedSharedUsage(user.id),
-    listMyIncidents(user.id),
-    countUnreadNotifications(user.id),
-  ]);
+  const [params, catalog, requests, shared, incidents, unread] =
+    await Promise.all([
+      searchParams,
+      buildLabCatalog(),
+      listMyRequests(user.id),
+      listConfirmedSharedUsage(user.id),
+      listMyIncidents(user.id),
+      countUnreadNotifications(user.id),
+    ]);
   const month = currentScheduleMonth();
   return (
     <ReaksanDashboard
+      key={params.search ?? ""}
       userName={user.name}
       catalog={catalog}
       events={buildCalendarEvents({
@@ -33,6 +40,7 @@ export default async function StudentDashboardPage() {
       })}
       unreadCount={unread}
       latestIncident={incidents[0] ? incidentToView(incidents[0]) : null}
+      initialSearch={params.search ?? ""}
     />
   );
 }

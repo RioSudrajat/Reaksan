@@ -17,11 +17,9 @@ import {
 import { user } from "./user";
 import { room } from "./laboratory";
 import { materialBatch } from "./material";
-import { equipmentAsset, equipmentUnit } from "./equipment";
+import { instrumentAsset, instrumentUnit } from "./instrument";
+import { toolAsset, toolUnit } from "./tool";
 
-// A stock opname is a counting session only. It never writes a stock
-// transaction or changes material_batch.quantity; corrections stay in the
-// manual batch adjustment flow.
 export const stockOpnameSession = pgTable(
   "stock_opname_session",
   {
@@ -66,12 +64,14 @@ export const stockOpnameEntry = pgTable(
     materialBatchId: uuid("material_batch_id").references(
       () => materialBatch.id,
     ),
-    equipmentAssetId: uuid("equipment_asset_id").references(
-      () => equipmentAsset.id,
+    instrumentAssetId: uuid("instrument_asset_id").references(
+      () => instrumentAsset.id,
     ),
-    equipmentUnitId: uuid("equipment_unit_id").references(
-      () => equipmentUnit.id,
+    instrumentUnitId: uuid("instrument_unit_id").references(
+      () => instrumentUnit.id,
     ),
+    toolAssetId: uuid("tool_asset_id").references(() => toolAsset.id),
+    toolUnitId: uuid("tool_unit_id").references(() => toolUnit.id),
     baselineQuantity: numeric("baseline_quantity", {
       precision: 14,
       scale: 3,
@@ -99,13 +99,13 @@ export const stockOpnameEntry = pgTable(
       table.sessionId,
       table.materialBatchId,
     ),
-    uniqueIndex("stock_opname_entry_session_asset_unique").on(
+    uniqueIndex("stock_opname_entry_session_instrument_unit_unique").on(
       table.sessionId,
-      table.equipmentAssetId,
+      table.instrumentUnitId,
     ),
-    uniqueIndex("stock_opname_entry_session_unit_unique").on(
+    uniqueIndex("stock_opname_entry_session_tool_unit_unique").on(
       table.sessionId,
-      table.equipmentUnitId,
+      table.toolUnitId,
     ),
     index("stock_opname_entry_session_idx").on(table.sessionId),
     index("stock_opname_entry_source_idx").on(table.entrySource),

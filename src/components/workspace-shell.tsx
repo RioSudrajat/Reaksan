@@ -108,7 +108,50 @@ export function WorkspaceShell({
   const [profileOpen, setProfileOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const searchBoxRef = useRef<HTMLDivElement>(null);
+
+  const allNavItems = useMemo(
+    () =>
+      nav.flatMap((group) =>
+        group.items.map((item) => ({ ...item, groupLabel: group.label })),
+      ),
+    [nav],
+  );
+
+  const matchingNavItems = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return allNavItems
+      .filter(
+        (item) =>
+          item.label.toLowerCase().includes(q) ||
+          item.groupLabel.toLowerCase().includes(q) ||
+          item.href.toLowerCase().includes(q),
+      )
+      .slice(0, 6);
+  }, [allNavItems, searchQuery]);
+
+  function handleGlobalSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+    if (matchingNavItems.length > 0) {
+      setSearchFocused(false);
+      router.push(matchingNavItems[0].href);
+      return;
+    }
+    const encoded = encodeURIComponent(q);
+    setSearchFocused(false);
+    if (pathname.startsWith("/plp")) {
+      router.push(`/plp/requests?search=${encoded}`);
+    } else if (pathname.startsWith("/admin")) {
+      router.push(`/admin/users?search=${encoded}`);
+    } else {
+      router.push(`/student?search=${encoded}`);
+    }
+  }
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -211,8 +254,7 @@ export function WorkspaceShell({
           </div>
           <button
             className={cn(
-              "ml-auto flex size-9 items-center justify-center rounded-lg text-[#64748B] transition hover:bg-[#F1F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]",
-              collapsed && "lg:hidden",
+              "ml-auto flex size-9 items-center justify-center rounded-lg text-[#64748B] transition hover:bg-[#F1F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] lg:hidden",
             )}
             aria-label="Tutup navigasi"
             onClick={() => setMobileOpen(false)}
@@ -354,18 +396,73 @@ export function WorkspaceShell({
             </div>
 
             {/* Center: Search pill */}
-            <div className="relative hidden md:flex items-center flex-1 max-w-sm lg:max-w-md mx-2 lg:mx-4">
-              <Search
-                className="pointer-events-none absolute left-3.5 size-4 text-slate-400"
-                aria-hidden="true"
-              />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari ruangan, instrumen, atau jadwal..."
-                className="h-9 w-full rounded-full border border-[#E2E8F0]/80 bg-[#F8FAFC] pl-9 pr-4 text-xs text-[#1E293B] placeholder:text-[#94A3B8] outline-none transition focus:border-[#F9B129] focus:bg-white focus:ring-2 focus:ring-[#F9B129]/20"
-              />
+            <div
+              ref={searchBoxRef}
+              className="relative hidden md:flex items-center flex-1 max-w-sm lg:max-w-md mx-2 lg:mx-4"
+            >
+              <form onSubmit={handleGlobalSearchSubmit} className="relative w-full">
+                <Search
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400"
+                  aria-hidden="true"
+                />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setSearchFocused(true);
+                  }}
+                  placeholder="Cari menu, ruangan, instrumen, atau jadwal..."
+                  aria-label="Cari di workspace"
+                  className="h-9 w-full rounded-full border border-[#E2E8F0]/80 bg-[#F8FAFC] pl-9 pr-4 text-xs text-[#1E293B] placeholder:text-[#94A3B8] outline-none transition focus:border-[#F9B129] focus:bg-white focus:ring-2 focus:ring-[#F9B129]/20"
+                />
+              </form>
+              {searchFocused && searchQuery.trim().length > 0 && (
+                <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+                  {matchingNavItems.length > 0 ? (
+                    <ul className="space-y-0.5">
+                      {matchingNavItems.map((item) => {
+                        const Icon = iconMap[item.icon] ?? LayoutDashboard;
+                        return (
+                          <li key={item.href}>
+                            <Link
+                              href={item.href}
+                              onClick={() => {
+                                setSearchFocused(false);
+                                setSearchQuery("");
+                              }}
+                              className="flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs text-slate-700 hover:bg-[#FEF7E6] hover:text-[#121826] transition"
+                            >
+                              <span className="flex items-center gap-2 font-semibold">
+                                <Icon className="size-3.5 text-[#8D6500]" />
+                                {item.label}
+                              </span>
+                              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                                {item.groupLabel}
+                              </span>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <button
+                      type="button"
+                      onMouseDown={handleGlobalSearchSubmit}
+                      className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs text-slate-700 hover:bg-[#FEF7E6]"
+                    >
+                      <span>
+                        Cari <strong>&ldquo;{searchQuery.trim()}&rdquo;</strong>
+                      </span>
+                      <span className="text-[10px] font-semibold text-[#8D6500]">
+                        Enter ↵
+                      </span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Right: Notifications + Profile (replacing + JOIN EVENT) */}

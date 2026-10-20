@@ -193,7 +193,7 @@ export function StackedBarChart({
                 </div>
               )}
               <span
-                className="w-full text-center text-[9.5px] sm:text-[10px] font-medium text-[#6B6B6B] leading-tight line-clamp-2 px-0.5"
+                className="w-full shrink-0 text-center text-[9.5px] sm:text-[10px] font-medium text-[#6B6B6B] leading-snug pb-0.5 line-clamp-2 px-0.5"
                 title={bucket.sublabel ? `${bucket.label} (${bucket.sublabel})` : bucket.label}
               >
                 {bucket.label}

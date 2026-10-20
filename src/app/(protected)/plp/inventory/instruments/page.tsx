@@ -151,7 +151,7 @@ export default async function PlpInstrumentsInventoryPage({
         description="Daftar peralatan berdaya listrik, optik, dan elektronik berpresisi tinggi dengan pemantauan kondisi dan kalibrasi."
         actions={
           <AddAssetDialog
-            label="+ Tambah Instrumen"
+            label="Tambah Instrumen"
             defaultClassification="INSTRUMENT"
             defaultStorageLocation="Gudang Instrumen"
             rooms={rooms.map((r) => ({ id: r.id, code: r.id, name: r.name }))}

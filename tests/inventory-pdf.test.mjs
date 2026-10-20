@@ -17,18 +17,32 @@ test("inventory queries calculate real unit and batch availability ratios", asyn
     // 1. Verify equipment unit availability ratio calculation
     const unitStatsRes = await pool.query(`
       SELECT
-        ea.id,
-        ea.asset_code,
-        et.classification,
-        COUNT(eu.id)::int as "totalUnits",
-        COUNT(CASE WHEN eu.status = 'AVAILABLE' AND eu.active = true THEN eu.id END)::int as "availableUnits",
-        COUNT(CASE WHEN eu.status = 'IN_USE' AND eu.active = true THEN eu.id END)::int as "inUseUnits",
-        COUNT(CASE WHEN eu.status = 'RESERVED' AND eu.active = true THEN eu.id END)::int as "reservedUnits"
-      FROM equipment_asset ea
-      JOIN equipment_type et ON et.id = ea.equipment_type_id
-      LEFT JOIN equipment_unit eu ON eu.equipment_asset_id = ea.id AND eu.active = true
-      WHERE ea.active = true
-      GROUP BY ea.id, ea.asset_code, et.classification
+        ia.id,
+        ia.asset_code,
+        'INSTRUMENT' as classification,
+        COUNT(iu.id)::int as "totalUnits",
+        COUNT(CASE WHEN iu.status = 'AVAILABLE' AND iu.active = true THEN iu.id END)::int as "availableUnits",
+        COUNT(CASE WHEN iu.status = 'IN_USE' AND iu.active = true THEN iu.id END)::int as "inUseUnits",
+        COUNT(CASE WHEN iu.status = 'RESERVED' AND iu.active = true THEN iu.id END)::int as "reservedUnits"
+      FROM instrument_asset ia
+      JOIN instrument_type it ON it.id = ia.instrument_type_id
+      LEFT JOIN instrument_unit iu ON iu.instrument_asset_id = ia.id AND iu.active = true
+      WHERE ia.active = true
+      GROUP BY ia.id, ia.asset_code
+      UNION ALL
+      SELECT
+        ta.id,
+        ta.asset_code,
+        'TOOL' as classification,
+        COUNT(tu.id)::int as "totalUnits",
+        COUNT(CASE WHEN tu.status = 'AVAILABLE' AND tu.active = true THEN tu.id END)::int as "availableUnits",
+        COUNT(CASE WHEN tu.status = 'IN_USE' AND tu.active = true THEN tu.id END)::int as "inUseUnits",
+        COUNT(CASE WHEN tu.status = 'RESERVED' AND tu.active = true THEN tu.id END)::int as "reservedUnits"
+      FROM tool_asset ta
+      JOIN tool_type tt ON tt.id = ta.tool_type_id
+      LEFT JOIN tool_unit tu ON tu.tool_asset_id = ta.id AND tu.active = true
+      WHERE ta.active = true
+      GROUP BY ta.id, ta.asset_code
       LIMIT 20
     `);
 

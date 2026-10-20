@@ -2,12 +2,26 @@ import "server-only";
 import { and, asc, eq, lt, notExists, sql } from "drizzle-orm";
 import { ApiError } from "@/lib/api";
 import { db } from "@/db";
-import { equipmentAsset, equipmentType, material, media } from "@/db/schema";
+import {
+  instrumentAsset,
+  instrumentType,
+  material,
+  media,
+  toolAsset,
+  toolType,
+} from "@/db/schema";
 import { deleteObject } from "@/lib/storage";
 import type { DbExecutor } from "@/services/executor";
 import { writeAudit } from "@/services/audit.service";
 
-export type MediaEntity = "material" | "equipment_type" | "equipment_asset";
+export type MediaEntity =
+  | "material"
+  | "instrument_type"
+  | "instrument_asset"
+  | "tool_type"
+  | "tool_asset"
+  | "equipment_type"
+  | "equipment_asset";
 
 export type CreateMediaInput = {
   storageProvider: string;
@@ -47,28 +61,52 @@ export async function findReferencingRows(
   mediaId: string,
   exec: DbExecutor = db,
 ) {
-  const [materials, equipmentTypes, equipmentAssets] = await Promise.all([
+  const [
+    materials,
+    instrumentTypes,
+    instrumentAssets,
+    toolTypes,
+    toolAssets,
+  ] = await Promise.all([
     exec
       .select({ id: material.id, code: material.code, name: material.name })
       .from(material)
       .where(eq(material.imageMediaId, mediaId)),
     exec
-      .select({ id: equipmentType.id, name: equipmentType.name })
-      .from(equipmentType)
-      .where(eq(equipmentType.imageMediaId, mediaId)),
+      .select({ id: instrumentType.id, name: instrumentType.name })
+      .from(instrumentType)
+      .where(eq(instrumentType.imageMediaId, mediaId)),
     exec
-      .select({ id: equipmentAsset.id, assetCode: equipmentAsset.assetCode })
-      .from(equipmentAsset)
-      .where(eq(equipmentAsset.imageMediaId, mediaId)),
+      .select({ id: instrumentAsset.id, assetCode: instrumentAsset.assetCode })
+      .from(instrumentAsset)
+      .where(eq(instrumentAsset.imageMediaId, mediaId)),
+    exec
+      .select({ id: toolType.id, name: toolType.name })
+      .from(toolType)
+      .where(eq(toolType.imageMediaId, mediaId)),
+    exec
+      .select({ id: toolAsset.id, assetCode: toolAsset.assetCode })
+      .from(toolAsset)
+      .where(eq(toolAsset.imageMediaId, mediaId)),
   ]);
-  return { materials, equipmentTypes, equipmentAssets };
+  return {
+    materials,
+    instrumentTypes,
+    instrumentAssets,
+    toolTypes,
+    toolAssets,
+    equipmentTypes: [...instrumentTypes, ...toolTypes],
+    equipmentAssets: [...instrumentAssets, ...toolAssets],
+  };
 }
 
 function referenceCount(refs: Awaited<ReturnType<typeof findReferencingRows>>) {
   return (
     refs.materials.length +
-    refs.equipmentTypes.length +
-    refs.equipmentAssets.length
+    refs.instrumentTypes.length +
+    refs.instrumentAssets.length +
+    refs.toolTypes.length +
+    refs.toolAssets.length
   );
 }
 
@@ -128,15 +166,27 @@ export async function cleanupOrphanMedia(actorId: string) {
         ),
         notExists(
           db
-            .select({ id: equipmentType.id })
-            .from(equipmentType)
-            .where(eq(equipmentType.imageMediaId, media.id)),
+            .select({ id: instrumentType.id })
+            .from(instrumentType)
+            .where(eq(instrumentType.imageMediaId, media.id)),
         ),
         notExists(
           db
-            .select({ id: equipmentAsset.id })
-            .from(equipmentAsset)
-            .where(eq(equipmentAsset.imageMediaId, media.id)),
+            .select({ id: instrumentAsset.id })
+            .from(instrumentAsset)
+            .where(eq(instrumentAsset.imageMediaId, media.id)),
+        ),
+        notExists(
+          db
+            .select({ id: toolType.id })
+            .from(toolType)
+            .where(eq(toolType.imageMediaId, media.id)),
+        ),
+        notExists(
+          db
+            .select({ id: toolAsset.id })
+            .from(toolAsset)
+            .where(eq(toolAsset.imageMediaId, media.id)),
         ),
       ),
     )
@@ -177,7 +227,7 @@ export async function setMediaImage(
   entity: MediaEntity,
   id: string,
   mediaId: string | null,
-) {
+): Promise<unknown> {
   if (mediaId) {
     const record = await getMediaRecord(mediaId);
     if (!record)
@@ -207,50 +257,121 @@ export async function setMediaImage(
       });
       return updated;
     }
-    if (entity === "equipment_type") {
+    if (entity === "instrument_type") {
       const [current] = await tx
-        .select({ imageMediaId: equipmentType.imageMediaId })
-        .from(equipmentType)
-        .where(eq(equipmentType.id, id))
+        .select({ imageMediaId: instrumentType.imageMediaId })
+        .from(instrumentType)
+        .where(eq(instrumentType.id, id))
         .limit(1);
       if (!current)
-        throw new ApiError(404, "NOT_FOUND", "Equipment type tidak ditemukan.");
+        throw new ApiError(404, "NOT_FOUND", "Tipe instrumen tidak ditemukan.");
       const [updated] = await tx
-        .update(equipmentType)
+        .update(instrumentType)
         .set({ imageMediaId: mediaId })
-        .where(eq(equipmentType.id, id))
+        .where(eq(instrumentType.id, id))
         .returning();
       await writeAudit(tx, {
         actorId,
         action: "UPDATE",
-        entityType: "equipment_type",
+        entityType: "instrument_type",
         entityId: id,
         before: { imageMediaId: current.imageMediaId },
         after: { imageMediaId: mediaId },
       });
       return updated;
     }
-    const [current] = await tx
-      .select({ imageMediaId: equipmentAsset.imageMediaId })
-      .from(equipmentAsset)
-      .where(eq(equipmentAsset.id, id))
+    if (entity === "tool_type") {
+      const [current] = await tx
+        .select({ imageMediaId: toolType.imageMediaId })
+        .from(toolType)
+        .where(eq(toolType.id, id))
+        .limit(1);
+      if (!current)
+        throw new ApiError(404, "NOT_FOUND", "Tipe alat tidak ditemukan.");
+      const [updated] = await tx
+        .update(toolType)
+        .set({ imageMediaId: mediaId })
+        .where(eq(toolType.id, id))
+        .returning();
+      await writeAudit(tx, {
+        actorId,
+        action: "UPDATE",
+        entityType: "tool_type",
+        entityId: id,
+        before: { imageMediaId: current.imageMediaId },
+        after: { imageMediaId: mediaId },
+      });
+      return updated;
+    }
+    if (entity === "instrument_asset") {
+      const [current] = await tx
+        .select({ imageMediaId: instrumentAsset.imageMediaId })
+        .from(instrumentAsset)
+        .where(eq(instrumentAsset.id, id))
+        .limit(1);
+      if (!current)
+        throw new ApiError(404, "NOT_FOUND", "Aset instrumen tidak ditemukan.");
+      const [updated] = await tx
+        .update(instrumentAsset)
+        .set({ imageMediaId: mediaId })
+        .where(eq(instrumentAsset.id, id))
+        .returning();
+      await writeAudit(tx, {
+        actorId,
+        action: "UPDATE",
+        entityType: "instrument_asset",
+        entityId: id,
+        before: { imageMediaId: current.imageMediaId },
+        after: { imageMediaId: mediaId },
+      });
+      return updated;
+    }
+    if (entity === "tool_asset") {
+      const [current] = await tx
+        .select({ imageMediaId: toolAsset.imageMediaId })
+        .from(toolAsset)
+        .where(eq(toolAsset.id, id))
+        .limit(1);
+      if (!current)
+        throw new ApiError(404, "NOT_FOUND", "Aset alat tidak ditemukan.");
+      const [updated] = await tx
+        .update(toolAsset)
+        .set({ imageMediaId: mediaId })
+        .where(eq(toolAsset.id, id))
+        .returning();
+      await writeAudit(tx, {
+        actorId,
+        action: "UPDATE",
+        entityType: "tool_asset",
+        entityId: id,
+        before: { imageMediaId: current.imageMediaId },
+        after: { imageMediaId: mediaId },
+      });
+      return updated;
+    }
+
+    // Legacy fallback for equipment_type and equipment_asset:
+    if (entity === "equipment_type") {
+      const [inst] = await tx
+        .select({ id: instrumentType.id })
+        .from(instrumentType)
+        .where(eq(instrumentType.id, id))
+        .limit(1);
+      if (inst) {
+        return setMediaImage(actorId, "instrument_type", id, mediaId);
+      }
+      return setMediaImage(actorId, "tool_type", id, mediaId);
+    }
+
+    const [instAsset] = await tx
+      .select({ id: instrumentAsset.id })
+      .from(instrumentAsset)
+      .where(eq(instrumentAsset.id, id))
       .limit(1);
-    if (!current)
-      throw new ApiError(404, "NOT_FOUND", "Equipment asset tidak ditemukan.");
-    const [updated] = await tx
-      .update(equipmentAsset)
-      .set({ imageMediaId: mediaId })
-      .where(eq(equipmentAsset.id, id))
-      .returning();
-    await writeAudit(tx, {
-      actorId,
-      action: "UPDATE",
-      entityType: "equipment_asset",
-      entityId: id,
-      before: { imageMediaId: current.imageMediaId },
-      after: { imageMediaId: mediaId },
-    });
-    return updated;
+    if (instAsset) {
+      return setMediaImage(actorId, "instrument_asset", id, mediaId);
+    }
+    return setMediaImage(actorId, "tool_asset", id, mediaId);
   });
 }
 
@@ -260,6 +381,38 @@ export function setMaterialImage(
   mediaId: string | null,
 ) {
   return setMediaImage(actorId, "material", materialId, mediaId);
+}
+
+export function setInstrumentTypeImage(
+  actorId: string,
+  instrumentTypeId: string,
+  mediaId: string | null,
+) {
+  return setMediaImage(actorId, "instrument_type", instrumentTypeId, mediaId);
+}
+
+export function setInstrumentAssetImage(
+  actorId: string,
+  instrumentAssetId: string,
+  mediaId: string | null,
+) {
+  return setMediaImage(actorId, "instrument_asset", instrumentAssetId, mediaId);
+}
+
+export function setToolTypeImage(
+  actorId: string,
+  toolTypeId: string,
+  mediaId: string | null,
+) {
+  return setMediaImage(actorId, "tool_type", toolTypeId, mediaId);
+}
+
+export function setToolAssetImage(
+  actorId: string,
+  toolAssetId: string,
+  mediaId: string | null,
+) {
+  return setMediaImage(actorId, "tool_asset", toolAssetId, mediaId);
 }
 
 export function setEquipmentTypeImage(
@@ -281,26 +434,54 @@ export function setEquipmentAssetImage(
 // Catalog pages use these maps because the shared admin list services do not
 // select the new image column.
 export async function listCatalogImageRefs() {
-  const [materials, equipmentTypes, equipmentAssets] = await Promise.all([
+  const [
+    materials,
+    instrumentTypes,
+    toolTypes,
+    instrumentAssets,
+    toolAssets,
+  ] = await Promise.all([
     db
       .select({ id: material.id, imageMediaId: material.imageMediaId })
       .from(material),
     db
       .select({
-        id: equipmentType.id,
-        imageMediaId: equipmentType.imageMediaId,
+        id: instrumentType.id,
+        imageMediaId: instrumentType.imageMediaId,
       })
-      .from(equipmentType),
+      .from(instrumentType),
     db
       .select({
-        id: equipmentAsset.id,
-        imageMediaId: sql<string | null>`COALESCE(${equipmentAsset.imageMediaId}, ${equipmentType.imageMediaId})`,
+        id: toolType.id,
+        imageMediaId: toolType.imageMediaId,
       })
-      .from(equipmentAsset)
+      .from(toolType),
+    db
+      .select({
+        id: instrumentAsset.id,
+        imageMediaId: sql<string | null>`COALESCE(${instrumentAsset.imageMediaId}, ${instrumentType.imageMediaId})`,
+      })
+      .from(instrumentAsset)
       .leftJoin(
-        equipmentType,
-        eq(equipmentAsset.equipmentTypeId, equipmentType.id),
+        instrumentType,
+        eq(instrumentAsset.instrumentTypeId, instrumentType.id),
       ),
+    db
+      .select({
+        id: toolAsset.id,
+        imageMediaId: sql<string | null>`COALESCE(${toolAsset.imageMediaId}, ${toolType.imageMediaId})`,
+      })
+      .from(toolAsset)
+      .leftJoin(toolType, eq(toolAsset.toolTypeId, toolType.id)),
   ]);
-  return { materials, equipmentTypes, equipmentAssets };
+
+  return {
+    materials,
+    instrumentTypes,
+    toolTypes,
+    instrumentAssets,
+    toolAssets,
+    equipmentTypes: [...instrumentTypes, ...toolTypes],
+    equipmentAssets: [...instrumentAssets, ...toolAssets],
+  };
 }

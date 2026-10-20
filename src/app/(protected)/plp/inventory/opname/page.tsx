@@ -80,7 +80,7 @@ export default async function OpnameSessionsPage({
       <PageHeader
         eyebrow="Inventori"
         title="Stok opname"
-        description="Hitung jumlah fisik per room dan bandingkan dengan catatan sistem. Sesi hitung tidak mengubah stok; koreksi tetap lewat penyesuaian batch manual."
+        description="Hitung jumlah fisik per room dan bandingkan dengan catatan sistem. Sesi hitung tidak otomatis mengubah stok hingga Anda menjalankan rekonsiliasi selisih atau penyesuaian batch."
       />
 
       <Panel context="Sesi baru" title="Mulai sesi hitung" className="mb-5">

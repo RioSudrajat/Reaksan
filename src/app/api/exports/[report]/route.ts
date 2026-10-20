@@ -1,4 +1,5 @@
 import { ApiError, withApiPermission, withApiSession } from "@/lib/api";
+import { assertRateLimit } from "@/lib/rate-limit";
 import { db } from "@/db";
 import type { Permissions } from "@/lib/permissions";
 import {
@@ -144,6 +145,12 @@ export async function GET(request: Request, context: Context) {
     });
   }
   return withApiPermission(request, permissions, async (session) => {
+    assertRateLimit(request, {
+      namespace: "exports:get",
+      limit: 20,
+      windowMs: 60_000,
+      identifier: session.user.id,
+    });
     const params = Object.fromEntries(new URL(request.url).searchParams);
     const { scope, roomCodes } = await scopeForSession(session);
     const { result, filters } = await buildReport(

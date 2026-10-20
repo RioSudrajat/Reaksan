@@ -112,14 +112,19 @@ export function permissionsAllow(
 export async function userHasPermission(
   userId: string,
   requested: Permissions,
+  knownRole?: string | null,
 ): Promise<boolean> {
-  const [row] = await db
-    .select({ role: user.role })
-    .from(user)
-    .where(eq(user.id, userId))
-    .limit(1);
-  if (!row) return false;
-  const granted = await getEffectivePermissions(row.role);
+  let role = knownRole;
+  if (role === undefined) {
+    const [row] = await db
+      .select({ role: user.role })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+    if (!row) return false;
+    role = row.role;
+  }
+  const granted = await getEffectivePermissions(role);
   return permissionsAllow(granted, requested);
 }
 

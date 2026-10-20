@@ -74,7 +74,7 @@ export function PlpScheduleCard({
         event={event}
         rangeLabel={rangeLabel}
         roomName={event.roomName}
-        showTimeline={event.kind === "request"}
+        showTimeline={Boolean(event.requestId || event.reservationId)}
         actions={
           <>
             {event.requestId && (

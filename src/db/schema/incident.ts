@@ -1,7 +1,8 @@
 import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { incidentSeverityEnum, incidentStatusEnum } from "./enums";
 import { activity } from "./activity";
-import { equipmentAsset } from "./equipment";
+import { instrumentAsset } from "./instrument";
+import { toolAsset } from "./tool";
 import { room } from "./laboratory";
 import { user } from "./user";
 import { resourceRequest } from "./request";
@@ -12,9 +13,10 @@ export const incident = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     code: text("code").notNull().unique(),
-    equipmentAssetId: uuid("equipment_asset_id").references(
-      () => equipmentAsset.id,
+    instrumentAssetId: uuid("instrument_asset_id").references(
+      () => instrumentAsset.id,
     ),
+    toolAssetId: uuid("tool_asset_id").references(() => toolAsset.id),
     roomId: uuid("room_id").references(() => room.id),
     requestId: uuid("request_id").references(() => resourceRequest.id),
     reservationId: uuid("reservation_id").references(() => reservation.id),
@@ -36,7 +38,8 @@ export const incident = pgTable(
       .notNull(),
   },
   (table) => [
-    index("incident_asset_idx").on(table.equipmentAssetId),
+    index("incident_instrument_asset_idx").on(table.instrumentAssetId),
+    index("incident_tool_asset_idx").on(table.toolAssetId),
     index("incident_room_idx").on(table.roomId),
     index("incident_request_idx").on(table.requestId),
     index("incident_reservation_idx").on(table.reservationId),

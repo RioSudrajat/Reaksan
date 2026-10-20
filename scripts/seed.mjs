@@ -733,7 +733,8 @@ const FRESH_TABLES = [
   "issue_transaction",
   "reservation",
   "material_request_item",
-  "equipment_request_item",
+  "instrument_request_item",
+  "tool_request_item",
   "shared_usage_request",
   "shared_usage",
   "incident_assessment",
@@ -744,10 +745,14 @@ const FRESH_TABLES = [
   "material_batch",
   "material_dispensing_rule",
   "material",
-  "equipment_condition_history",
-  "equipment_unit",
-  "equipment_asset",
-  "equipment_type",
+  "instrument_condition_history",
+  "tool_condition_history",
+  "instrument_unit",
+  "tool_unit",
+  "instrument_asset",
+  "tool_asset",
+  "instrument_type",
+  "tool_type",
   "room",
   "laboratory",
   "notification",
@@ -811,58 +816,70 @@ async function upsertRoom(client, labId, room) {
 
 async function upsertEquipmentType(client, [name, category, usageType, classification, description, shape, tone]) {
   const art = await writeArtwork(client, `equipment-${shape}`, equipmentArt(shape, tone));
+  const isTool = classification === "TOOL";
+  const tableName = isTool ? "tool_type" : "instrument_type";
+
   const existing = await client.query(
-    "SELECT id FROM equipment_type WHERE name = $1",
+    `SELECT id FROM ${tableName} WHERE name = $1`,
     [name],
   );
   if (existing.rowCount > 0) {
     await client.query(
-      "UPDATE equipment_type SET category = $2, usage_type = $3, classification = $4, description = $5, image_media_id = $6 WHERE id = $1",
-      [existing.rows[0].id, category, usageType, classification, description, art],
+      `UPDATE ${tableName} SET category = $2, usage_type = $3, description = $4, image_media_id = $5 WHERE id = $1`,
+      [existing.rows[0].id, category, usageType, description, art],
     );
-    return existing.rows[0].id;
+    return { id: existing.rows[0].id, classification };
   }
   const inserted = await client.query(
-    "INSERT INTO equipment_type (name, category, usage_type, classification, description, image_media_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
-    [name, category, usageType, classification, description, art],
+    `INSERT INTO ${tableName} (name, category, usage_type, description, image_media_id) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    [name, category, usageType, description, art],
   );
-  return inserted.rows[0].id;
+  return { id: inserted.rows[0].id, classification };
 }
 
-async function upsertAsset(client, roomIds, typeIds, [code, type, room, condition, notes]) {
+async function upsertAsset(client, roomIds, typeMap, [code, typeName, room, condition, notes]) {
+  const typeMeta = typeMap[typeName];
+  const isTool = typeMeta.classification === "TOOL";
+  const tableName = isTool ? "tool_asset" : "instrument_asset";
+  const typeCol = isTool ? "tool_type_id" : "instrument_type_id";
+
   const existing = await client.query(
-    "SELECT id FROM equipment_asset WHERE asset_code = $1",
+    `SELECT id FROM ${tableName} WHERE asset_code = $1`,
     [code],
   );
   if (existing.rowCount > 0) {
     await client.query(
-      "UPDATE equipment_asset SET room_id = $2, equipment_type_id = $3, condition = $4, notes = $5, active = true WHERE id = $1",
-      [existing.rows[0].id, roomIds[room], typeIds[type], condition, notes],
+      `UPDATE ${tableName} SET room_id = $2, ${typeCol} = $3, condition = $4, notes = $5, active = true WHERE id = $1`,
+      [existing.rows[0].id, roomIds[room], typeMeta.id, condition, notes],
     );
-    return existing.rows[0].id;
+    return { id: existing.rows[0].id, classification: typeMeta.classification };
   }
   const inserted = await client.query(
-    "INSERT INTO equipment_asset (asset_code, equipment_type_id, room_id, condition, notes) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-    [code, typeIds[type], roomIds[room], condition, notes],
+    `INSERT INTO ${tableName} (asset_code, ${typeCol}, room_id, condition, notes) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    [code, typeMeta.id, roomIds[room], condition, notes],
   );
-  return inserted.rows[0].id;
+  return { id: inserted.rows[0].id, classification: typeMeta.classification };
 }
 
-async function upsertUnit(client, assetId, code, label, notes, storageLocation, qrCode) {
+async function upsertUnit(client, assetMeta, code, label, notes, storageLocation, qrCode) {
+  const isTool = assetMeta.classification === "TOOL";
+  const tableName = isTool ? "tool_unit" : "instrument_unit";
+  const assetCol = isTool ? "tool_asset_id" : "instrument_asset_id";
+
   const existing = await client.query(
-    "SELECT id, storage_location, qr_code FROM equipment_unit WHERE code = $1",
+    `SELECT id, storage_location, qr_code FROM ${tableName} WHERE code = $1`,
     [code],
   );
   if (existing.rowCount > 0) {
     await client.query(
-      "UPDATE equipment_unit SET equipment_asset_id = $2, label = $3, notes = $4, storage_location = COALESCE($5, storage_location), qr_code = COALESCE(qr_code, $6), active = true WHERE id = $1",
-      [existing.rows[0].id, assetId, label, notes ?? null, storageLocation ?? null, qrCode ?? null],
+      `UPDATE ${tableName} SET ${assetCol} = $2, label = $3, notes = $4, storage_location = COALESCE($5, storage_location), qr_code = COALESCE(qr_code, $6), active = true WHERE id = $1`,
+      [existing.rows[0].id, assetMeta.id, label, notes ?? null, storageLocation ?? null, qrCode ?? null],
     );
     return;
   }
   await client.query(
-    "INSERT INTO equipment_unit (equipment_asset_id, code, label, status, notes, storage_location, qr_code, active) VALUES ($1, $2, $3, $4, $5, $6, $7, true)",
-    [assetId, code, label, notes ? "MAINTENANCE" : "AVAILABLE", notes ?? null, storageLocation ?? null, qrCode ?? null],
+    `INSERT INTO ${tableName} (${assetCol}, code, label, status, notes, storage_location, qr_code, active) VALUES ($1, $2, $3, $4, $5, $6, $7, true)`,
+    [assetMeta.id, code, label, notes ? "MAINTENANCE" : "AVAILABLE", notes ?? null, storageLocation ?? null, qrCode ?? null],
   );
 }
 
@@ -947,24 +964,38 @@ try {
 
   const currentAssetCodes = ASSETS.map((a) => a[0]);
   await client.query(
-    "UPDATE equipment_asset SET active = false WHERE NOT (asset_code = ANY($1))",
+    "UPDATE instrument_asset SET active = false WHERE NOT (asset_code = ANY($1))",
     [currentAssetCodes],
   );
   await client.query(
-    "UPDATE equipment_unit SET active = false WHERE equipment_asset_id IN (SELECT id FROM equipment_asset WHERE active = false)",
+    "UPDATE tool_asset SET active = false WHERE NOT (asset_code = ANY($1))",
+    [currentAssetCodes],
+  );
+  await client.query(
+    "UPDATE instrument_unit SET active = false WHERE instrument_asset_id IN (SELECT id FROM instrument_asset WHERE active = false)",
+  );
+  await client.query(
+    "UPDATE tool_unit SET active = false WHERE tool_asset_id IN (SELECT id FROM tool_asset WHERE active = false)",
   );
 
   for (const asset of ASSETS) {
-    const assetId = await upsertAsset(client, roomIds, typeIds, asset);
+    const assetMeta = await upsertAsset(client, roomIds, typeIds, asset);
     const { prefix, spec, count, location } = UNIT_LABELS[asset[0]];
-    const defaultStorage = location ?? "Gudang Instrumen";
+    const defaultStorage =
+      location ??
+      (assetMeta.classification === "TOOL"
+        ? "Meja Praktikum 1-4"
+        : "Gudang Instrumen");
     for (let index = 1; index <= count; index += 1) {
       const number = String(index).padStart(2, "0");
       const code = `${asset[0]}-${number}`;
-      const qrCode = `RK-UNT-${code}`;
+      const qrCode =
+        assetMeta.classification === "TOOL"
+          ? `RK-TOL-${code}`
+          : `RK-INS-${code}`;
       await upsertUnit(
         client,
-        assetId,
+        assetMeta,
         code,
         `${prefix} ${number} · ${spec}`,
         MAINTENANCE_NOTES[code],
@@ -983,7 +1014,8 @@ try {
   }
 
   // Ensure all units and batches have non-null QR codes
-  await client.query("UPDATE equipment_unit SET qr_code = 'RK-UNT-' || code WHERE qr_code IS NULL");
+  await client.query("UPDATE instrument_unit SET qr_code = 'RK-INS-' || code WHERE qr_code IS NULL");
+  await client.query("UPDATE tool_unit SET qr_code = 'RK-TOL-' || code WHERE qr_code IS NULL");
   await client.query("UPDATE material_batch SET qr_code = 'RK-MAT-' || COALESCE(lot_number, SUBSTRING(id::text, 1, 8)) WHERE qr_code IS NULL");
 
   await client.query("COMMIT");

@@ -8,6 +8,7 @@ export default defineConfig([
   globalIgnores([
     ".next/**",
     "node_modules/**",
+    "artifacts/**",
     "next-env.d.ts",
     "playwright-report/**",
     "test-results/**",

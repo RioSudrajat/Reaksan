@@ -19,15 +19,19 @@ export async function requireSession() {
 
 // Reads the stored role and the editable role permissions, so a change takes
 // effect on the next request instead of when the session expires.
-export async function hasPermission(userId: string, permissions: Permissions) {
-  return userHasPermission(userId, permissions);
+export async function hasPermission(
+  userId: string,
+  permissions: Permissions,
+  knownRole?: string | null,
+) {
+  return userHasPermission(userId, permissions, knownRole);
 }
 
 // Page and Server Action guard. Renders not-found rather than a "forbidden"
 // screen so a signed-in user cannot map out the routes they lack access to.
 export async function requirePermission(permissions: Permissions) {
   const session = await requireSession();
-  if (!(await hasPermission(session.user.id, permissions))) {
+  if (!(await hasPermission(session.user.id, permissions, session.user.role))) {
     const role = (session.user.role ?? "").split(",").map((s) => s.trim());
     if (role.includes("admin")) redirect("/admin/dashboard");
     if (role.includes("plp")) redirect("/plp/dashboard");

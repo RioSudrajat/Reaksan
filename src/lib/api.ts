@@ -59,6 +59,37 @@ export async function withApiSession(
         },
         { status: 422 },
       );
+    } else if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "23505"
+    ) {
+      response = Response.json(
+        {
+          error: {
+            code: "CONFLICT",
+            message: "Data dengan kode atau identitas tersebut sudah terdaftar.",
+          },
+        },
+        { status: 409 },
+      );
+    } else if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "23503"
+    ) {
+      response = Response.json(
+        {
+          error: {
+            code: "REFERENTIAL_CONFLICT",
+            message:
+              "Data ini masih direferensikan oleh catatan lain dan tidak dapat dihapus.",
+          },
+        },
+        { status: 409 },
+      );
     } else {
       // Do not return database errors, connection strings, or private values to clients.
       console.error(
@@ -88,7 +119,15 @@ export function withApiPermission(
   handler: (session: Session) => Promise<Response>,
 ) {
   return withApiSession(request, async (session) => {
-    if (!(await userHasPermission(session.user.id, permissions)))
+    // withApiSession already loaded the live session & user row from PostgreSQL
+    // with disableCookieCache: true, so session.user.role is authoritative.
+    if (
+      !(await userHasPermission(
+        session.user.id,
+        permissions,
+        session.user.role,
+      ))
+    )
       throw new ApiError(
         403,
         "FORBIDDEN",

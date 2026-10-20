@@ -26,6 +26,7 @@ export default async function StudentCalendarPage() {
         month,
         months: scheduleMonths(month),
         viewerId: user.id,
+        allowUnapproved: true,
       })}
     />
   );

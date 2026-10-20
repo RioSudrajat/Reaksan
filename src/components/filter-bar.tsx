@@ -32,8 +32,20 @@ export function FilterBar({
     const queryString = params.toString();
     const target = queryString ? `${action}?${queryString}` : action;
     startTransition(() => {
-      router.replace(target, { scroll: false });
+      router.push(target);
+      router.refresh();
     });
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLFormElement>) {
+    const target = e.target as HTMLElement;
+    if (
+      target instanceof HTMLSelectElement ||
+      (target instanceof HTMLInputElement &&
+        ["date", "datetime-local", "radio", "checkbox", "month"].includes(target.type))
+    ) {
+      e.currentTarget.requestSubmit();
+    }
   }
 
   const formKey = searchParams.toString();
@@ -44,6 +56,7 @@ export function FilterBar({
       method="get"
       action={action}
       onSubmit={handleSubmit}
+      onChange={handleChange}
       className="dashboard-card mb-5 flex flex-wrap items-end gap-3 p-4 transition-opacity duration-200"
       style={{ opacity: isPending ? 0.7 : 1 }}
     >

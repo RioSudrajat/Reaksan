@@ -1,14 +1,17 @@
 import "server-only";
 import type { CSSProperties } from "react";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  equipmentAsset,
-  equipmentType,
-  equipmentUnit,
+  instrumentAsset,
+  instrumentType,
+  instrumentUnit,
   material,
   room,
   reservation,
+  toolAsset,
+  toolType,
+  toolUnit,
   user,
 } from "@/db/schema";
 import type { DbExecutor } from "@/services/executor";
@@ -25,7 +28,13 @@ import type {
 } from "@/components/schedule-data";
 
 type EquipmentStatus =
-  (typeof equipmentUnit.$inferSelect)["status"];
+  | "AVAILABLE"
+  | "RESERVED"
+  | "IN_USE"
+  | "MAINTENANCE"
+  | "DAMAGED"
+  | "UNDER_INSPECTION"
+  | "RETIRED";
 
 const toneValues: ScheduleTone[] = ["blue", "green", "yellow", "rose", "cream"];
 
@@ -79,27 +88,60 @@ export async function findRoomByCode(exec: DbExecutor, code: string) {
 
 export async function findUnitsByCodes(exec: DbExecutor, codes: string[]) {
   if (codes.length === 0) return [];
-  return exec
-    .select({
-      unitId: equipmentUnit.id,
-      unitCode: equipmentUnit.code,
-      unitLabel: equipmentUnit.label,
-      unitStatus: equipmentUnit.status,
-      unitActive: equipmentUnit.active,
-      assetId: equipmentAsset.id,
-      assetCode: equipmentAsset.assetCode,
-      assetName: equipmentType.name,
-      assetStatus: equipmentAsset.status,
-      assetCondition: equipmentAsset.condition,
-      roomId: equipmentAsset.roomId,
-      roomCode: room.code,
-      roomName: room.name,
-    })
-    .from(equipmentUnit)
-    .innerJoin(equipmentAsset, eq(equipmentAsset.id, equipmentUnit.equipmentAssetId))
-    .innerJoin(room, eq(room.id, equipmentAsset.roomId))
-    .innerJoin(equipmentType, eq(equipmentType.id, equipmentAsset.equipmentTypeId))
-    .where(inArray(equipmentUnit.code, codes));
+  const [instruments, tools] = await Promise.all([
+    exec
+      .select({
+        unitId: instrumentUnit.id,
+        unitCode: instrumentUnit.code,
+        unitLabel: instrumentUnit.label,
+        unitStatus: instrumentUnit.status,
+        unitActive: instrumentUnit.active,
+        assetId: instrumentAsset.id,
+        assetCode: instrumentAsset.assetCode,
+        assetName: instrumentType.name,
+        assetStatus: instrumentAsset.status,
+        assetCondition: instrumentAsset.condition,
+        roomId: instrumentAsset.roomId,
+        roomCode: room.code,
+        roomName: room.name,
+        classification: sql<"INSTRUMENT">`'INSTRUMENT'`,
+      })
+      .from(instrumentUnit)
+      .innerJoin(
+        instrumentAsset,
+        eq(instrumentAsset.id, instrumentUnit.instrumentAssetId),
+      )
+      .innerJoin(room, eq(room.id, instrumentAsset.roomId))
+      .innerJoin(
+        instrumentType,
+        eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+      )
+      .where(inArray(instrumentUnit.code, codes)),
+    exec
+      .select({
+        unitId: toolUnit.id,
+        unitCode: toolUnit.code,
+        unitLabel: toolUnit.label,
+        unitStatus: toolUnit.status,
+        unitActive: toolUnit.active,
+        assetId: toolAsset.id,
+        assetCode: toolAsset.assetCode,
+        assetName: toolType.name,
+        assetStatus: toolAsset.status,
+        assetCondition: toolAsset.condition,
+        roomId: toolAsset.roomId,
+        roomCode: room.code,
+        roomName: room.name,
+        classification: sql<"TOOL">`'TOOL'`,
+      })
+      .from(toolUnit)
+      .innerJoin(toolAsset, eq(toolAsset.id, toolUnit.toolAssetId))
+      .innerJoin(room, eq(room.id, toolAsset.roomId))
+      .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
+      .where(inArray(toolUnit.code, codes)),
+  ]);
+
+  return [...instruments, ...tools];
 }
 
 export async function findMaterialsByCodes(exec: DbExecutor, codes: string[]) {
@@ -137,18 +179,59 @@ export async function listRoomRows(exec: DbExecutor) {
   const result = await exec.execute<RoomAggregateRow>(sql`
     SELECT
       r.id, r.code, r.name, r.short_name, r.description, r.tone,
-      COUNT(DISTINCT a.id) FILTER (WHERE a.active)::int AS type_count,
-      COUNT(u.id) FILTER (WHERE a.active AND u.active)::int AS total_units,
-      COUNT(u.id) FILTER (WHERE a.active AND u.active AND u.status = 'AVAILABLE')::int AS available_units,
-      COUNT(u.id) FILTER (WHERE a.active AND u.active AND u.status = 'RESERVED')::int AS reserved_units,
-      COUNT(u.id) FILTER (WHERE a.active AND u.active AND u.status = 'IN_USE')::int AS in_use_units,
-      COUNT(u.id) FILTER (WHERE a.active AND u.active AND u.status = 'UNDER_INSPECTION')::int AS awaiting_return_units,
-      COUNT(u.id) FILTER (WHERE a.active AND u.active AND u.status IN ('MAINTENANCE', 'DAMAGED', 'RETIRED'))::int AS maintenance_units
+      (
+        COALESCE(i_agg.type_count, 0) + COALESCE(t_agg.type_count, 0)
+      )::int AS type_count,
+      (
+        COALESCE(i_agg.total_units, 0) + COALESCE(t_agg.total_units, 0)
+      )::int AS total_units,
+      (
+        COALESCE(i_agg.available_units, 0) + COALESCE(t_agg.available_units, 0)
+      )::int AS available_units,
+      (
+        COALESCE(i_agg.reserved_units, 0) + COALESCE(t_agg.reserved_units, 0)
+      )::int AS reserved_units,
+      (
+        COALESCE(i_agg.in_use_units, 0) + COALESCE(t_agg.in_use_units, 0)
+      )::int AS in_use_units,
+      (
+        COALESCE(i_agg.awaiting_return_units, 0) + COALESCE(t_agg.awaiting_return_units, 0)
+      )::int AS awaiting_return_units,
+      (
+        COALESCE(i_agg.maintenance_units, 0) + COALESCE(t_agg.maintenance_units, 0)
+      )::int AS maintenance_units
     FROM room r
-    LEFT JOIN equipment_asset a ON a.room_id = r.id AND a.active
-    LEFT JOIN equipment_unit u ON u.equipment_asset_id = a.id AND u.active
+    LEFT JOIN (
+      SELECT
+        ia.room_id,
+        COUNT(DISTINCT ia.id) AS type_count,
+        COUNT(iu.id) AS total_units,
+        COUNT(iu.id) FILTER (WHERE iu.status = 'AVAILABLE') AS available_units,
+        COUNT(iu.id) FILTER (WHERE iu.status = 'RESERVED') AS reserved_units,
+        COUNT(iu.id) FILTER (WHERE iu.status = 'IN_USE') AS in_use_units,
+        COUNT(iu.id) FILTER (WHERE iu.status = 'UNDER_INSPECTION') AS awaiting_return_units,
+        COUNT(iu.id) FILTER (WHERE iu.status IN ('MAINTENANCE', 'DAMAGED', 'RETIRED')) AS maintenance_units
+      FROM instrument_asset ia
+      LEFT JOIN instrument_unit iu ON iu.instrument_asset_id = ia.id AND iu.active
+      WHERE ia.active
+      GROUP BY ia.room_id
+    ) i_agg ON i_agg.room_id = r.id
+    LEFT JOIN (
+      SELECT
+        ta.room_id,
+        COUNT(DISTINCT ta.id) AS type_count,
+        COUNT(tu.id) AS total_units,
+        COUNT(tu.id) FILTER (WHERE tu.status = 'AVAILABLE') AS available_units,
+        COUNT(tu.id) FILTER (WHERE tu.status = 'RESERVED') AS reserved_units,
+        COUNT(tu.id) FILTER (WHERE tu.status = 'IN_USE') AS in_use_units,
+        COUNT(tu.id) FILTER (WHERE tu.status = 'UNDER_INSPECTION') AS awaiting_return_units,
+        COUNT(tu.id) FILTER (WHERE tu.status IN ('MAINTENANCE', 'DAMAGED', 'RETIRED')) AS maintenance_units
+      FROM tool_asset ta
+      LEFT JOIN tool_unit tu ON tu.tool_asset_id = ta.id AND tu.active
+      WHERE ta.active
+      GROUP BY ta.room_id
+    ) t_agg ON t_agg.room_id = r.id
     WHERE r.active
-    GROUP BY r.id
     ORDER BY r.created_at ASC
   `);
   return result.rows;
@@ -170,18 +253,20 @@ export type MaterialAggregateRow = {
   physical: string;
   reserved: string;
   issued: string;
-  // Raw SQL rows can arrive as a Date or an ISO string depending on the driver.
   nearest_expiry: Date | string | null;
 };
 
 export async function listMaterialRows(
   exec: DbExecutor,
-  options: { roomCode?: string; roomCodes?: string[] | null } = {},
+  options: {
+    roomCode?: string;
+    roomCodes?: string[] | null;
+    materialCode?: string;
+  } = {},
 ) {
   const roomCode = options.roomCode ?? null;
   const roomCodes = options.roomCodes ?? null;
-  // Inventory is owned per lab, so rows are grouped by material and lab.
-  // `roomCodes` carries an assigned-lab scope; null means no scope filter.
+  const materialCode = options.materialCode ?? null;
   const scopeCondition =
     roomCodes === null
       ? sql`true`
@@ -219,6 +304,7 @@ export async function listMaterialRows(
     ) t ON t.material_batch_id = b.id
     LEFT JOIN material_dispensing_rule rule ON rule.material_id = m.id AND rule.active
     WHERE m.active
+      AND (${materialCode}::text IS NULL OR m.code = ${materialCode})
       AND (${roomCode}::text IS NULL OR r.code = ${roomCode})
       AND ${scopeCondition}
     GROUP BY m.id, r.code, r.name
@@ -314,7 +400,7 @@ export async function listActiveReservationsForUnits(
   if (unitIds.length === 0) return [];
   const rows = await exec
     .select({
-      unitId: reservation.equipmentUnitId,
+      unitId: sql<string>`COALESCE(${reservation.instrumentUnitId}, ${reservation.toolUnitId})`,
       startAt: reservation.startAt,
       endAt: reservation.endAt,
       status: reservation.status,
@@ -324,7 +410,10 @@ export async function listActiveReservationsForUnits(
     .innerJoin(user, eq(user.id, reservation.primaryUserId))
     .where(
       and(
-        inArray(reservation.equipmentUnitId, unitIds),
+        or(
+          inArray(reservation.instrumentUnitId, unitIds),
+          inArray(reservation.toolUnitId, unitIds),
+        ),
         inArray(reservation.status, ["RESERVED", "ACTIVE"]),
       ),
     )
@@ -364,12 +453,12 @@ type AssetRow = {
   assetId: string;
   assetCode: string;
   assetName: string;
-  assetStatus: (typeof equipmentAsset.$inferSelect)["status"];
-  assetCondition: (typeof equipmentAsset.$inferSelect)["condition"];
+  assetStatus: EquipmentStatus;
+  assetCondition: (typeof instrumentAsset.$inferSelect)["condition"];
   notes: string | null;
   typeName: string;
-  classification: (typeof equipmentType.$inferSelect)["classification"];
-  usageType: (typeof equipmentType.$inferSelect)["usageType"];
+  classification: "INSTRUMENT" | "TOOL";
+  usageType: "BORROWABLE" | "USAGE_ONLY";
   assetImageMediaId: string | null;
   typeImageMediaId: string | null;
   roomId: string;
@@ -381,35 +470,70 @@ type AssetRow = {
 export async function listAssetRows(
   exec: DbExecutor,
   options: { roomCode?: string } = {},
-) {
-  return exec
-    .select({
-      assetId: equipmentAsset.id,
-      assetCode: equipmentAsset.assetCode,
-      assetName: equipmentType.name,
-      assetStatus: equipmentAsset.status,
-      assetCondition: equipmentAsset.condition,
-      notes: equipmentAsset.notes,
-      typeName: equipmentType.name,
-      classification: equipmentType.classification,
-      usageType: equipmentType.usageType,
-      assetImageMediaId: equipmentAsset.imageMediaId,
-      typeImageMediaId: equipmentType.imageMediaId,
-      roomId: equipmentAsset.roomId,
-      roomCode: room.code,
-      roomName: room.name,
-      roomTone: room.tone,
-    })
-    .from(equipmentAsset)
-    .innerJoin(equipmentType, eq(equipmentType.id, equipmentAsset.equipmentTypeId))
-    .innerJoin(room, eq(room.id, equipmentAsset.roomId))
-    .where(
-      and(
-        eq(equipmentAsset.active, true),
-        options.roomCode ? eq(room.code, options.roomCode) : undefined,
+): Promise<AssetRow[]> {
+  const [instruments, tools] = await Promise.all([
+    exec
+      .select({
+        assetId: instrumentAsset.id,
+        assetCode: instrumentAsset.assetCode,
+        assetName: instrumentType.name,
+        assetStatus: instrumentAsset.status,
+        assetCondition: instrumentAsset.condition,
+        notes: instrumentAsset.notes,
+        typeName: instrumentType.name,
+        classification: sql<"INSTRUMENT">`'INSTRUMENT'`,
+        usageType: instrumentType.usageType,
+        assetImageMediaId: instrumentAsset.imageMediaId,
+        typeImageMediaId: instrumentType.imageMediaId,
+        roomId: instrumentAsset.roomId,
+        roomCode: room.code,
+        roomName: room.name,
+        roomTone: room.tone,
+      })
+      .from(instrumentAsset)
+      .innerJoin(
+        instrumentType,
+        eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+      )
+      .innerJoin(room, eq(room.id, instrumentAsset.roomId))
+      .where(
+        and(
+          eq(instrumentAsset.active, true),
+          options.roomCode ? eq(room.code, options.roomCode) : undefined,
+        ),
       ),
-    )
-    .orderBy(asc(equipmentAsset.assetCode));
+    exec
+      .select({
+        assetId: toolAsset.id,
+        assetCode: toolAsset.assetCode,
+        assetName: toolType.name,
+        assetStatus: toolAsset.status,
+        assetCondition: toolAsset.condition,
+        notes: toolAsset.notes,
+        typeName: toolType.name,
+        classification: sql<"TOOL">`'TOOL'`,
+        usageType: toolType.usageType,
+        assetImageMediaId: toolAsset.imageMediaId,
+        typeImageMediaId: toolType.imageMediaId,
+        roomId: toolAsset.roomId,
+        roomCode: room.code,
+        roomName: room.name,
+        roomTone: room.tone,
+      })
+      .from(toolAsset)
+      .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
+      .innerJoin(room, eq(room.id, toolAsset.roomId))
+      .where(
+        and(
+          eq(toolAsset.active, true),
+          options.roomCode ? eq(room.code, options.roomCode) : undefined,
+        ),
+      ),
+  ]);
+
+  return [...instruments, ...tools].sort((a, b) =>
+    a.assetCode.localeCompare(b.assetCode),
+  );
 }
 
 function assetSummary(units: EquipmentUnitView[]) {
@@ -524,24 +648,46 @@ export async function listUnitRows(
   assetIds: string[],
 ): Promise<UnitQueryRow[]> {
   if (assetIds.length === 0) return [];
-  return exec
-    .select({
-      unitId: equipmentUnit.id,
-      unitCode: equipmentUnit.code,
-      unitLabel: equipmentUnit.label,
-      unitStatus: equipmentUnit.status,
-      condition: equipmentUnit.condition,
-      assetId: equipmentUnit.equipmentAssetId,
-      notes: equipmentUnit.notes,
-    })
-    .from(equipmentUnit)
-    .where(
-      and(
-        inArray(equipmentUnit.equipmentAssetId, assetIds),
-        eq(equipmentUnit.active, true),
+  const [instUnits, tUnits] = await Promise.all([
+    exec
+      .select({
+        unitId: instrumentUnit.id,
+        unitCode: instrumentUnit.code,
+        unitLabel: instrumentUnit.label,
+        unitStatus: instrumentUnit.status,
+        condition: instrumentUnit.condition,
+        assetId: instrumentUnit.instrumentAssetId,
+        notes: instrumentUnit.notes,
+      })
+      .from(instrumentUnit)
+      .where(
+        and(
+          inArray(instrumentUnit.instrumentAssetId, assetIds),
+          eq(instrumentUnit.active, true),
+        ),
       ),
-    )
-    .orderBy(asc(equipmentUnit.code));
+    exec
+      .select({
+        unitId: toolUnit.id,
+        unitCode: toolUnit.code,
+        unitLabel: toolUnit.label,
+        unitStatus: toolUnit.status,
+        condition: toolUnit.condition,
+        assetId: toolUnit.toolAssetId,
+        notes: toolUnit.notes,
+      })
+      .from(toolUnit)
+      .where(
+        and(
+          inArray(toolUnit.toolAssetId, assetIds),
+          eq(toolUnit.active, true),
+        ),
+      ),
+  ]);
+
+  return [...instUnits, ...tUnits].sort((a, b) =>
+    a.unitCode.localeCompare(b.unitCode),
+  );
 }
 
 export async function buildEquipmentViews(

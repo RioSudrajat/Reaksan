@@ -292,7 +292,7 @@ function CalendarGrid({
 
   return (
     <div ref={rootRef} className="overflow-x-auto overscroll-x-contain">
-      <div>
+      <div className="min-w-[600px] sm:min-w-0">
         <div className="grid grid-cols-7 border-b border-[#E1E1E1] bg-[#FAFAF8]">
           {WEEKDAYS.map((weekday) => (
             <div
@@ -1016,6 +1016,17 @@ function statusSteps(event: ScheduleEvent) {
       { label: "Shared usage disetujui", state: "done" as const },
       { label: "Terlihat di kalender semua pihak", state: "done" as const },
     ];
+  if (event.status === "OVERDUE") {
+    return [
+      { label: "Diajukan", state: "done" as const },
+      { label: "Review PLP", state: "done" as const },
+      { label: "Disetujui", state: "done" as const },
+      { label: "Disiapkan", state: "done" as const },
+      { label: "Sedang digunakan", state: "done" as const },
+      { label: "Lewat tenggat pengembalian", state: "stopped" as const },
+      { label: "Selesai", state: "todo" as const },
+    ];
+  }
   const order: RequestStatus[] = [
     "PENDING_PLP",
     "APPROVED",
@@ -1292,7 +1303,9 @@ export function ScheduleEventCard({
                   "text-[11px]",
                   step.state === "todo"
                     ? "text-[#929292]"
-                    : "font-semibold text-[#212121]",
+                    : step.state === "stopped"
+                      ? "font-bold text-[#F45959]"
+                      : "font-semibold text-[#212121]",
                 )}
               >
                 {step.label}
@@ -1300,6 +1313,11 @@ export function ScheduleEventCard({
               {step.state === "current" && (
                 <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#AE7C1D]">
                   sekarang
+                </span>
+              )}
+              {step.state === "stopped" && (
+                <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#F45959]">
+                  perhatian
                 </span>
               )}
             </li>
@@ -1775,9 +1793,19 @@ function MaterialPickerModal({
   onClose: () => void;
 }) {
   const catalog = useLabCatalog();
+  const [query, setQuery] = useState("");
   const roomMaterials = catalog.materials.filter(
     (material) => material.roomId === roomId,
   );
+  const filteredMaterials = roomMaterials.filter((material) => {
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    return (
+      material.name.toLowerCase().includes(q) ||
+      material.id.toLowerCase().includes(q) ||
+      (material.category && material.category.toLowerCase().includes(q))
+    );
+  });
   const toggle = (id: string) => {
     const existing = selected.find((item) => item.id === id);
     if (existing) {
@@ -1824,18 +1852,36 @@ function MaterialPickerModal({
         </>
       }
     >
-      {roomMaterials.length === 0 ? (
-        <div className="rounded-xl bg-[#FAFAF8] p-5 text-center">
+      <label className="relative block">
+        <span className="sr-only">Cari bahan kimia</span>
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#929292]"
+          aria-hidden="true"
+        />
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Cari bahan kimia..."
+          className="h-11 w-full rounded-xl border border-[#E1E1E1] pl-9 pr-3 text-[12px] outline-none placeholder:text-[#929292] focus:border-[#6E8EDA] focus:ring-2 focus:ring-[#6E8EDA]/20"
+        />
+      </label>
+
+      {filteredMaterials.length === 0 ? (
+        <div className="mt-4 rounded-xl bg-[#FAFAF8] p-5 text-center">
           <p className="text-[12px] font-semibold text-[#212121]">
-            Belum ada stok bahan di lab ini
+            {roomMaterials.length === 0
+              ? "Belum ada stok bahan di lab ini"
+              : "Tidak ada bahan yang cocok"}
           </p>
           <p className="mt-1 text-[11px] leading-5 text-[#6B6B6B]">
-            Setiap laboratorium menyimpan stok bahan tersendiri. Pilih peralatan dari lab ini atau koordinasikan dengan petugas PLP.
+            {roomMaterials.length === 0
+              ? "Setiap laboratorium menyimpan stok bahan tersendiri. Pilih peralatan dari lab ini atau koordinasikan dengan petugas PLP."
+              : "Coba gunakan kata kunci pencarian bahan lain atau periksa ejaan nama bahan."}
           </p>
         </div>
       ) : (
-        <ul className="space-y-2">
-          {roomMaterials.map((material) => {
+        <ul className="mt-3 space-y-2">
+          {filteredMaterials.map((material) => {
             const selectedItem = selected.find(
               (item) => item.id === material.id,
             );
@@ -2361,41 +2407,62 @@ export function ScheduleRequestForm({
                   return (
                     <li
                       key={item.id}
-                      className="flex items-center gap-2 rounded-xl border border-[#EEEEEE] bg-[#FAFAF8] px-2.5 py-2"
+                      className="rounded-xl border border-[#EEEEEE] bg-[#FAFAF8] p-3 space-y-2.5"
                     >
-                      <ResourceThumb
-                        mediaId={item.imageMediaId ?? option?.imageMediaId}
-                        alt={item.name}
-                        size={28}
-                      />
-                      <span className="min-w-0 flex-1">
-                        <strong className="block truncate text-[11px] text-[#212121]">
-                          {item.name}
-                        </strong>
-                        <span className="block text-[10px] text-[#929292]">
-                          {item.id} · {option?.available ?? ""}
-                        </span>
-                      </span>
-                      <div className="flex flex-col gap-1 items-end">
-                        {option && option.options.length > 0 && (
-                          <div className="flex flex-wrap items-center justify-end gap-1">
-                            {option.options.slice(0, 5).map((value) => (
-                              <button
-                                key={value}
-                                type="button"
-                                onClick={() => setMaterialQuantity(item.id, value)}
-                                className={cn(
-                                  "rounded-md px-1.5 py-0.5 text-[10px] font-semibold transition",
-                                  item.quantity === value
-                                    ? "bg-[#38529B] text-white"
-                                    : "bg-[#EFEFEF] text-[#555] hover:bg-[#E0E0E0]",
-                                )}
-                              >
-                                {value}
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                      <div className="flex items-start gap-2.5">
+                        <ResourceThumb
+                          mediaId={item.imageMediaId ?? option?.imageMediaId}
+                          alt={item.name}
+                          size={32}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <strong className="block text-[12px] font-bold text-[#212121] leading-snug">
+                            {item.name}
+                          </strong>
+                          <span className="block mt-0.5 text-[10px] text-[#6B6B6B]">
+                            {item.id} {option?.available ? `· ${option.available}` : ""}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setMaterials((current) =>
+                              current.filter((entry) => entry.id !== item.id),
+                            )
+                          }
+                          aria-label={`Hapus ${item.name}`}
+                          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[#9E3636] hover:bg-[#FDE9E9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#EEEEEE]/80 pt-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-[10px] font-medium text-[#6B6B6B]">
+                            Takaran:
+                          </span>
+                          {option && option.options.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1">
+                              {option.options.slice(0, 5).map((value) => (
+                                <button
+                                  key={value}
+                                  type="button"
+                                  onClick={() => setMaterialQuantity(item.id, value)}
+                                  className={cn(
+                                    "rounded-md px-1.5 py-0.5 text-[10px] font-semibold transition",
+                                    item.quantity === value
+                                      ? "bg-[#38529B] text-white"
+                                      : "bg-[#EFEFEF] text-[#555] hover:bg-[#E0E0E0]",
+                                  )}
+                                >
+                                  {value}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
                         <div className="relative inline-flex items-center">
                           <label
                             className="sr-only"
@@ -2420,18 +2487,6 @@ export function ScheduleRequestForm({
                           </span>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setMaterials((current) =>
-                            current.filter((entry) => entry.id !== item.id),
-                          )
-                        }
-                        aria-label={`Hapus ${item.name}`}
-                        className="flex size-10 items-center justify-center rounded-xl text-[#6B6B6B] hover:bg-[#EEEEEE] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
-                      >
-                        <Trash2 className="size-4" aria-hidden="true" />
-                      </button>
                     </li>
                   );
                 })}
@@ -2735,7 +2790,7 @@ export function ScheduleEventPopover({
         event={event}
         rangeLabel={rangeLabel}
         roomName={event.roomName}
-        showTimeline={event.kind === "request"}
+        showTimeline={Boolean(event.requestId || event.reservationId)}
         actions={
           <>
             {editable && (

@@ -526,7 +526,7 @@ export function InteractiveStackedBarChart({
               {/* X-axis date label */}
               <span
                 className={cn(
-                  "w-full text-center text-[9.5px] sm:text-[10px] transition-colors leading-tight px-0.5 line-clamp-2",
+                  "w-full shrink-0 text-center text-[9.5px] sm:text-[10px] transition-colors leading-snug pb-0.5 px-0.5 line-clamp-2",
                   isHovered
                     ? "font-bold text-[#212121]"
                     : "font-normal text-[#6B6B6B]",

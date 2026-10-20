@@ -262,19 +262,43 @@ export function LabMap({
   selectedRoom,
   onSelectRoom,
   searchTerm,
+  equipmentByRoom,
 }: {
   rooms: RoomView[];
   selectedRoom: RoomView | null;
   onSelectRoom: (room: RoomView | null) => void;
   searchTerm: string;
+  equipmentByRoom?: Map<string, string[]>;
 }) {
   const [rotation, setRotation] = useState({ yaw: -8, pitch: 18 });
+  const [statusFilter, setStatusFilter] = useState<"all" | "available" | "active">("all");
 
-  const visibleRooms = rooms.filter((room) =>
-    `${room.name} ${room.description}`
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase()),
-  );
+  const visibleRooms = rooms.filter((room) => {
+    const q = searchTerm.trim().toLowerCase();
+    const eqNames = equipmentByRoom?.get(room.id) ?? [];
+    const matchesSearch =
+      !q ||
+      `${room.name} ${room.shortName} ${room.description} ${eqNames.join(" ")}`
+        .toLowerCase()
+        .includes(q);
+    if (!matchesSearch) return false;
+    if (statusFilter === "available") return room.available > 0;
+    if (statusFilter === "active") return room.inUse > 0 || room.reserved > 0;
+    return true;
+  });
+
+  const cycleFilter = () => {
+    setStatusFilter((prev) =>
+      prev === "all" ? "available" : prev === "available" ? "active" : "all",
+    );
+  };
+
+  const filterLabel =
+    statusFilter === "available"
+      ? "Siap Pakai"
+      : statusFilter === "active"
+        ? "Sedang Aktif"
+        : "Filter";
 
   const updateRotation = (yawDelta: number, pitchDelta: number) => {
     setRotation((current) => ({
@@ -289,27 +313,36 @@ export function LabMap({
       className="dashboard-card relative min-h-[470px] overflow-hidden p-3 sm:p-4"
     >
       <div className="relative h-[430px] overflow-hidden rounded-[13px] map-grid">
-        <div className="absolute left-4 top-4 z-20 flex items-center gap-2 rounded-xl border border-white/80 bg-white/95 px-3 py-2 shadow-sm">
+        <div className="absolute left-3 top-3 sm:left-4 sm:top-4 z-20 flex items-center gap-2 rounded-xl border border-white/80 bg-white/95 px-3 py-2 shadow-sm">
           <MapPin className="size-4 text-[#AE7C1D]" aria-hidden="true" />
           <div>
             <p className="text-[12px] font-semibold text-[#212121]">
               Laboratorium Kimia
             </p>
             <p className="text-[10px] text-[#6B6B6B]">
-              {rooms.length} lab · klik untuk pilih / lepas seleksi
+              {visibleRooms.length} dari {rooms.length} lab · klik untuk pilih
             </p>
           </div>
         </div>
 
-        <div className="absolute right-4 top-4 z-20 flex gap-2">
+        <div className="absolute right-3 top-3 sm:right-4 sm:top-4 z-20 flex gap-1.5 sm:gap-2">
           <button
-            className="flex min-h-10 items-center gap-2 rounded-xl border border-white/80 bg-white/95 px-3 text-[11px] font-semibold text-[#6B6B6B] shadow-sm transition hover:text-[#212121] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+            type="button"
+            onClick={cycleFilter}
+            className={cn(
+              "flex min-h-10 items-center gap-1.5 rounded-xl border px-3 text-[11px] font-semibold shadow-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]",
+              statusFilter !== "all"
+                ? "border-[#F9B129] bg-[#FEF7E6] text-[#8D6500]"
+                : "border-white/80 bg-white/95 text-[#6B6B6B] hover:text-[#212121]",
+            )}
             aria-label="Filter denah laboratorium"
+            title="Filter status ruangan (Semua / Siap Pakai / Sedang Aktif)"
           >
             <SlidersHorizontal className="size-3.5" aria-hidden="true" />
-            <span className="hidden sm:inline">Filter</span>
+            <span className="hidden sm:inline">{filterLabel}</span>
           </button>
           <button
+            type="button"
             className="flex size-10 items-center justify-center rounded-xl border border-white/80 bg-white/95 text-[#6B6B6B] shadow-sm transition hover:text-[#212121] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
             aria-label="Kembalikan sudut pandang denah"
             onClick={() => setRotation({ yaw: -8, pitch: 18 })}
@@ -321,8 +354,9 @@ export function LabMap({
           </button>
         </div>
 
-        <div className="absolute right-4 top-[68px] z-20 flex items-center gap-1 rounded-xl border border-white/80 bg-white/95 p-1 shadow-sm">
+        <div className="absolute right-3 bottom-3 sm:bottom-auto sm:right-4 sm:top-[68px] z-20 flex items-center gap-1 rounded-xl border border-white/80 bg-white/95 p-1 shadow-sm">
           <button
+            type="button"
             className="flex size-9 items-center justify-center rounded-lg text-[16px] text-[#6B6B6B] hover:bg-[#F5F5F5] hover:text-[#212121] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
             onClick={() => updateRotation(-18, 0)}
             aria-label="Putar denah ke kiri"
@@ -331,6 +365,7 @@ export function LabMap({
             ←
           </button>
           <button
+            type="button"
             className="flex size-9 items-center justify-center rounded-lg text-[16px] text-[#6B6B6B] hover:bg-[#F5F5F5] hover:text-[#212121] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
             onClick={() => updateRotation(18, 0)}
             aria-label="Putar denah ke kanan"
@@ -340,7 +375,7 @@ export function LabMap({
           </button>
         </div>
 
-        <div className="pointer-events-none absolute bottom-4 left-4 z-20 flex flex-wrap gap-2 rounded-xl border border-white/80 bg-white/95 p-2 shadow-sm">
+        <div className="pointer-events-none absolute bottom-3 left-3 sm:bottom-4 sm:left-4 z-20 flex flex-wrap gap-1.5 sm:gap-2 rounded-xl border border-white/80 bg-white/95 p-1.5 sm:p-2 shadow-sm max-w-[calc(100%-110px)] sm:max-w-none">
           <StatusBadge tone="green">Tersedia</StatusBadge>
           <StatusBadge tone="blue">Direservasi</StatusBadge>
           <StatusBadge tone="yellow">Digunakan</StatusBadge>
@@ -445,16 +480,18 @@ export function ReaksanDashboard({
   events,
   unreadCount: _unreadCount,
   latestIncident,
+  initialSearch = "",
 }: {
   userName: string;
   catalog: LabCatalog;
   events: ScheduleEvent[];
   unreadCount: number;
   latestIncident: IncidentView | null;
+  initialSearch?: string;
 }) {
   const rooms = catalog.rooms;
   const [selectedRoom, setSelectedRoom] = useState<RoomView | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [requestView, setRequestView] = useState<"upcoming" | "requests">(
     "upcoming",
   );
@@ -515,15 +552,26 @@ export function ReaksanDashboard({
   }));
 
   const firstName = userName.trim().split(/\s+/)[0] || "Peneliti";
-  const searchMatches = useMemo(
-    () =>
-      rooms.filter((room) =>
-        `${room.name} ${room.description}`
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()),
-      ),
-    [rooms, searchTerm],
-  );
+  const equipmentByRoom = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const eq of catalog.equipment) {
+      const existing = map.get(eq.roomId) ?? [];
+      existing.push(eq.name, eq.typeName);
+      map.set(eq.roomId, existing);
+    }
+    return map;
+  }, [catalog.equipment]);
+
+  const searchMatches = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return rooms;
+    return rooms.filter((room) => {
+      const eqNames = equipmentByRoom.get(room.id) ?? [];
+      return `${room.name} ${room.shortName} ${room.description} ${eqNames.join(" ")}`
+        .toLowerCase()
+        .includes(q);
+    });
+  }, [rooms, searchTerm, equipmentByRoom]);
   const selectedRoomMatchesSearch = currentRoom
     ? searchMatches.some((room) => room.id === currentRoom.id)
     : false;
@@ -601,6 +649,7 @@ export function ReaksanDashboard({
                 selectedRoom={visibleSelectedRoom}
                 onSelectRoom={setSelectedRoom}
                 searchTerm={searchTerm}
+                equipmentByRoom={equipmentByRoom}
               />
             </div>
 

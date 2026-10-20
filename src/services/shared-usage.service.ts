@@ -4,9 +4,9 @@ import { alias } from "drizzle-orm/pg-core";
 import { ApiError } from "@/lib/api";
 import { db } from "@/db";
 import {
-  equipmentAsset,
-  equipmentType,
-  equipmentUnit,
+  instrumentAsset,
+  instrumentType,
+  instrumentUnit,
   reservation,
   resourceRequest,
   room,
@@ -69,12 +69,12 @@ const sharedSelection = {
   purpose: sharedUsageRequest.purpose,
   createdAt: sharedUsageRequest.createdAt,
   respondedAt: sharedUsageRequest.respondedAt,
-  unitCode: equipmentUnit.code,
-  unitLabel: equipmentUnit.label,
-  assetCode: equipmentAsset.assetCode,
-  assetName: equipmentType.name,
-  assetImageMediaId: equipmentAsset.imageMediaId,
-  typeImageMediaId: equipmentType.imageMediaId,
+  unitCode: instrumentUnit.code,
+  unitLabel: instrumentUnit.label,
+  assetCode: instrumentAsset.assetCode,
+  assetName: instrumentType.name,
+  assetImageMediaId: instrumentAsset.imageMediaId,
+  typeImageMediaId: instrumentType.imageMediaId,
   roomCode: room.code,
   roomName: room.name,
 };
@@ -157,13 +157,13 @@ async function loadSharedRows(
       resourceRequest,
       eq(resourceRequest.id, reservation.requestId),
     )
-    .innerJoin(equipmentUnit, eq(equipmentUnit.id, reservation.equipmentUnitId))
+    .innerJoin(instrumentUnit, eq(instrumentUnit.id, reservation.instrumentUnitId))
     .innerJoin(
-      equipmentAsset,
-      eq(equipmentAsset.id, reservation.equipmentAssetId),
+      instrumentAsset,
+      eq(instrumentAsset.id, reservation.instrumentAssetId),
     )
-    .innerJoin(equipmentType, eq(equipmentType.id, equipmentAsset.equipmentTypeId))
-    .innerJoin(room, eq(room.id, equipmentAsset.roomId))
+    .innerJoin(instrumentType, eq(instrumentType.id, instrumentAsset.instrumentTypeId))
+    .innerJoin(room, eq(room.id, instrumentAsset.roomId))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(sharedUsageRequest.createdAt))
     .limit(options.limit ?? 200);
@@ -207,25 +207,25 @@ export async function loadSharedUsagePage(
       requestId: reservation.requestId,
       requestCode: resourceRequest.code,
       requestTitle: resourceRequest.title,
-      unitCode: equipmentUnit.code,
-      unitLabel: equipmentUnit.label,
-      assetCode: equipmentAsset.assetCode,
-      assetName: equipmentType.name,
-      assetImageMediaId: equipmentAsset.imageMediaId,
-      typeImageMediaId: equipmentType.imageMediaId,
+      unitCode: instrumentUnit.code,
+      unitLabel: instrumentUnit.label,
+      assetCode: instrumentAsset.assetCode,
+      assetName: instrumentType.name,
+      assetImageMediaId: instrumentAsset.imageMediaId,
+      typeImageMediaId: instrumentType.imageMediaId,
       roomCode: room.code,
       roomName: room.name,
     })
     .from(reservation)
     .innerJoin(user, eq(user.id, reservation.primaryUserId))
     .innerJoin(resourceRequest, eq(resourceRequest.id, reservation.requestId))
-    .innerJoin(equipmentUnit, eq(equipmentUnit.id, reservation.equipmentUnitId))
+    .innerJoin(instrumentUnit, eq(instrumentUnit.id, reservation.instrumentUnitId))
     .innerJoin(
-      equipmentAsset,
-      eq(equipmentAsset.id, reservation.equipmentAssetId),
+      instrumentAsset,
+      eq(instrumentAsset.id, reservation.instrumentAssetId),
     )
-    .innerJoin(equipmentType, eq(equipmentType.id, equipmentAsset.equipmentTypeId))
-    .innerJoin(room, eq(room.id, equipmentAsset.roomId))
+    .innerJoin(instrumentType, eq(instrumentType.id, instrumentAsset.instrumentTypeId))
+    .innerJoin(room, eq(room.id, instrumentAsset.roomId))
     .where(
       and(
         ne(reservation.primaryUserId, userId),
@@ -268,6 +268,7 @@ export async function loadSharedUsagePage(
       unitLabel: row.unitLabel,
       assetCode: row.assetCode,
       assetName: row.assetName,
+      classification: "INSTRUMENT",
       roomCode: row.roomCode,
       roomName: row.roomName,
       requestId: row.requestId,
@@ -301,15 +302,15 @@ export async function createSharedUsageRequest(
         startAt: reservation.startAt,
         endAt: reservation.endAt,
         primaryUserId: reservation.primaryUserId,
-        unitId: reservation.equipmentUnitId,
-        unitCode: equipmentUnit.code,
+        unitId: reservation.instrumentUnitId,
+        unitCode: instrumentUnit.code,
         requestCode: resourceRequest.code,
         primaryName: user.name,
       })
       .from(reservation)
       .innerJoin(
-        equipmentUnit,
-        eq(equipmentUnit.id, reservation.equipmentUnitId),
+        instrumentUnit,
+        eq(instrumentUnit.id, reservation.instrumentUnitId),
       )
       .innerJoin(resourceRequest, eq(resourceRequest.id, reservation.requestId))
       .innerJoin(user, eq(user.id, reservation.primaryUserId))
@@ -364,7 +365,7 @@ export async function createSharedUsageRequest(
       .from(reservation)
       .where(
         and(
-          eq(reservation.equipmentUnitId, row.unitId),
+          eq(reservation.instrumentUnitId, row.unitId!),
           eq(reservation.primaryUserId, userId),
           inArray(reservation.status, ["RESERVED", "ACTIVE"]),
           sql`${reservation.startAt} < ${endAt}`,
@@ -435,14 +436,14 @@ export async function respondSharedUsage(
         purpose: sharedUsageRequest.purpose,
         reservationStatus: reservation.status,
         primaryUserId: reservation.primaryUserId,
-        unitCode: equipmentUnit.code,
+        unitCode: instrumentUnit.code,
         requestCode: resourceRequest.code,
       })
       .from(sharedUsageRequest)
       .innerJoin(reservation, eq(reservation.id, sharedUsageRequest.reservationId))
       .innerJoin(
-        equipmentUnit,
-        eq(equipmentUnit.id, reservation.equipmentUnitId),
+        instrumentUnit,
+        eq(instrumentUnit.id, reservation.instrumentUnitId),
       )
       .innerJoin(resourceRequest, eq(resourceRequest.id, reservation.requestId))
       .where(eq(sharedUsageRequest.id, id))
@@ -583,12 +584,12 @@ async function loadConfirmedSharedUsage(
       requestId: resourceRequest.id,
       requestCode: resourceRequest.code,
       requestTitle: resourceRequest.title,
-      unitCode: equipmentUnit.code,
-      unitLabel: equipmentUnit.label,
-      assetCode: equipmentAsset.assetCode,
-      assetName: equipmentType.name,
-      assetImageMediaId: equipmentAsset.imageMediaId,
-      typeImageMediaId: equipmentType.imageMediaId,
+      unitCode: instrumentUnit.code,
+      unitLabel: instrumentUnit.label,
+      assetCode: instrumentAsset.assetCode,
+      assetName: instrumentType.name,
+      assetImageMediaId: instrumentAsset.imageMediaId,
+      typeImageMediaId: instrumentType.imageMediaId,
       roomCode: room.code,
       roomName: room.name,
     })
@@ -597,13 +598,13 @@ async function loadConfirmedSharedUsage(
     .innerJoin(sharedUser, eq(sharedUser.id, sharedUsage.userId))
     .innerJoin(primaryUser, eq(primaryUser.id, reservation.primaryUserId))
     .innerJoin(resourceRequest, eq(resourceRequest.id, reservation.requestId))
-    .innerJoin(equipmentUnit, eq(equipmentUnit.id, reservation.equipmentUnitId))
+    .innerJoin(instrumentUnit, eq(instrumentUnit.id, reservation.instrumentUnitId))
     .innerJoin(
-      equipmentAsset,
-      eq(equipmentAsset.id, reservation.equipmentAssetId),
+      instrumentAsset,
+      eq(instrumentAsset.id, reservation.instrumentAssetId),
     )
-    .innerJoin(equipmentType, eq(equipmentType.id, equipmentAsset.equipmentTypeId))
-    .innerJoin(room, eq(room.id, equipmentAsset.roomId))
+    .innerJoin(instrumentType, eq(instrumentType.id, instrumentAsset.instrumentTypeId))
+    .innerJoin(room, eq(room.id, instrumentAsset.roomId))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(asc(sharedUsage.startAt))
     .limit(500);
@@ -614,6 +615,7 @@ async function loadConfirmedSharedUsage(
     unitLabel: row.unitLabel,
     assetCode: row.assetCode,
     assetName: row.assetName,
+    classification: "INSTRUMENT",
     roomCode: row.roomCode,
     roomName: row.roomName,
     requestId: row.requestId,
@@ -627,6 +629,11 @@ async function loadConfirmedSharedUsage(
     purpose: row.purpose ?? `Shared usage ${row.requestCode}`,
     mine: options.viewerId ? row.userId === options.viewerId : false,
     imageMediaId: row.assetImageMediaId ?? row.typeImageMediaId ?? null,
+    supervisor: null,
+    fieldPic: null,
+    issuedAt: null,
+    returnedAt: null,
+    materials: [],
   }));
 }
 

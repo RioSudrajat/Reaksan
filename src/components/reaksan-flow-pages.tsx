@@ -310,15 +310,6 @@ export function RoomDetailPage({
   const roomMaterials = catalog.materials.filter(
     (material) => material.roomId === room?.id,
   );
-  const roomMaintenanceUnits = roomAssets.flatMap((asset) =>
-    asset.units
-      .filter((unit) => unit.status === "Maintenance")
-      .map((unit) => ({
-        ...unit,
-        assetId: asset.id,
-        assetName: asset.name,
-      })),
-  );
   const [expandedAssetId, setExpandedAssetId] = useState<string>("");
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
@@ -424,47 +415,6 @@ export function RoomDetailPage({
           </div>
         ))}
       </div>
-
-      {roomMaintenanceUnits.length > 0 && (
-        <div className="mt-4 rounded-2xl border border-[#FDE9E9] bg-[#FFF8F8] p-4 sm:p-5">
-          <div className="flex items-center gap-2 text-[#9E3636]">
-            <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
-            <h4 className="text-[13px] font-bold">
-              {roomMaintenanceUnits.length} unit dalam perbaikan / pemeriksaan teknis
-            </h4>
-          </div>
-          <p className="mt-1 text-[11px] text-[#64748B]">
-            Unit berikut sedang dalam penanganan teknisi atau kalibrasi berkala dan tidak dapat dipilih untuk reservasi sampai diselesaikan oleh PLP.
-          </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {roomMaintenanceUnits.map((u) => (
-              <div
-                key={u.id}
-                className="flex items-start gap-3 rounded-xl border border-[#F7D0D0] bg-white p-3 shadow-xs"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-1">
-                    <p className="truncate text-[12px] font-bold text-[#1E293B]">
-                      {u.label}
-                    </p>
-                    <span className="rounded-md bg-[#FDE9E9] px-1.5 py-0.5 text-[10px] font-semibold text-[#9E3636]">
-                      {u.condition ? u.condition.replace(/_/g, " ") : "Perbaikan"}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 truncate text-[11px] text-[#64748B]">
-                    {u.assetName}
-                  </p>
-                  {u.notes && (
-                    <p className="mt-1.5 rounded-lg bg-[#FAF9F6] px-2 py-1 text-[10px] text-[#64748B] italic">
-                      &quot;{u.notes}&quot;
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <section id="schedule" className="mt-4 dashboard-card p-5 sm:p-6">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">

@@ -174,13 +174,22 @@ export function auditRoomScopeSql(codes: string[]): SQL {
       SELECT b.id::text FROM material_batch b
       JOIN room r ON r.id = b.room_id WHERE r.code IN ${codeList}
     ))
-    OR (${auditLog.entityType} = 'equipment_asset' AND ${auditLog.entityId} IN (
-      SELECT a.id::text FROM equipment_asset a
+    OR (${auditLog.entityType} IN ('instrument_asset', 'equipment_asset') AND ${auditLog.entityId} IN (
+      SELECT a.id::text FROM instrument_asset a
       JOIN room r ON r.id = a.room_id WHERE r.code IN ${codeList}
     ))
-    OR (${auditLog.entityType} = 'equipment_unit' AND ${auditLog.entityId} IN (
-      SELECT u.id::text FROM equipment_unit u
-      JOIN equipment_asset a ON a.id = u.equipment_asset_id
+    OR (${auditLog.entityType} IN ('instrument_unit', 'equipment_unit') AND ${auditLog.entityId} IN (
+      SELECT u.id::text FROM instrument_unit u
+      JOIN instrument_asset a ON a.id = u.instrument_asset_id
+      JOIN room r ON r.id = a.room_id WHERE r.code IN ${codeList}
+    ))
+    OR (${auditLog.entityType} = 'tool_asset' AND ${auditLog.entityId} IN (
+      SELECT a.id::text FROM tool_asset a
+      JOIN room r ON r.id = a.room_id WHERE r.code IN ${codeList}
+    ))
+    OR (${auditLog.entityType} = 'tool_unit' AND ${auditLog.entityId} IN (
+      SELECT u.id::text FROM tool_unit u
+      JOIN tool_asset a ON a.id = u.tool_asset_id
       JOIN room r ON r.id = a.room_id WHERE r.code IN ${codeList}
     ))
     OR (${auditLog.entityType} = 'stock_opname_session' AND ${auditLog.entityId} IN (

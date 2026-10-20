@@ -46,12 +46,20 @@ async function main() {
 
     // 3. Lookup units and materials in lab-fisik
     const unitsRes = await client.query(`
-      SELECT eu.id as unit_id, eu.code as unit_code, eu.label as unit_label,
-             ea.id as asset_id, ea.asset_code, et.name as asset_name, et.classification
-      FROM equipment_unit eu
-      JOIN equipment_asset ea ON ea.id = eu.equipment_asset_id
-      JOIN equipment_type et ON et.id = ea.equipment_type_id
-      JOIN room rm ON rm.id = ea.room_id
+      SELECT iu.id as unit_id, iu.code as unit_code, iu.label as unit_label,
+             ia.id as asset_id, ia.asset_code, it.name as asset_name, 'INSTRUMENT' as classification
+      FROM instrument_unit iu
+      JOIN instrument_asset ia ON ia.id = iu.instrument_asset_id
+      JOIN instrument_type it ON it.id = ia.instrument_type_id
+      JOIN room rm ON rm.id = ia.room_id
+      WHERE rm.code = 'lab-fisik'
+      UNION ALL
+      SELECT tu.id as unit_id, tu.code as unit_code, tu.label as unit_label,
+             ta.id as asset_id, ta.asset_code, tt.name as asset_name, 'TOOL' as classification
+      FROM tool_unit tu
+      JOIN tool_asset ta ON ta.id = tu.tool_asset_id
+      JOIN tool_type tt ON tt.id = ta.tool_type_id
+      JOIN room rm ON rm.id = ta.room_id
       WHERE rm.code = 'lab-fisik'
     `);
     const unitsMap = new Map();
@@ -310,7 +318,8 @@ async function main() {
         await client.query("DELETE FROM issue_transaction WHERE request_id = $1", [reqId]);
         await client.query("DELETE FROM stock_transaction WHERE reference_type = 'resource_request' AND reference_id = $1", [reqId]);
         await client.query("DELETE FROM reservation WHERE request_id = $1", [reqId]);
-        await client.query("DELETE FROM equipment_request_item WHERE request_id = $1", [reqId]);
+        await client.query("DELETE FROM instrument_request_item WHERE request_id = $1", [reqId]);
+        await client.query("DELETE FROM tool_request_item WHERE request_id = $1", [reqId]);
         await client.query("DELETE FROM material_request_item WHERE request_id = $1", [reqId]);
         await client.query("DELETE FROM resource_request WHERE id = $1", [reqId]);
       }
@@ -357,81 +366,153 @@ async function main() {
           continue;
         }
 
+        const isTool = u.classification === "TOOL";
         const equipItemId = randomUUID();
-        await client.query(`
-          INSERT INTO equipment_request_item (
-            id, request_id, equipment_asset_id, equipment_unit_id, start_at, end_at, purpose
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-        `, [
-          equipItemId,
-          requestId,
-          u.asset_id,
-          u.unit_id,
-          item.startAt,
-          item.endAt,
-          item.purpose,
-        ]);
+        if (isTool) {
+          await client.query(`
+            INSERT INTO tool_request_item (
+              id, request_id, tool_asset_id, tool_unit_id, start_at, end_at, purpose
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+          `, [
+            equipItemId,
+            requestId,
+            u.asset_id,
+            u.unit_id,
+            item.startAt,
+            item.endAt,
+            item.purpose,
+          ]);
+        } else {
+          await client.query(`
+            INSERT INTO instrument_request_item (
+              id, request_id, instrument_asset_id, instrument_unit_id, start_at, end_at, purpose
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+          `, [
+            equipItemId,
+            requestId,
+            u.asset_id,
+            u.unit_id,
+            item.startAt,
+            item.endAt,
+            item.purpose,
+          ]);
+        }
 
         // Insert reservation for active/approved/ready/completed
         if (["APPROVED", "READY_FOR_PICKUP", "ACTIVE", "COMPLETED", "OVERDUE"].includes(item.status)) {
           const resvId = randomUUID();
           const resvStatus = item.status === "COMPLETED" ? "COMPLETED" : item.status === "ACTIVE" || item.status === "OVERDUE" ? "ACTIVE" : "RESERVED";
-          await client.query(`
-            INSERT INTO reservation (
-              id, request_id, equipment_asset_id, equipment_unit_id, primary_user_id,
-              start_at, end_at, status, purpose
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-          `, [
-            resvId,
-            requestId,
-            u.asset_id,
-            u.unit_id,
-            item.student.id,
-            item.startAt,
-            item.endAt,
-            resvStatus,
-            item.purpose,
-          ]);
+          if (isTool) {
+            await client.query(`
+              INSERT INTO reservation (
+                id, request_id, tool_asset_id, tool_unit_id, primary_user_id,
+                start_at, end_at, status, purpose
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            `, [
+              resvId,
+              requestId,
+              u.asset_id,
+              u.unit_id,
+              item.student.id,
+              item.startAt,
+              item.endAt,
+              resvStatus,
+              item.purpose,
+            ]);
+          } else {
+            await client.query(`
+              INSERT INTO reservation (
+                id, request_id, instrument_asset_id, instrument_unit_id, primary_user_id,
+                start_at, end_at, status, purpose
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            `, [
+              resvId,
+              requestId,
+              u.asset_id,
+              u.unit_id,
+              item.student.id,
+              item.startAt,
+              item.endAt,
+              resvStatus,
+              item.purpose,
+            ]);
+          }
         }
 
-        // Update equipment unit status to match current reality
+        // Update unit status to match current reality
+        const unitTable = isTool ? "tool_unit" : "instrument_unit";
         await client.query(`
-          UPDATE equipment_unit SET status = $1 WHERE id = $2
+          UPDATE ${unitTable} SET status = $1 WHERE id = $2
         `, [item.unitStatus, u.unit_id]);
 
         // Handle issue and return transactions if applicable
         if (item.issued) {
           const issueId = randomUUID();
-          await client.query(`
-            INSERT INTO issue_transaction (
-              id, request_id, equipment_asset_id, equipment_unit_id, issued_to_id, issued_by_id,
-              quantity, condition_at_issue, issued_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, 1, 'GOOD', $7)
-          `, [
-            issueId,
-            requestId,
-            u.asset_id,
-            u.unit_id,
-            item.student.id,
-            plp.id,
-            item.startAt,
-          ]);
+          if (isTool) {
+            await client.query(`
+              INSERT INTO issue_transaction (
+                id, request_id, tool_asset_id, tool_unit_id, issued_to_id, issued_by_id,
+                quantity, condition_at_issue, issued_at
+              ) VALUES ($1, $2, $3, $4, $5, $6, 1, 'GOOD', $7)
+            `, [
+              issueId,
+              requestId,
+              u.asset_id,
+              u.unit_id,
+              item.student.id,
+              plp.id,
+              item.startAt,
+            ]);
+          } else {
+            await client.query(`
+              INSERT INTO issue_transaction (
+                id, request_id, instrument_asset_id, instrument_unit_id, issued_to_id, issued_by_id,
+                quantity, condition_at_issue, issued_at
+              ) VALUES ($1, $2, $3, $4, $5, $6, 1, 'GOOD', $7)
+            `, [
+              issueId,
+              requestId,
+              u.asset_id,
+              u.unit_id,
+              item.student.id,
+              plp.id,
+              item.startAt,
+            ]);
+          }
 
           if (item.returned) {
             const returnId = randomUUID();
-            await client.query(`
-              INSERT INTO return_transaction (
-                id, issue_transaction_id, equipment_asset_id, returned_by_id, received_by_id,
-                condition_at_return, notes, returned_at
-              ) VALUES ($1, $2, $3, $4, $5, 'GOOD', 'Alat dikembalikan bersih dan berfungsi normal.', $6)
-            `, [
-              returnId,
-              issueId,
-              u.asset_id,
-              item.student.id,
-              plp.id,
-              item.completedAt || item.endAt,
-            ]);
+            if (isTool) {
+              await client.query(`
+                INSERT INTO return_transaction (
+                  id, issue_transaction_id, tool_asset_id, tool_unit_id, returned_by_id, received_by_id,
+                  condition_at_return, notes, returned_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, 'GOOD', 'Alat dikembalikan bersih dan berfungsi normal.', $7)
+              `, [
+                returnId,
+                issueId,
+                u.asset_id,
+                u.unit_id,
+                item.student.id,
+                plp.id,
+                item.completedAt || item.endAt,
+              ]);
+            } else {
+              await client.query(`
+                INSERT INTO return_transaction (
+                  id, issue_transaction_id, instrument_asset_id, instrument_unit_id, returned_by_id, received_by_id,
+                  condition_at_return, notes, returned_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, 'GOOD', 'Alat dikembalikan bersih dan berfungsi normal.', $7)
+              `, [
+                returnId,
+                issueId,
+                u.asset_id,
+                u.unit_id,
+                item.student.id,
+                plp.id,
+                item.completedAt || item.endAt,
+              ]);
+            }
           }
         }
       }

@@ -2,7 +2,17 @@ import "server-only";
 import QRCode from "qrcode";
 import { eq, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
-import { equipmentUnit, equipmentAsset, equipmentType, materialBatch, material, stockOpnameEntry } from "@/db/schema";
+import {
+  instrumentUnit,
+  instrumentAsset,
+  instrumentType,
+  toolUnit,
+  toolAsset,
+  toolType,
+  materialBatch,
+  material,
+  stockOpnameEntry,
+} from "@/db/schema";
 
 export type QrTargetType = "UNIT" | "BATCH" | "ASSET";
 
@@ -26,120 +36,46 @@ export async function generateUnitQrCode(
   fallbackClassification?: string | null,
   fallbackLocation?: string | null,
 ) {
-  let units = await db
+  // 1. Check instrumentUnit
+  const instrumentRows = await db
     .select({
-      id: equipmentUnit.id,
-      code: equipmentUnit.code,
-      label: equipmentUnit.label,
-      qrCode: equipmentUnit.qrCode,
-      storageLocation: equipmentUnit.storageLocation,
-      assetCode: equipmentAsset.assetCode,
-      typeName: equipmentType.name,
-      classification: equipmentType.classification,
+      id: instrumentUnit.id,
+      code: instrumentUnit.code,
+      label: instrumentUnit.label,
+      qrCode: instrumentUnit.qrCode,
+      storageLocation: instrumentUnit.storageLocation,
+      assetCode: instrumentAsset.assetCode,
+      typeName: instrumentType.name,
     })
-    .from(equipmentUnit)
-    .innerJoin(equipmentAsset, eq(equipmentUnit.equipmentAssetId, equipmentAsset.id))
-    .innerJoin(equipmentType, eq(equipmentAsset.equipmentTypeId, equipmentType.id))
-    .where(eq(equipmentUnit.id, unitId))
+    .from(instrumentUnit)
+    .innerJoin(
+      instrumentAsset,
+      eq(instrumentUnit.instrumentAssetId, instrumentAsset.id),
+    )
+    .innerJoin(
+      instrumentType,
+      eq(instrumentAsset.instrumentTypeId, instrumentType.id),
+    )
+    .where(or(eq(instrumentUnit.id, unitId), eq(instrumentUnit.code, unitId)))
     .limit(1);
 
-  if (units.length === 0) {
-    units = await db
-      .select({
-        id: equipmentUnit.id,
-        code: equipmentUnit.code,
-        label: equipmentUnit.label,
-        qrCode: equipmentUnit.qrCode,
-        storageLocation: equipmentUnit.storageLocation,
-        assetCode: equipmentAsset.assetCode,
-        typeName: equipmentType.name,
-        classification: equipmentType.classification,
-      })
-      .from(equipmentUnit)
-      .innerJoin(equipmentAsset, eq(equipmentUnit.equipmentAssetId, equipmentAsset.id))
-      .innerJoin(equipmentType, eq(equipmentAsset.equipmentTypeId, equipmentType.id))
-      .where(eq(equipmentUnit.code, unitId))
-      .limit(1);
-  }
-
-  if (units.length === 0) {
-    const [opEntry] = await db
-      .select({
-        id: stockOpnameEntry.id,
-        equipmentAssetId: stockOpnameEntry.equipmentAssetId,
-        equipmentUnitId: stockOpnameEntry.equipmentUnitId,
-      })
-      .from(stockOpnameEntry)
-      .where(eq(stockOpnameEntry.id, unitId))
-      .limit(1);
-
-    if (opEntry?.equipmentAssetId) {
-      return generateAssetQrCode(
-        opEntry.equipmentAssetId,
-        forceRegenerate,
-        fallbackCode,
-        fallbackName,
-        fallbackClassification,
-        fallbackLocation,
-      );
-    }
-
-    if (opEntry?.equipmentUnitId) {
-      units = await db
-        .select({
-          id: equipmentUnit.id,
-          code: equipmentUnit.code,
-          label: equipmentUnit.label,
-          qrCode: equipmentUnit.qrCode,
-          storageLocation: equipmentUnit.storageLocation,
-          assetCode: equipmentAsset.assetCode,
-          typeName: equipmentType.name,
-          classification: equipmentType.classification,
-        })
-        .from(equipmentUnit)
-        .innerJoin(equipmentAsset, eq(equipmentUnit.equipmentAssetId, equipmentAsset.id))
-        .innerJoin(equipmentType, eq(equipmentAsset.equipmentTypeId, equipmentType.id))
-        .where(eq(equipmentUnit.id, opEntry.equipmentUnitId))
-        .limit(1);
-    }
-  }
-
-  // If still not found, check if unitId is an equipmentAsset directly
-  if (units.length === 0) {
-    const assets = await db
-      .select({ id: equipmentAsset.id })
-      .from(equipmentAsset)
-      .where(or(eq(equipmentAsset.id, unitId), eq(equipmentAsset.assetCode, unitId)))
-      .limit(1);
-    if (assets.length > 0) {
-      return generateAssetQrCode(
-        assets[0].id,
-        forceRegenerate,
-        fallbackCode,
-        fallbackName,
-        fallbackClassification,
-        fallbackLocation,
-      );
-    }
-  }
-
-  if (units.length > 0) {
-    const unit = units[0];
+  if (instrumentRows.length > 0) {
+    const unit = instrumentRows[0];
     let finalQrCode = unit.qrCode;
 
     if (!finalQrCode || forceRegenerate) {
       const suffix = forceRegenerate
         ? `-${Date.now().toString(36).slice(-4).toUpperCase()}`
         : "";
-      finalQrCode = `RK-UNT-${unit.code}${suffix}`;
+      finalQrCode = `RK-INS-${unit.code}${suffix}`;
 
       await db
-        .update(equipmentUnit)
+        .update(instrumentUnit)
         .set({
           qrCode: finalQrCode,
           updatedAt: new Date(),
         })
-        .where(eq(equipmentUnit.id, unit.id));
+        .where(eq(instrumentUnit.id, unit.id));
     }
 
     const svg = await generateQrSvg(finalQrCode);
@@ -149,13 +85,160 @@ export async function generateUnitQrCode(
       id: unit.id,
       code: unit.code,
       name: unit.typeName,
-      classification: unit.classification,
+      classification: "INSTRUMENT" as const,
       storageLocation: unit.storageLocation ?? "Belum ditentukan",
       qrCode: finalQrCode,
       svg,
     };
   }
 
+  // 2. Check toolUnit
+  const toolRows = await db
+    .select({
+      id: toolUnit.id,
+      code: toolUnit.code,
+      label: toolUnit.label,
+      qrCode: toolUnit.qrCode,
+      storageLocation: toolUnit.storageLocation,
+      assetCode: toolAsset.assetCode,
+      typeName: toolType.name,
+    })
+    .from(toolUnit)
+    .innerJoin(toolAsset, eq(toolUnit.toolAssetId, toolAsset.id))
+    .innerJoin(toolType, eq(toolAsset.toolTypeId, toolType.id))
+    .where(or(eq(toolUnit.id, unitId), eq(toolUnit.code, unitId)))
+    .limit(1);
+
+  if (toolRows.length > 0) {
+    const unit = toolRows[0];
+    let finalQrCode = unit.qrCode;
+
+    if (!finalQrCode || forceRegenerate) {
+      const suffix = forceRegenerate
+        ? `-${Date.now().toString(36).slice(-4).toUpperCase()}`
+        : "";
+      finalQrCode = `RK-TOL-${unit.code}${suffix}`;
+
+      await db
+        .update(toolUnit)
+        .set({
+          qrCode: finalQrCode,
+          updatedAt: new Date(),
+        })
+        .where(eq(toolUnit.id, unit.id));
+    }
+
+    const svg = await generateQrSvg(finalQrCode);
+
+    return {
+      targetType: "UNIT" as const,
+      id: unit.id,
+      code: unit.code,
+      name: unit.typeName,
+      classification: "TOOL" as const,
+      storageLocation: unit.storageLocation ?? "Belum ditentukan",
+      qrCode: finalQrCode,
+      svg,
+    };
+  }
+
+  // 3. Check stockOpnameEntry if unitId is an opname entry id
+  const [opEntry] = await db
+    .select({
+      id: stockOpnameEntry.id,
+      instrumentAssetId: stockOpnameEntry.instrumentAssetId,
+      instrumentUnitId: stockOpnameEntry.instrumentUnitId,
+      toolAssetId: stockOpnameEntry.toolAssetId,
+      toolUnitId: stockOpnameEntry.toolUnitId,
+    })
+    .from(stockOpnameEntry)
+    .where(eq(stockOpnameEntry.id, unitId))
+    .limit(1);
+
+  if (opEntry) {
+    if (opEntry.instrumentUnitId) {
+      return generateUnitQrCode(
+        opEntry.instrumentUnitId,
+        forceRegenerate,
+        fallbackCode,
+        fallbackName,
+        "INSTRUMENT",
+        fallbackLocation,
+      );
+    }
+    if (opEntry.toolUnitId) {
+      return generateUnitQrCode(
+        opEntry.toolUnitId,
+        forceRegenerate,
+        fallbackCode,
+        fallbackName,
+        "TOOL",
+        fallbackLocation,
+      );
+    }
+    if (opEntry.instrumentAssetId) {
+      return generateAssetQrCode(
+        opEntry.instrumentAssetId,
+        forceRegenerate,
+        fallbackCode,
+        fallbackName,
+        "INSTRUMENT",
+        fallbackLocation,
+      );
+    }
+    if (opEntry.toolAssetId) {
+      return generateAssetQrCode(
+        opEntry.toolAssetId,
+        forceRegenerate,
+        fallbackCode,
+        fallbackName,
+        "TOOL",
+        fallbackLocation,
+      );
+    }
+  }
+
+  // 4. Check if unitId is an asset directly
+  const [instAsset] = await db
+    .select({ id: instrumentAsset.id })
+    .from(instrumentAsset)
+    .where(
+      or(
+        eq(instrumentAsset.id, unitId),
+        eq(instrumentAsset.assetCode, unitId),
+      ),
+    )
+    .limit(1);
+  if (instAsset) {
+    return generateAssetQrCode(
+      instAsset.id,
+      forceRegenerate,
+      fallbackCode,
+      fallbackName,
+      "INSTRUMENT",
+      fallbackLocation,
+    );
+  }
+
+  const [tAsset] = await db
+    .select({ id: toolAsset.id })
+    .from(toolAsset)
+    .where(
+      or(eq(toolAsset.id, unitId), eq(toolAsset.assetCode, unitId)),
+    )
+    .limit(1);
+  if (tAsset) {
+    return generateAssetQrCode(
+      tAsset.id,
+      forceRegenerate,
+      fallbackCode,
+      fallbackName,
+      "TOOL",
+      fallbackLocation,
+    );
+  }
+
+  // Fallback
   const code = fallbackCode ?? `UNT-${unitId.slice(0, 8).toUpperCase()}`;
   const suffix = forceRegenerate
     ? `-${Date.now().toString(36).slice(-4).toUpperCase()}`
@@ -183,30 +266,33 @@ export async function generateAssetQrCode(
   fallbackClassification?: string | null,
   fallbackLocation?: string | null,
 ) {
-  const assets = await db
+  // Check instrumentAsset
+  const instAssets = await db
     .select({
-      id: equipmentAsset.id,
-      assetCode: equipmentAsset.assetCode,
-      serialNumber: equipmentAsset.serialNumber,
-      typeName: equipmentType.name,
-      classification: equipmentType.classification,
+      id: instrumentAsset.id,
+      assetCode: instrumentAsset.assetCode,
+      serialNumber: instrumentAsset.serialNumber,
+      typeName: instrumentType.name,
     })
-    .from(equipmentAsset)
+    .from(instrumentAsset)
     .innerJoin(
-      equipmentType,
-      eq(equipmentAsset.equipmentTypeId, equipmentType.id),
+      instrumentType,
+      eq(instrumentAsset.instrumentTypeId, instrumentType.id),
     )
     .where(
-      or(eq(equipmentAsset.id, assetId), eq(equipmentAsset.assetCode, assetId)),
+      or(
+        eq(instrumentAsset.id, assetId),
+        eq(instrumentAsset.assetCode, assetId),
+      ),
     )
     .limit(1);
 
-  if (assets.length > 0) {
-    const asset = assets[0];
+  if (instAssets.length > 0) {
+    const asset = instAssets[0];
     const suffix = forceRegenerate
       ? `-${Date.now().toString(36).slice(-4).toUpperCase()}`
       : "";
-    const finalQrCode = `RK-AST-${asset.assetCode}${suffix}`;
+    const finalQrCode = `RK-INS-AST-${asset.assetCode}${suffix}`;
     const svg = await generateQrSvg(finalQrCode);
 
     return {
@@ -214,12 +300,43 @@ export async function generateAssetQrCode(
       id: asset.id,
       code: asset.assetCode,
       name: asset.typeName,
-      classification: asset.classification,
-      storageLocation:
-        fallbackLocation ??
-        (asset.classification === "TOOL"
-          ? "Meja Praktikum 1-4"
-          : "Gudang Instrumen"),
+      classification: "INSTRUMENT" as const,
+      storageLocation: fallbackLocation ?? "Gudang Instrumen",
+      qrCode: finalQrCode,
+      svg,
+    };
+  }
+
+  // Check toolAsset
+  const toolAssets = await db
+    .select({
+      id: toolAsset.id,
+      assetCode: toolAsset.assetCode,
+      serialNumber: toolAsset.serialNumber,
+      typeName: toolType.name,
+    })
+    .from(toolAsset)
+    .innerJoin(toolType, eq(toolAsset.toolTypeId, toolType.id))
+    .where(
+      or(eq(toolAsset.id, assetId), eq(toolAsset.assetCode, assetId)),
+    )
+    .limit(1);
+
+  if (toolAssets.length > 0) {
+    const asset = toolAssets[0];
+    const suffix = forceRegenerate
+      ? `-${Date.now().toString(36).slice(-4).toUpperCase()}`
+      : "";
+    const finalQrCode = `RK-TOL-AST-${asset.assetCode}${suffix}`;
+    const svg = await generateQrSvg(finalQrCode);
+
+    return {
+      targetType: "ASSET" as const,
+      id: asset.id,
+      code: asset.assetCode,
+      name: asset.typeName,
+      classification: "TOOL" as const,
+      storageLocation: fallbackLocation ?? "Meja Praktikum",
       qrCode: finalQrCode,
       svg,
     };
@@ -367,26 +484,50 @@ export async function bulkGenerateMissingQrCodes(roomId?: string) {
   let unitsUpdated = 0;
   let batchesUpdated = 0;
 
-  // Find units with missing QR code
-  const missingUnits = await db
+  // Find instrumentUnits with missing QR code
+  const missingInstrumentUnits = await db
     .select({
-      id: equipmentUnit.id,
-      code: equipmentUnit.code,
+      id: instrumentUnit.id,
+      code: instrumentUnit.code,
     })
-    .from(equipmentUnit)
-    .innerJoin(equipmentAsset, eq(equipmentUnit.equipmentAssetId, equipmentAsset.id))
+    .from(instrumentUnit)
+    .innerJoin(
+      instrumentAsset,
+      eq(instrumentUnit.instrumentAssetId, instrumentAsset.id),
+    )
     .where(
       roomId
-        ? eq(equipmentAsset.roomId, roomId)
-        : isNull(equipmentUnit.qrCode),
+        ? eq(instrumentAsset.roomId, roomId)
+        : isNull(instrumentUnit.qrCode),
     );
 
-  for (const unit of missingUnits) {
-    const code = `RK-UNT-${unit.code}`;
+  for (const unit of missingInstrumentUnits) {
+    const code = `RK-INS-${unit.code}`;
     await db
-      .update(equipmentUnit)
+      .update(instrumentUnit)
       .set({ qrCode: code, updatedAt: new Date() })
-      .where(eq(equipmentUnit.id, unit.id));
+      .where(eq(instrumentUnit.id, unit.id));
+    unitsUpdated += 1;
+  }
+
+  // Find toolUnits with missing QR code
+  const missingToolUnits = await db
+    .select({
+      id: toolUnit.id,
+      code: toolUnit.code,
+    })
+    .from(toolUnit)
+    .innerJoin(toolAsset, eq(toolUnit.toolAssetId, toolAsset.id))
+    .where(
+      roomId ? eq(toolAsset.roomId, roomId) : isNull(toolUnit.qrCode),
+    );
+
+  for (const unit of missingToolUnits) {
+    const code = `RK-TOL-${unit.code}`;
+    await db
+      .update(toolUnit)
+      .set({ qrCode: code, updatedAt: new Date() })
+      .where(eq(toolUnit.id, unit.id));
     unitsUpdated += 1;
   }
 

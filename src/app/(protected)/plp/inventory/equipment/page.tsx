@@ -143,7 +143,7 @@ export default async function PlpEquipmentInventoryPage({
         description="Pantau kondisi fisik, penempatan meja praktikum, dan status pemakaian alat gelas dan perkakas laboratorium."
         actions={
           <AddAssetDialog
-            label="+ Tambah Alat / Glassware"
+            label="Tambah Alat / Glassware"
             defaultClassification="TOOL"
             defaultStorageLocation="Meja Praktikum 1-4"
             rooms={rooms.map((r) => ({ id: r.id, code: r.id, name: r.name }))}

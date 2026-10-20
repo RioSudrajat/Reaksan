@@ -3,12 +3,12 @@ import { and, asc, count, desc, eq, gte, inArray, lte, notInArray, sql } from "d
 import { db } from "@/db";
 import {
   auditLog,
-  equipmentAsset,
-  equipmentConditionHistory,
-  equipmentRequestItem,
-  equipmentType,
-  equipmentUnit,
   incident,
+  instrumentAsset,
+  instrumentConditionHistory,
+  instrumentRequestItem,
+  instrumentType,
+  instrumentUnit,
   issueTransaction,
   material,
   materialBatch,
@@ -20,6 +20,11 @@ import {
   room,
   stockOpnameEntry,
   stockTransaction,
+  toolAsset,
+  toolConditionHistory,
+  toolRequestItem,
+  toolType,
+  toolUnit,
   user,
 } from "@/db/schema";
 import { ApiError } from "@/lib/api";
@@ -260,7 +265,21 @@ export async function listPlpSchedule(input: {
     startAt: request.startAt,
     endAt: request.endAt,
   }));
+  const requestIds = new Set(requests.map((r) => r.id));
   for (const reservation of reservations) {
+    if (
+      input.kind !== "reservation" &&
+      reservation.requestId &&
+      requestIds.has(reservation.requestId)
+    ) {
+      continue;
+    }
+    const effectiveStatus =
+      reservation.requestStatus === "OVERDUE"
+        ? "OVERDUE"
+        : reservation.status === "ACTIVE"
+          ? "ACTIVE"
+          : "APPROVED";
     events.push({
       id: `reservation-${reservation.id}`,
       kind: "reservation",
@@ -271,7 +290,7 @@ export async function listPlpSchedule(input: {
       roomCode: reservation.roomCode,
       roomName: reservation.roomName,
       resource: `${reservation.assetName} · ${reservation.unitCode}`,
-      status: reservation.status,
+      status: effectiveStatus,
       startAt: reservation.startAt,
       endAt: reservation.endAt,
     });
@@ -285,6 +304,10 @@ async function loadEquipmentRows(
   exec: DbExecutor,
   roomCode?: string,
   roomCodes?: string[] | null,
+  options?: {
+    assetCode?: string;
+    classification?: "INSTRUMENT" | "TOOL";
+  },
 ): Promise<PlpEquipmentRow[]> {
   const scopeCondition =
     roomCodes === undefined || roomCodes === null
@@ -292,77 +315,182 @@ async function loadEquipmentRows(
       : roomCodes.length === 0
         ? sql`false`
         : inArray(room.code, roomCodes);
-  const assets = await exec
-    .select({
-      assetId: equipmentAsset.id,
-      assetCode: equipmentAsset.assetCode,
-      name: equipmentType.name,
-      category: equipmentType.category,
-      typeName: equipmentType.name,
-      classification: equipmentType.classification,
-      usageType: equipmentType.usageType,
-      status: equipmentAsset.status,
-      condition: equipmentAsset.condition,
-      notes: equipmentAsset.notes,
-      assetImageMediaId: equipmentAsset.imageMediaId,
-      typeImageMediaId: equipmentType.imageMediaId,
-      roomCode: room.code,
-      roomName: room.name,
-    })
-    .from(equipmentAsset)
-    .innerJoin(equipmentType, eq(equipmentType.id, equipmentAsset.equipmentTypeId))
-    .innerJoin(room, eq(room.id, equipmentAsset.roomId))
-    .where(
-      and(
-        eq(equipmentAsset.active, true),
-        roomCode ? eq(room.code, roomCode) : undefined,
-        scopeCondition,
-      ),
-    )
-    .orderBy(asc(equipmentAsset.assetCode));
-  if (assets.length === 0) return [];
-  const assetIds = assets.map((asset) => asset.assetId);
-  const [units, requestStats] = await Promise.all([
-    exec
-      .select({
-        unitId: equipmentUnit.id,
-        assetId: equipmentUnit.equipmentAssetId,
-        code: equipmentUnit.code,
-        label: equipmentUnit.label,
-        qrCode: equipmentUnit.qrCode,
-        storageLocation: equipmentUnit.storageLocation,
-        status: equipmentUnit.status,
-        condition: equipmentUnit.condition,
-        notes: equipmentUnit.notes,
-        active: equipmentUnit.active,
-      })
-      .from(equipmentUnit)
-      .where(
-        inArray(
-          equipmentUnit.equipmentAssetId,
-          assetIds,
-        ),
-      )
-      .orderBy(asc(equipmentUnit.code)),
-    exec
-      .select({
-        assetId: equipmentRequestItem.equipmentAssetId,
-        totalRequests: sql<number>`COUNT(DISTINCT ${resourceRequest.id})::int`,
-        activeRequests: sql<number>`COUNT(DISTINCT CASE WHEN ${resourceRequest.status} IN ('APPROVED', 'READY_FOR_PICKUP', 'ACTIVE', 'OVERDUE') THEN ${resourceRequest.id} END)::int`,
-      })
-      .from(equipmentRequestItem)
-      .innerJoin(
-        resourceRequest,
-        eq(resourceRequest.id, equipmentRequestItem.requestId),
-      )
-      .where(
-        and(
-          inArray(equipmentRequestItem.equipmentAssetId, assetIds),
-          notInArray(resourceRequest.status, ["CANCELLED", "REJECTED", "DRAFT"]),
-        ),
-      )
-      .groupBy(equipmentRequestItem.equipmentAssetId),
+  const wantInstruments =
+    !options?.classification || options.classification === "INSTRUMENT";
+  const wantTools =
+    !options?.classification || options.classification === "TOOL";
+  const [instrumentAssets, toolAssets] = await Promise.all([
+    wantInstruments
+      ? exec
+          .select({
+            assetId: instrumentAsset.id,
+            assetCode: instrumentAsset.assetCode,
+            name: instrumentType.name,
+            category: instrumentType.category,
+            typeName: instrumentType.name,
+            classification: sql<"INSTRUMENT">`'INSTRUMENT'`,
+            usageType: instrumentType.usageType,
+            status: instrumentAsset.status,
+            condition: instrumentAsset.condition,
+            notes: instrumentAsset.notes,
+            assetImageMediaId: instrumentAsset.imageMediaId,
+            typeImageMediaId: instrumentType.imageMediaId,
+            roomCode: room.code,
+            roomName: room.name,
+          })
+          .from(instrumentAsset)
+          .innerJoin(
+            instrumentType,
+            eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+          )
+          .innerJoin(room, eq(room.id, instrumentAsset.roomId))
+          .where(
+            and(
+              eq(instrumentAsset.active, true),
+              options?.assetCode
+                ? eq(instrumentAsset.assetCode, options.assetCode)
+                : undefined,
+              roomCode ? eq(room.code, roomCode) : undefined,
+              scopeCondition,
+            ),
+          )
+      : [],
+    wantTools
+      ? exec
+          .select({
+            assetId: toolAsset.id,
+            assetCode: toolAsset.assetCode,
+            name: toolType.name,
+            category: toolType.category,
+            typeName: toolType.name,
+            classification: sql<"TOOL">`'TOOL'`,
+            usageType: toolType.usageType,
+            status: toolAsset.status,
+            condition: toolAsset.condition,
+            notes: toolAsset.notes,
+            assetImageMediaId: toolAsset.imageMediaId,
+            typeImageMediaId: toolType.imageMediaId,
+            roomCode: room.code,
+            roomName: room.name,
+          })
+          .from(toolAsset)
+          .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
+          .innerJoin(room, eq(room.id, toolAsset.roomId))
+          .where(
+            and(
+              eq(toolAsset.active, true),
+              options?.assetCode
+                ? eq(toolAsset.assetCode, options.assetCode)
+                : undefined,
+              roomCode ? eq(room.code, roomCode) : undefined,
+              scopeCondition,
+            ),
+          )
+      : [],
   ]);
+  const assets = [...instrumentAssets, ...toolAssets].sort((a, b) =>
+    a.assetCode.localeCompare(b.assetCode),
+  );
+  if (assets.length === 0) return [];
+  const instrumentAssetIds = instrumentAssets.map((asset) => asset.assetId);
+  const toolAssetIds = toolAssets.map((asset) => asset.assetId);
+
+  const [
+    instrumentUnits,
+    toolUnits,
+    instrumentRequestStats,
+    toolRequestStats,
+  ] = await Promise.all([
+    instrumentAssetIds.length > 0
+      ? exec
+          .select({
+            unitId: instrumentUnit.id,
+            assetId: instrumentUnit.instrumentAssetId,
+            code: instrumentUnit.code,
+            label: instrumentUnit.label,
+            qrCode: instrumentUnit.qrCode,
+            storageLocation: instrumentUnit.storageLocation,
+            status: instrumentUnit.status,
+            condition: instrumentUnit.condition,
+            notes: instrumentUnit.notes,
+            active: instrumentUnit.active,
+          })
+          .from(instrumentUnit)
+          .where(inArray(instrumentUnit.instrumentAssetId, instrumentAssetIds))
+          .orderBy(asc(instrumentUnit.code))
+      : [],
+    toolAssetIds.length > 0
+      ? exec
+          .select({
+            unitId: toolUnit.id,
+            assetId: toolUnit.toolAssetId,
+            code: toolUnit.code,
+            label: toolUnit.label,
+            qrCode: toolUnit.qrCode,
+            storageLocation: toolUnit.storageLocation,
+            status: toolUnit.status,
+            condition: toolUnit.condition,
+            notes: toolUnit.notes,
+            active: toolUnit.active,
+          })
+          .from(toolUnit)
+          .where(inArray(toolUnit.toolAssetId, toolAssetIds))
+          .orderBy(asc(toolUnit.code))
+      : [],
+    instrumentAssetIds.length > 0
+      ? exec
+          .select({
+            assetId: instrumentRequestItem.instrumentAssetId,
+            totalRequests: sql<number>`COUNT(DISTINCT ${resourceRequest.id})::int`,
+            activeRequests: sql<number>`COUNT(DISTINCT CASE WHEN ${resourceRequest.status} IN ('APPROVED', 'READY_FOR_PICKUP', 'ACTIVE', 'OVERDUE') THEN ${resourceRequest.id} END)::int`,
+          })
+          .from(instrumentRequestItem)
+          .innerJoin(
+            resourceRequest,
+            eq(resourceRequest.id, instrumentRequestItem.requestId),
+          )
+          .where(
+            and(
+              inArray(
+                instrumentRequestItem.instrumentAssetId,
+                instrumentAssetIds,
+              ),
+              notInArray(resourceRequest.status, [
+                "CANCELLED",
+                "REJECTED",
+                "DRAFT",
+              ]),
+            ),
+          )
+          .groupBy(instrumentRequestItem.instrumentAssetId)
+      : [],
+    toolAssetIds.length > 0
+      ? exec
+          .select({
+            assetId: toolRequestItem.toolAssetId,
+            totalRequests: sql<number>`COUNT(DISTINCT ${resourceRequest.id})::int`,
+            activeRequests: sql<number>`COUNT(DISTINCT CASE WHEN ${resourceRequest.status} IN ('APPROVED', 'READY_FOR_PICKUP', 'ACTIVE', 'OVERDUE') THEN ${resourceRequest.id} END)::int`,
+          })
+          .from(toolRequestItem)
+          .innerJoin(
+            resourceRequest,
+            eq(resourceRequest.id, toolRequestItem.requestId),
+          )
+          .where(
+            and(
+              inArray(toolRequestItem.toolAssetId, toolAssetIds),
+              notInArray(resourceRequest.status, [
+                "CANCELLED",
+                "REJECTED",
+                "DRAFT",
+              ]),
+            ),
+          )
+          .groupBy(toolRequestItem.toolAssetId)
+      : [],
+  ]);
+  const units = [...instrumentUnits, ...toolUnits];
+  const requestStats = [...instrumentRequestStats, ...toolRequestStats];
 
   return assets.map<PlpEquipmentRow>((asset) => {
     const assetUnits = units.filter((unit) => unit.assetId === asset.assetId);
@@ -408,7 +536,9 @@ export async function listPlpEquipment(input: {
   limit?: number;
   offset?: number;
 }) {
-  const rows = await loadEquipmentRows(db, input.room, input.roomCodes);
+  const rows = await loadEquipmentRows(db, input.room, input.roomCodes, {
+    classification: input.classification,
+  });
   const search = input.search?.toLowerCase();
   const filtered = rows.filter((row) => {
     if (input.classification && row.classification !== input.classification) return false;
@@ -480,36 +610,29 @@ export async function getPlpEquipmentDetail(
   assetCode: string,
   roomCodes?: string[] | null,
 ) {
-  const rows = await loadEquipmentRows(db, undefined, roomCodes);
+  const rows = await loadEquipmentRows(db, undefined, roomCodes, {
+    assetCode,
+  });
   const asset = rows.find((item) => item.assetCode === assetCode);
   if (!asset) return null;
   const reservations = await loadReservations(db, {
     statuses: ["RESERVED", "ACTIVE"],
+    roomCode: asset.roomCode,
     roomCodes,
   });
-  const conditionHistory = await db
-    .select({
-      id: equipmentAsset.id,
-      assetId: equipmentAsset.id,
-      condition: equipmentAsset.condition,
-      status: equipmentAsset.status,
-      notes: equipmentAsset.notes,
-    })
-    .from(equipmentAsset)
-    .where(eq(equipmentAsset.id, asset.assetId))
-    .limit(1);
   return {
     asset,
     reservations: reservations.filter(
       (item) => item.assetCode === assetCode && item.status !== "COMPLETED",
     ),
-    statusRecorded: conditionHistory[0]?.status ?? asset.status,
+    statusRecorded: asset.status,
   };
 }
 
 export async function listPlpMaterials(input: {
   room?: string;
   roomCodes?: string[] | null;
+  materialCode?: string;
   stock?: "all" | "low" | "out";
   expiry?: "all" | "soon" | "expired";
   search?: string;
@@ -520,6 +643,7 @@ export async function listPlpMaterials(input: {
   const rows = await listMaterialRows(db, {
     roomCode: input.room,
     roomCodes: input.roomCodes,
+    materialCode: input.materialCode,
   });
   const materialIds = rows.map((row) => row.id);
   const batches = materialIds.length
@@ -684,8 +808,8 @@ export async function getPlpMaterialDetail(
   options: { room?: string; roomCodes?: string[] | null } = {},
 ) {
   const rows = await listPlpMaterials({
-    search: code,
-    limit: 200,
+    materialCode: code,
+    limit: 50,
     room: options.room,
     roomCodes: options.roomCodes,
   });
@@ -849,27 +973,17 @@ export async function loadScheduleCalendar(input: {
           to,
           roomCode: input.room,
           roomCodes: input.roomCodes,
-          statuses: ["RESERVED", "ACTIVE"],
+          statuses: ["RESERVED", "ACTIVE", "COMPLETED"],
         }),
   ]);
-  const events = buildCalendarEvents({
+  return buildCalendarEvents({
     requests,
     reservations,
     month: input.month,
     months,
     viewerId: input.viewerId,
+    skipSubsumedReservations: false,
   });
-  if (input.kind !== "all") return events;
-  // In the combined view a request bar already covers its unit reservations.
-  const requestIds = new Set(
-    events.filter((event) => event.kind === "request").map((event) => event.requestId),
-  );
-  return events.filter(
-    (event) =>
-      event.kind !== "reservation" ||
-      !event.requestId ||
-      !requestIds.has(event.requestId),
-  );
 }
 
 export async function getPlpBadgeCounts(
@@ -1008,46 +1122,90 @@ export async function listMaintenanceUnits(
         ? sql`false`
         : inArray(room.code, roomCodes);
 
-  const rows = await db
-    .select({
-      id: equipmentUnit.id,
-      code: equipmentUnit.code,
-      label: equipmentUnit.label,
-      status: equipmentUnit.status,
-      condition: equipmentUnit.condition,
-      notes: equipmentUnit.notes,
-      updatedAt: equipmentUnit.updatedAt,
-      assetId: equipmentAsset.id,
-      assetCode: equipmentAsset.assetCode,
-      assetName: equipmentType.name,
-      usageType: equipmentType.usageType,
-      roomCode: room.code,
-      roomName: room.name,
-      assetImageMediaId: equipmentAsset.imageMediaId,
-      typeImageMediaId: equipmentType.imageMediaId,
-    })
-    .from(equipmentUnit)
-    .innerJoin(
-      equipmentAsset,
-      eq(equipmentAsset.id, equipmentUnit.equipmentAssetId),
-    )
-    .innerJoin(
-      equipmentType,
-      eq(equipmentType.id, equipmentAsset.equipmentTypeId),
-    )
-    .innerJoin(room, eq(room.id, equipmentAsset.roomId))
-    .where(
-      and(
-        eq(equipmentUnit.active, true),
-        inArray(equipmentUnit.status, [
-          "MAINTENANCE",
-          "DAMAGED",
-          "UNDER_INSPECTION",
-        ]),
-        scopeCondition,
+  const [instrumentRows, toolRows] = await Promise.all([
+    db
+      .select({
+        id: instrumentUnit.id,
+        code: instrumentUnit.code,
+        label: instrumentUnit.label,
+        status: instrumentUnit.status,
+        condition: instrumentUnit.condition,
+        notes: instrumentUnit.notes,
+        updatedAt: instrumentUnit.updatedAt,
+        assetId: instrumentAsset.id,
+        assetCode: instrumentAsset.assetCode,
+        assetName: instrumentType.name,
+        usageType: instrumentType.usageType,
+        roomCode: room.code,
+        roomName: room.name,
+        assetImageMediaId: instrumentAsset.imageMediaId,
+        typeImageMediaId: instrumentType.imageMediaId,
+      })
+      .from(instrumentUnit)
+      .innerJoin(
+        instrumentAsset,
+        eq(instrumentAsset.id, instrumentUnit.instrumentAssetId),
+      )
+      .innerJoin(
+        instrumentType,
+        eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+      )
+      .innerJoin(room, eq(room.id, instrumentAsset.roomId))
+      .where(
+        and(
+          eq(instrumentUnit.active, true),
+          inArray(instrumentUnit.status, [
+            "MAINTENANCE",
+            "DAMAGED",
+            "UNDER_INSPECTION",
+          ]),
+          scopeCondition,
+        ),
       ),
-    )
-    .orderBy(desc(equipmentUnit.updatedAt));
+    db
+      .select({
+        id: toolUnit.id,
+        code: toolUnit.code,
+        label: toolUnit.label,
+        status: toolUnit.status,
+        condition: toolUnit.condition,
+        notes: toolUnit.notes,
+        updatedAt: toolUnit.updatedAt,
+        assetId: toolAsset.id,
+        assetCode: toolAsset.assetCode,
+        assetName: toolType.name,
+        usageType: toolType.usageType,
+        roomCode: room.code,
+        roomName: room.name,
+        assetImageMediaId: toolAsset.imageMediaId,
+        typeImageMediaId: toolType.imageMediaId,
+      })
+      .from(toolUnit)
+      .innerJoin(
+        toolAsset,
+        eq(toolAsset.id, toolUnit.toolAssetId),
+      )
+      .innerJoin(
+        toolType,
+        eq(toolType.id, toolAsset.toolTypeId),
+      )
+      .innerJoin(room, eq(room.id, toolAsset.roomId))
+      .where(
+        and(
+          eq(toolUnit.active, true),
+          inArray(toolUnit.status, [
+            "MAINTENANCE",
+            "DAMAGED",
+            "UNDER_INSPECTION",
+          ]),
+          scopeCondition,
+        ),
+      ),
+  ]);
+
+  const rows = [...instrumentRows, ...toolRows].sort(
+    (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+  );
 
   return rows.map((row) => ({
     id: row.id,
@@ -1068,17 +1226,31 @@ export async function listMaintenanceUnits(
 }
 
 export async function listEquipmentTypesForPlp() {
-  return db
-    .select({
-      id: equipmentType.id,
-      name: equipmentType.name,
-      category: equipmentType.category,
-      usageType: equipmentType.usageType,
-      imageMediaId: equipmentType.imageMediaId,
-    })
-    .from(equipmentType)
-    .where(eq(equipmentType.active, true))
-    .orderBy(asc(equipmentType.name));
+  const [instruments, tools] = await Promise.all([
+    db
+      .select({
+        id: instrumentType.id,
+        name: instrumentType.name,
+        category: instrumentType.category,
+        usageType: instrumentType.usageType,
+        imageMediaId: instrumentType.imageMediaId,
+        classification: sql<"INSTRUMENT">`'INSTRUMENT'`,
+      })
+      .from(instrumentType)
+      .where(eq(instrumentType.active, true)),
+    db
+      .select({
+        id: toolType.id,
+        name: toolType.name,
+        category: toolType.category,
+        usageType: toolType.usageType,
+        imageMediaId: toolType.imageMediaId,
+        classification: sql<"TOOL">`'TOOL'`,
+      })
+      .from(toolType)
+      .where(eq(toolType.active, true)),
+  ]);
+  return [...instruments, ...tools].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function createPlpEquipmentAsset(
@@ -1088,31 +1260,63 @@ export async function createPlpEquipmentAsset(
 ) {
   assertRoomInScope(scope, input.roomCode);
   return db.transaction(async (tx) => {
+    let classification: "INSTRUMENT" | "TOOL" = "INSTRUMENT";
     let typeId = input.equipmentTypeId;
     let typeName = "";
 
     if (!typeId && input.newType) {
-      const [newTypeRow] = await tx
-        .insert(equipmentType)
-        .values({
-          name: input.newType.name.trim(),
-          category: input.newType.category ? input.newType.category.trim() : null,
-          classification: input.newType.classification ?? "INSTRUMENT",
-          usageType: input.newType.usageType,
-          imageMediaId: input.newType.imageMediaId ?? null,
-        })
-        .returning();
-      typeId = newTypeRow.id;
-      typeName = newTypeRow.name;
+      classification = input.newType.classification ?? "INSTRUMENT";
+      if (classification === "INSTRUMENT") {
+        const [newTypeRow] = await tx
+          .insert(instrumentType)
+          .values({
+            name: input.newType.name.trim(),
+            category: input.newType.category
+              ? input.newType.category.trim()
+              : null,
+            usageType: input.newType.usageType,
+            imageMediaId: input.newType.imageMediaId ?? null,
+          })
+          .returning();
+        typeId = newTypeRow.id;
+        typeName = newTypeRow.name;
+      } else {
+        const [newTypeRow] = await tx
+          .insert(toolType)
+          .values({
+            name: input.newType.name.trim(),
+            category: input.newType.category
+              ? input.newType.category.trim()
+              : null,
+            usageType: input.newType.usageType,
+            imageMediaId: input.newType.imageMediaId ?? null,
+          })
+          .returning();
+        typeId = newTypeRow.id;
+        typeName = newTypeRow.name;
+      }
     } else {
-      const [type] = await tx
+      const [insType] = await tx
         .select()
-        .from(equipmentType)
-        .where(eq(equipmentType.id, typeId!))
+        .from(instrumentType)
+        .where(eq(instrumentType.id, typeId!))
         .limit(1);
-      if (!type)
-        throw new ApiError(404, "NOT_FOUND", "Equipment type tidak ditemukan.");
-      typeName = type.name;
+      if (insType) {
+        classification = "INSTRUMENT";
+        typeName = insType.name;
+      } else {
+        const [tolType] = await tx
+          .select()
+          .from(toolType)
+          .where(eq(toolType.id, typeId!))
+          .limit(1);
+        if (tolType) {
+          classification = "TOOL";
+          typeName = tolType.name;
+        } else {
+          throw new ApiError(404, "NOT_FOUND", "Type tidak ditemukan.");
+        }
+      }
     }
 
     const [roomRow] = await tx
@@ -1123,12 +1327,19 @@ export async function createPlpEquipmentAsset(
     if (!roomRow)
       throw new ApiError(404, "NOT_FOUND", "Room tidak ditemukan.");
 
-    const existing = await tx
-      .select({ id: equipmentAsset.id })
-      .from(equipmentAsset)
-      .where(eq(equipmentAsset.assetCode, input.assetCode))
-      .limit(1);
-    if (existing.length > 0) {
+    const [existingIns, existingTol] = await Promise.all([
+      tx
+        .select({ id: instrumentAsset.id })
+        .from(instrumentAsset)
+        .where(eq(instrumentAsset.assetCode, input.assetCode))
+        .limit(1),
+      tx
+        .select({ id: toolAsset.id })
+        .from(toolAsset)
+        .where(eq(toolAsset.assetCode, input.assetCode))
+        .limit(1),
+    ]);
+    if (existingIns.length > 0 || existingTol.length > 0) {
       throw new ApiError(
         409,
         "CODE_TAKEN",
@@ -1136,64 +1347,132 @@ export async function createPlpEquipmentAsset(
       );
     }
 
-    const [created] = await tx
-      .insert(equipmentAsset)
-      .values({
-        equipmentTypeId: typeId!,
-        roomId: roomRow.id,
-        assetCode: input.assetCode,
-        serialNumber: input.serialNumber ? input.serialNumber.trim() : null,
-        status: input.status,
-        condition: input.condition,
-        notes: input.notes ? input.notes.trim() : null,
-        imageMediaId: input.imageMediaId ?? null,
-        active: input.active,
-      })
-      .returning();
-
-    // Model 2-Level: Otomatis generate unit fisik dan QR Code agar langsung siap pakai
     const unitCount = input.unitCount ?? 1;
-    const defaultStorage = input.storageLocation?.trim() || "Gudang Instrumen";
-    if (unitCount === 1) {
-      const unitCode = `${created.assetCode}-01`;
-      await tx.insert(equipmentUnit).values({
-        equipmentAssetId: created.id,
-        code: unitCode,
-        label: `${typeName} 01`,
-        qrCode: `RK-UNT-${unitCode}`,
-        storageLocation: defaultStorage,
-        status: input.status,
-        condition: input.condition,
-        notes: input.notes ? input.notes.trim() : null,
-      });
-    } else {
-      const unitsToInsert = [];
-      for (let i = 1; i <= unitCount; i++) {
-        const numStr = String(i).padStart(2, "0");
-        const unitCode = `${created.assetCode}-${numStr}`;
-        unitsToInsert.push({
-          equipmentAssetId: created.id,
+    const defaultStorage =
+      input.storageLocation?.trim() ||
+      (classification === "INSTRUMENT" ? "Gudang Instrumen" : "Gudang Alat");
+
+    if (classification === "INSTRUMENT") {
+      const [created] = await tx
+        .insert(instrumentAsset)
+        .values({
+          instrumentTypeId: typeId!,
+          roomId: roomRow.id,
+          assetCode: input.assetCode,
+          serialNumber: input.serialNumber ? input.serialNumber.trim() : null,
+          status: input.status,
+          condition: input.condition,
+          notes: input.notes ? input.notes.trim() : null,
+          imageMediaId: input.imageMediaId ?? null,
+          active: input.active,
+        })
+        .returning();
+
+      if (unitCount === 1) {
+        const unitCode = `${created.assetCode}-01`;
+        await tx.insert(instrumentUnit).values({
+          instrumentAssetId: created.id,
           code: unitCode,
-          label: `${typeName} ${numStr}`,
-          qrCode: `RK-UNT-${unitCode}`,
+          label: `${typeName} 01`,
+          qrCode: `RK-INS-${unitCode}`,
           storageLocation: defaultStorage,
           status: input.status,
           condition: input.condition,
           notes: input.notes ? input.notes.trim() : null,
         });
+      } else {
+        const unitsToInsert = [];
+        for (let i = 1; i <= unitCount; i++) {
+          const numStr = String(i).padStart(2, "0");
+          const unitCode = `${created.assetCode}-${numStr}`;
+          unitsToInsert.push({
+            instrumentAssetId: created.id,
+            code: unitCode,
+            label: `${typeName} ${numStr}`,
+            qrCode: `RK-INS-${unitCode}`,
+            storageLocation: defaultStorage,
+            status: input.status,
+            condition: input.condition,
+            notes: input.notes ? input.notes.trim() : null,
+          });
+        }
+        await tx.insert(instrumentUnit).values(unitsToInsert);
       }
-      await tx.insert(equipmentUnit).values(unitsToInsert);
+
+      await writeAudit(tx, {
+        actorId,
+        action: "CREATE",
+        entityType: "instrument_asset",
+        entityId: created.id,
+        after: {
+          assetCode: created.assetCode,
+          room: roomRow.code,
+          units: unitCount,
+        },
+      });
+
+      return created;
+    } else {
+      const [created] = await tx
+        .insert(toolAsset)
+        .values({
+          toolTypeId: typeId!,
+          roomId: roomRow.id,
+          assetCode: input.assetCode,
+          serialNumber: input.serialNumber ? input.serialNumber.trim() : null,
+          status: input.status,
+          condition: input.condition,
+          notes: input.notes ? input.notes.trim() : null,
+          imageMediaId: input.imageMediaId ?? null,
+          active: input.active,
+        })
+        .returning();
+
+      if (unitCount === 1) {
+        const unitCode = `${created.assetCode}-01`;
+        await tx.insert(toolUnit).values({
+          toolAssetId: created.id,
+          code: unitCode,
+          label: `${typeName} 01`,
+          qrCode: `RK-TOL-${unitCode}`,
+          storageLocation: defaultStorage,
+          status: input.status,
+          condition: input.condition,
+          notes: input.notes ? input.notes.trim() : null,
+        });
+      } else {
+        const unitsToInsert = [];
+        for (let i = 1; i <= unitCount; i++) {
+          const numStr = String(i).padStart(2, "0");
+          const unitCode = `${created.assetCode}-${numStr}`;
+          unitsToInsert.push({
+            toolAssetId: created.id,
+            code: unitCode,
+            label: `${typeName} ${numStr}`,
+            qrCode: `RK-TOL-${unitCode}`,
+            storageLocation: defaultStorage,
+            status: input.status,
+            condition: input.condition,
+            notes: input.notes ? input.notes.trim() : null,
+          });
+        }
+        await tx.insert(toolUnit).values(unitsToInsert);
+      }
+
+      await writeAudit(tx, {
+        actorId,
+        action: "CREATE",
+        entityType: "tool_asset",
+        entityId: created.id,
+        after: {
+          assetCode: created.assetCode,
+          room: roomRow.code,
+          units: unitCount,
+        },
+      });
+
+      return created;
     }
-
-    await writeAudit(tx, {
-      actorId,
-      action: "CREATE",
-      entityType: "equipment_asset",
-      entityId: created.id,
-      after: { assetCode: created.assetCode, room: roomRow.code, units: unitCount },
-    });
-
-    return created;
   });
 }
 
@@ -1303,27 +1582,51 @@ export async function createPlpEquipmentUnit(
   input: PlpEquipmentUnitInput,
 ) {
   return db.transaction(async (tx) => {
-    const [asset] = await tx
+    const [insAsset] = await tx
       .select({
-        id: equipmentAsset.id,
-        assetCode: equipmentAsset.assetCode,
+        id: instrumentAsset.id,
+        assetCode: instrumentAsset.assetCode,
         roomCode: room.code,
       })
-      .from(equipmentAsset)
-      .innerJoin(room, eq(room.id, equipmentAsset.roomId))
-      .where(eq(equipmentAsset.assetCode, assetCode))
+      .from(instrumentAsset)
+      .innerJoin(room, eq(room.id, instrumentAsset.roomId))
+      .where(eq(instrumentAsset.assetCode, assetCode))
       .limit(1);
+
+    const asset = insAsset
+      ? { ...insAsset, kind: "INSTRUMENT" as const }
+      : await tx
+          .select({
+            id: toolAsset.id,
+            assetCode: toolAsset.assetCode,
+            roomCode: room.code,
+          })
+          .from(toolAsset)
+          .innerJoin(room, eq(room.id, toolAsset.roomId))
+          .where(eq(toolAsset.assetCode, assetCode))
+          .limit(1)
+          .then((rows) =>
+            rows[0] ? { ...rows[0], kind: "TOOL" as const } : null,
+          );
+
     if (!asset)
-      throw new ApiError(404, "NOT_FOUND", "Equipment asset tidak ditemukan.");
+      throw new ApiError(404, "NOT_FOUND", "Asset tidak ditemukan.");
 
     assertRoomInScope(scope, asset.roomCode);
 
-    const existing = await tx
-      .select({ id: equipmentUnit.id })
-      .from(equipmentUnit)
-      .where(eq(equipmentUnit.code, input.code))
-      .limit(1);
-    if (existing.length > 0) {
+    const [existingIns, existingTol] = await Promise.all([
+      tx
+        .select({ id: instrumentUnit.id })
+        .from(instrumentUnit)
+        .where(eq(instrumentUnit.code, input.code))
+        .limit(1),
+      tx
+        .select({ id: toolUnit.id })
+        .from(toolUnit)
+        .where(eq(toolUnit.code, input.code))
+        .limit(1),
+    ]);
+    if (existingIns.length > 0 || existingTol.length > 0) {
       throw new ApiError(
         409,
         "CODE_TAKEN",
@@ -1331,30 +1634,57 @@ export async function createPlpEquipmentUnit(
       );
     }
 
-    const [created] = await tx
-      .insert(equipmentUnit)
-      .values({
-        equipmentAssetId: asset.id,
-        code: input.code,
-        label: input.label,
-        qrCode: `RK-UNT-${input.code}`,
-        storageLocation: input.storageLocation?.trim() || null,
-        status: input.status,
-        condition: input.condition,
-        notes: input.notes ? input.notes.trim() : null,
-        active: input.active,
-      })
-      .returning();
+    if (asset.kind === "INSTRUMENT") {
+      const [created] = await tx
+        .insert(instrumentUnit)
+        .values({
+          instrumentAssetId: asset.id,
+          code: input.code,
+          label: input.label,
+          qrCode: `RK-INS-${input.code}`,
+          storageLocation: input.storageLocation?.trim() || null,
+          status: input.status,
+          condition: input.condition,
+          notes: input.notes ? input.notes.trim() : null,
+          active: input.active,
+        })
+        .returning();
 
-    await writeAudit(tx, {
-      actorId,
-      action: "CREATE",
-      entityType: "equipment_unit",
-      entityId: created.id,
-      after: { code: created.code, asset: asset.assetCode },
-    });
+      await writeAudit(tx, {
+        actorId,
+        action: "CREATE",
+        entityType: "instrument_unit",
+        entityId: created.id,
+        after: { code: created.code, asset: asset.assetCode },
+      });
 
-    return created;
+      return created;
+    } else {
+      const [created] = await tx
+        .insert(toolUnit)
+        .values({
+          toolAssetId: asset.id,
+          code: input.code,
+          label: input.label,
+          qrCode: `RK-TOL-${input.code}`,
+          storageLocation: input.storageLocation?.trim() || null,
+          status: input.status,
+          condition: input.condition,
+          notes: input.notes ? input.notes.trim() : null,
+          active: input.active,
+        })
+        .returning();
+
+      await writeAudit(tx, {
+        actorId,
+        action: "CREATE",
+        entityType: "tool_unit",
+        entityId: created.id,
+        after: { code: created.code, asset: asset.assetCode },
+      });
+
+      return created;
+    }
   });
 }
 
@@ -1494,27 +1824,86 @@ export async function adjustPlpMaterialStock(
   });
 }
 
+export async function assertEquipmentUnitInScope(
+  scope: RoomScope,
+  unitId: string,
+) {
+  if (scope.all) return;
+  const [insUnit] = await db
+    .select({ roomCode: room.code })
+    .from(instrumentUnit)
+    .innerJoin(
+      instrumentAsset,
+      eq(instrumentAsset.id, instrumentUnit.instrumentAssetId),
+    )
+    .innerJoin(room, eq(room.id, instrumentAsset.roomId))
+    .where(eq(instrumentUnit.id, unitId))
+    .limit(1);
+
+  if (insUnit) {
+    assertRoomInScope(scope, insUnit.roomCode);
+    return;
+  }
+
+  const [tolUnit] = await db
+    .select({ roomCode: room.code })
+    .from(toolUnit)
+    .innerJoin(toolAsset, eq(toolAsset.id, toolUnit.toolAssetId))
+    .innerJoin(room, eq(room.id, toolAsset.roomId))
+    .where(eq(toolUnit.id, unitId))
+    .limit(1);
+
+  if (!tolUnit) {
+    throw new ApiError(404, "NOT_FOUND", "Unit tidak ditemukan.");
+  }
+  assertRoomInScope(scope, tolUnit.roomCode);
+}
+
 export async function deletePlpEquipmentUnit(
   actorId: string,
   scope: RoomScope,
   unitId: string,
 ) {
   return db.transaction(async (tx) => {
-    const [unit] = await tx
+    const [insUnit] = await tx
       .select({
-        id: equipmentUnit.id,
-        code: equipmentUnit.code,
-        label: equipmentUnit.label,
-        status: equipmentUnit.status,
-        equipmentAssetId: equipmentUnit.equipmentAssetId,
-        assetCode: equipmentAsset.assetCode,
+        id: instrumentUnit.id,
+        code: instrumentUnit.code,
+        label: instrumentUnit.label,
+        status: instrumentUnit.status,
+        instrumentAssetId: instrumentUnit.instrumentAssetId,
+        assetCode: instrumentAsset.assetCode,
         roomCode: room.code,
       })
-      .from(equipmentUnit)
-      .innerJoin(equipmentAsset, eq(equipmentAsset.id, equipmentUnit.equipmentAssetId))
-      .innerJoin(room, eq(room.id, equipmentAsset.roomId))
-      .where(eq(equipmentUnit.id, unitId))
+      .from(instrumentUnit)
+      .innerJoin(
+        instrumentAsset,
+        eq(instrumentAsset.id, instrumentUnit.instrumentAssetId),
+      )
+      .innerJoin(room, eq(room.id, instrumentAsset.roomId))
+      .where(eq(instrumentUnit.id, unitId))
       .limit(1);
+
+    const unit = insUnit
+      ? { ...insUnit, kind: "INSTRUMENT" as const }
+      : await tx
+          .select({
+            id: toolUnit.id,
+            code: toolUnit.code,
+            label: toolUnit.label,
+            status: toolUnit.status,
+            toolAssetId: toolUnit.toolAssetId,
+            assetCode: toolAsset.assetCode,
+            roomCode: room.code,
+          })
+          .from(toolUnit)
+          .innerJoin(toolAsset, eq(toolAsset.id, toolUnit.toolAssetId))
+          .innerJoin(room, eq(room.id, toolAsset.roomId))
+          .where(eq(toolUnit.id, unitId))
+          .limit(1)
+          .then((rows) =>
+            rows[0] ? { ...rows[0], kind: "TOOL" as const } : null,
+          );
 
     if (!unit) {
       throw new ApiError(404, "NOT_FOUND", "Unit tidak ditemukan.");
@@ -1530,45 +1919,109 @@ export async function deletePlpEquipmentUnit(
       );
     }
 
-    const [activeRes] = await tx
-      .select({ count: count() })
-      .from(reservation)
-      .where(
-        and(
-          eq(reservation.equipmentUnitId, unitId),
-          inArray(reservation.status, ["RESERVED", "ACTIVE"]),
-        ),
-      );
+    if (unit.kind === "INSTRUMENT") {
+      const [activeRes] = await tx
+        .select({ count: count() })
+        .from(reservation)
+        .where(
+          and(
+            eq(reservation.instrumentUnitId, unitId),
+            inArray(reservation.status, ["RESERVED", "ACTIVE"]),
+          ),
+        );
 
-    if (Number(activeRes?.count ?? 0) > 0) {
-      throw new ApiError(
-        400,
-        "ACTIVE_RESERVATION",
-        `Unit ${unit.code} memiliki jadwal reservasi aktif. Batalkan atau selesaikan reservasi terlebih dahulu.`,
-      );
+      if (Number(activeRes?.count ?? 0) > 0) {
+        throw new ApiError(
+          400,
+          "ACTIVE_RESERVATION",
+          `Unit ${unit.code} memiliki jadwal reservasi aktif. Batalkan atau selesaikan reservasi terlebih dahulu.`,
+        );
+      }
+
+      await tx
+        .delete(reservation)
+        .where(eq(reservation.instrumentUnitId, unitId));
+      await tx
+        .delete(instrumentRequestItem)
+        .where(eq(instrumentRequestItem.instrumentUnitId, unitId));
+      await tx
+        .update(issueTransaction)
+        .set({ instrumentUnitId: null })
+        .where(eq(issueTransaction.instrumentUnitId, unitId));
+      await tx
+        .update(stockOpnameEntry)
+        .set({ instrumentUnitId: null })
+        .where(eq(stockOpnameEntry.instrumentUnitId, unitId));
+      await tx
+        .delete(instrumentConditionHistory)
+        .where(eq(instrumentConditionHistory.instrumentUnitId, unitId));
+      await tx.delete(instrumentUnit).where(eq(instrumentUnit.id, unitId));
+
+      await writeAudit(tx, {
+        actorId,
+        action: "DELETE",
+        entityType: "instrument_unit",
+        entityId: unit.id,
+        before: {
+          code: unit.code,
+          label: unit.label,
+          assetCode: unit.assetCode,
+          roomCode: unit.roomCode,
+        },
+      });
+
+      return { success: true, code: unit.code };
+    } else {
+      const [activeRes] = await tx
+        .select({ count: count() })
+        .from(reservation)
+        .where(
+          and(
+            eq(reservation.toolUnitId, unitId),
+            inArray(reservation.status, ["RESERVED", "ACTIVE"]),
+          ),
+        );
+
+      if (Number(activeRes?.count ?? 0) > 0) {
+        throw new ApiError(
+          400,
+          "ACTIVE_RESERVATION",
+          `Unit ${unit.code} memiliki jadwal reservasi aktif. Batalkan atau selesaikan reservasi terlebih dahulu.`,
+        );
+      }
+
+      await tx.delete(reservation).where(eq(reservation.toolUnitId, unitId));
+      await tx
+        .delete(toolRequestItem)
+        .where(eq(toolRequestItem.toolUnitId, unitId));
+      await tx
+        .update(issueTransaction)
+        .set({ toolUnitId: null })
+        .where(eq(issueTransaction.toolUnitId, unitId));
+      await tx
+        .update(stockOpnameEntry)
+        .set({ toolUnitId: null })
+        .where(eq(stockOpnameEntry.toolUnitId, unitId));
+      await tx
+        .delete(toolConditionHistory)
+        .where(eq(toolConditionHistory.toolUnitId, unitId));
+      await tx.delete(toolUnit).where(eq(toolUnit.id, unitId));
+
+      await writeAudit(tx, {
+        actorId,
+        action: "DELETE",
+        entityType: "tool_unit",
+        entityId: unit.id,
+        before: {
+          code: unit.code,
+          label: unit.label,
+          assetCode: unit.assetCode,
+          roomCode: unit.roomCode,
+        },
+      });
+
+      return { success: true, code: unit.code };
     }
-
-    await tx.delete(reservation).where(eq(reservation.equipmentUnitId, unitId));
-    await tx.delete(equipmentRequestItem).where(eq(equipmentRequestItem.equipmentUnitId, unitId));
-    await tx.update(issueTransaction).set({ equipmentUnitId: null }).where(eq(issueTransaction.equipmentUnitId, unitId));
-    await tx.update(stockOpnameEntry).set({ equipmentUnitId: null }).where(eq(stockOpnameEntry.equipmentUnitId, unitId));
-    await tx.delete(equipmentConditionHistory).where(eq(equipmentConditionHistory.equipmentUnitId, unitId));
-    await tx.delete(equipmentUnit).where(eq(equipmentUnit.id, unitId));
-
-    await writeAudit(tx, {
-      actorId,
-      action: "DELETE",
-      entityType: "equipment_unit",
-      entityId: unit.id,
-      before: {
-        code: unit.code,
-        label: unit.label,
-        assetCode: unit.assetCode,
-        roomCode: unit.roomCode,
-      },
-    });
-
-    return { success: true, code: unit.code };
   });
 }
 
@@ -1578,18 +2031,36 @@ export async function deletePlpEquipmentAsset(
   assetCode: string,
 ) {
   return db.transaction(async (tx) => {
-    const [asset] = await tx
+    const [insAsset] = await tx
       .select({
-        id: equipmentAsset.id,
-        assetCode: equipmentAsset.assetCode,
-        status: equipmentAsset.status,
-        equipmentTypeId: equipmentAsset.equipmentTypeId,
+        id: instrumentAsset.id,
+        assetCode: instrumentAsset.assetCode,
+        status: instrumentAsset.status,
+        typeId: instrumentAsset.instrumentTypeId,
         roomCode: room.code,
       })
-      .from(equipmentAsset)
-      .innerJoin(room, eq(room.id, equipmentAsset.roomId))
-      .where(eq(equipmentAsset.assetCode, assetCode))
+      .from(instrumentAsset)
+      .innerJoin(room, eq(room.id, instrumentAsset.roomId))
+      .where(eq(instrumentAsset.assetCode, assetCode))
       .limit(1);
+
+    const asset = insAsset
+      ? { ...insAsset, kind: "INSTRUMENT" as const }
+      : await tx
+          .select({
+            id: toolAsset.id,
+            assetCode: toolAsset.assetCode,
+            status: toolAsset.status,
+            typeId: toolAsset.toolTypeId,
+            roomCode: room.code,
+          })
+          .from(toolAsset)
+          .innerJoin(room, eq(room.id, toolAsset.roomId))
+          .where(eq(toolAsset.assetCode, assetCode))
+          .limit(1)
+          .then((rows) =>
+            rows[0] ? { ...rows[0], kind: "TOOL" as const } : null,
+          );
 
     if (!asset) {
       throw new ApiError(404, "NOT_FOUND", "Aset peralatan tidak ditemukan.");
@@ -1605,119 +2076,321 @@ export async function deletePlpEquipmentAsset(
       );
     }
 
-    const units = await tx
-      .select({ id: equipmentUnit.id, code: equipmentUnit.code, status: equipmentUnit.status })
-      .from(equipmentUnit)
-      .where(eq(equipmentUnit.equipmentAssetId, asset.id));
+    if (asset.kind === "INSTRUMENT") {
+      const units = await tx
+        .select({
+          id: instrumentUnit.id,
+          code: instrumentUnit.code,
+          status: instrumentUnit.status,
+        })
+        .from(instrumentUnit)
+        .where(eq(instrumentUnit.instrumentAssetId, asset.id));
 
-    const busyUnit = units.find((u) => u.status === "IN_USE" || u.status === "RESERVED");
-    if (busyUnit) {
-      throw new ApiError(
-        400,
-        "UNIT_IN_USE",
-        `Unit ${busyUnit.code} sedang berstatus ${busyUnit.status}. Selesaikan penggunaan sebelum menghapus aset.`,
+      const busyUnit = units.find(
+        (u) => u.status === "IN_USE" || u.status === "RESERVED",
       );
-    }
-
-    const unitIds = units.map((u) => u.id);
-    if (unitIds.length > 0) {
-      const [activeRes] = await tx
-        .select({ count: count() })
-        .from(reservation)
-        .where(
-          and(
-            inArray(reservation.equipmentUnitId, unitIds),
-            inArray(reservation.status, ["RESERVED", "ACTIVE"]),
-          ),
-        );
-      if (Number(activeRes?.count ?? 0) > 0) {
+      if (busyUnit) {
         throw new ApiError(
           400,
-          "ACTIVE_RESERVATION",
-          `Aset ${asset.assetCode} memiliki unit dengan reservasi aktif.`,
+          "UNIT_IN_USE",
+          `Unit ${busyUnit.code} sedang berstatus ${busyUnit.status}. Selesaikan penggunaan sebelum menghapus aset.`,
         );
       }
 
-      await tx.delete(reservation).where(inArray(reservation.equipmentUnitId, unitIds));
-      await tx.delete(equipmentRequestItem).where(inArray(equipmentRequestItem.equipmentUnitId, unitIds));
-      await tx.update(issueTransaction).set({ equipmentUnitId: null }).where(inArray(issueTransaction.equipmentUnitId, unitIds));
-      await tx.update(stockOpnameEntry).set({ equipmentUnitId: null }).where(inArray(stockOpnameEntry.equipmentUnitId, unitIds));
-      await tx.delete(equipmentConditionHistory).where(inArray(equipmentConditionHistory.equipmentUnitId, unitIds));
-      await tx.delete(equipmentUnit).where(inArray(equipmentUnit.id, unitIds));
+      const unitIds = units.map((u) => u.id);
+      if (unitIds.length > 0) {
+        const [activeRes] = await tx
+          .select({ count: count() })
+          .from(reservation)
+          .where(
+            and(
+              inArray(reservation.instrumentUnitId, unitIds),
+              inArray(reservation.status, ["RESERVED", "ACTIVE"]),
+            ),
+          );
+        if (Number(activeRes?.count ?? 0) > 0) {
+          throw new ApiError(
+            400,
+            "ACTIVE_RESERVATION",
+            `Aset ${asset.assetCode} memiliki unit dengan reservasi aktif.`,
+          );
+        }
+
+        await tx
+          .delete(reservation)
+          .where(inArray(reservation.instrumentUnitId, unitIds));
+        await tx
+          .delete(instrumentRequestItem)
+          .where(inArray(instrumentRequestItem.instrumentUnitId, unitIds));
+        await tx
+          .update(issueTransaction)
+          .set({ instrumentUnitId: null })
+          .where(inArray(issueTransaction.instrumentUnitId, unitIds));
+        await tx
+          .update(stockOpnameEntry)
+          .set({ instrumentUnitId: null })
+          .where(inArray(stockOpnameEntry.instrumentUnitId, unitIds));
+        await tx
+          .delete(instrumentConditionHistory)
+          .where(inArray(instrumentConditionHistory.instrumentUnitId, unitIds));
+        await tx
+          .delete(instrumentUnit)
+          .where(inArray(instrumentUnit.id, unitIds));
+      }
+
+      await tx
+        .delete(reservation)
+        .where(eq(reservation.instrumentAssetId, asset.id));
+      await tx
+        .delete(instrumentRequestItem)
+        .where(eq(instrumentRequestItem.instrumentAssetId, asset.id));
+      await tx
+        .delete(returnTransaction)
+        .where(eq(returnTransaction.instrumentAssetId, asset.id));
+      await tx
+        .update(issueTransaction)
+        .set({ instrumentAssetId: null })
+        .where(eq(issueTransaction.instrumentAssetId, asset.id));
+      await tx
+        .update(stockOpnameEntry)
+        .set({ instrumentAssetId: null })
+        .where(eq(stockOpnameEntry.instrumentAssetId, asset.id));
+      await tx
+        .update(incident)
+        .set({ instrumentAssetId: null })
+        .where(eq(incident.instrumentAssetId, asset.id));
+      await tx
+        .delete(instrumentConditionHistory)
+        .where(eq(instrumentConditionHistory.instrumentAssetId, asset.id));
+      await tx
+        .delete(instrumentAsset)
+        .where(eq(instrumentAsset.id, asset.id));
+
+      const remainingAssets = await tx
+        .select({ count: count() })
+        .from(instrumentAsset)
+        .where(eq(instrumentAsset.instrumentTypeId, asset.typeId));
+
+      if (Number(remainingAssets[0]?.count ?? 0) === 0) {
+        await tx
+          .delete(instrumentType)
+          .where(eq(instrumentType.id, asset.typeId));
+      }
+
+      await writeAudit(tx, {
+        actorId,
+        action: "DELETE",
+        entityType: "instrument_asset",
+        entityId: asset.id,
+        before: {
+          assetCode: asset.assetCode,
+          roomCode: asset.roomCode,
+        },
+      });
+
+      return { success: true, assetCode: asset.assetCode };
+    } else {
+      const units = await tx
+        .select({
+          id: toolUnit.id,
+          code: toolUnit.code,
+          status: toolUnit.status,
+        })
+        .from(toolUnit)
+        .where(eq(toolUnit.toolAssetId, asset.id));
+
+      const busyUnit = units.find(
+        (u) => u.status === "IN_USE" || u.status === "RESERVED",
+      );
+      if (busyUnit) {
+        throw new ApiError(
+          400,
+          "UNIT_IN_USE",
+          `Unit ${busyUnit.code} sedang berstatus ${busyUnit.status}. Selesaikan penggunaan sebelum menghapus aset.`,
+        );
+      }
+
+      const unitIds = units.map((u) => u.id);
+      if (unitIds.length > 0) {
+        const [activeRes] = await tx
+          .select({ count: count() })
+          .from(reservation)
+          .where(
+            and(
+              inArray(reservation.toolUnitId, unitIds),
+              inArray(reservation.status, ["RESERVED", "ACTIVE"]),
+            ),
+          );
+        if (Number(activeRes?.count ?? 0) > 0) {
+          throw new ApiError(
+            400,
+            "ACTIVE_RESERVATION",
+            `Aset ${asset.assetCode} memiliki unit dengan reservasi aktif.`,
+          );
+        }
+
+        await tx
+          .delete(reservation)
+          .where(inArray(reservation.toolUnitId, unitIds));
+        await tx
+          .delete(toolRequestItem)
+          .where(inArray(toolRequestItem.toolUnitId, unitIds));
+        await tx
+          .update(issueTransaction)
+          .set({ toolUnitId: null })
+          .where(inArray(issueTransaction.toolUnitId, unitIds));
+        await tx
+          .update(stockOpnameEntry)
+          .set({ toolUnitId: null })
+          .where(inArray(stockOpnameEntry.toolUnitId, unitIds));
+        await tx
+          .delete(toolConditionHistory)
+          .where(inArray(toolConditionHistory.toolUnitId, unitIds));
+        await tx
+          .delete(toolUnit)
+          .where(inArray(toolUnit.id, unitIds));
+      }
+
+      await tx
+        .delete(reservation)
+        .where(eq(reservation.toolAssetId, asset.id));
+      await tx
+        .delete(toolRequestItem)
+        .where(eq(toolRequestItem.toolAssetId, asset.id));
+      await tx
+        .delete(returnTransaction)
+        .where(eq(returnTransaction.toolAssetId, asset.id));
+      await tx
+        .update(issueTransaction)
+        .set({ toolAssetId: null })
+        .where(eq(issueTransaction.toolAssetId, asset.id));
+      await tx
+        .update(stockOpnameEntry)
+        .set({ toolAssetId: null })
+        .where(eq(stockOpnameEntry.toolAssetId, asset.id));
+      await tx
+        .update(incident)
+        .set({ toolAssetId: null })
+        .where(eq(incident.toolAssetId, asset.id));
+      await tx
+        .delete(toolConditionHistory)
+        .where(eq(toolConditionHistory.toolAssetId, asset.id));
+      await tx
+        .delete(toolAsset)
+        .where(eq(toolAsset.id, asset.id));
+
+      const remainingAssets = await tx
+        .select({ count: count() })
+        .from(toolAsset)
+        .where(eq(toolAsset.toolTypeId, asset.typeId));
+
+      if (Number(remainingAssets[0]?.count ?? 0) === 0) {
+        await tx
+          .delete(toolType)
+          .where(eq(toolType.id, asset.typeId));
+      }
+
+      await writeAudit(tx, {
+        actorId,
+        action: "DELETE",
+        entityType: "tool_asset",
+        entityId: asset.id,
+        before: {
+          assetCode: asset.assetCode,
+          roomCode: asset.roomCode,
+        },
+      });
+
+      return { success: true, assetCode: asset.assetCode };
     }
-
-    await tx.delete(reservation).where(eq(reservation.equipmentAssetId, asset.id));
-    await tx.delete(equipmentRequestItem).where(eq(equipmentRequestItem.equipmentAssetId, asset.id));
-    await tx.delete(returnTransaction).where(eq(returnTransaction.equipmentAssetId, asset.id));
-    await tx.update(issueTransaction).set({ equipmentAssetId: null }).where(eq(issueTransaction.equipmentAssetId, asset.id));
-    await tx.update(stockOpnameEntry).set({ equipmentAssetId: null }).where(eq(stockOpnameEntry.equipmentAssetId, asset.id));
-    await tx.update(incident).set({ equipmentAssetId: null }).where(eq(incident.equipmentAssetId, asset.id));
-    await tx.delete(equipmentConditionHistory).where(eq(equipmentConditionHistory.equipmentAssetId, asset.id));
-    await tx.delete(equipmentAsset).where(eq(equipmentAsset.id, asset.id));
-
-    const remainingAssets = await tx
-      .select({ count: count() })
-      .from(equipmentAsset)
-      .where(eq(equipmentAsset.equipmentTypeId, asset.equipmentTypeId));
-
-    if (Number(remainingAssets[0]?.count ?? 0) === 0) {
-      await tx.delete(equipmentType).where(eq(equipmentType.id, asset.equipmentTypeId));
-    }
-
-    await writeAudit(tx, {
-      actorId,
-      action: "DELETE",
-      entityType: "equipment_asset",
-      entityId: asset.id,
-      before: {
-        assetCode: asset.assetCode,
-        roomCode: asset.roomCode,
-      },
-    });
-
-    return { success: true, assetCode: asset.assetCode };
   });
 }
 
 export async function deletePlpEquipmentType(
   actorId: string,
+  scope: RoomScope,
   typeId: string,
 ) {
+  if (!scope.all && scope.roomCodes.length === 0) {
+    throw new ApiError(
+      403,
+      "FORBIDDEN",
+      "Anda belum memiliki penugasan laboratorium aktif.",
+    );
+  }
   return db.transaction(async (tx) => {
-    const [eqType] = await tx
+    const [insType] = await tx
       .select()
-      .from(equipmentType)
-      .where(eq(equipmentType.id, typeId))
+      .from(instrumentType)
+      .where(eq(instrumentType.id, typeId))
       .limit(1);
+
+    const eqType = insType
+      ? { ...insType, kind: "INSTRUMENT" as const }
+      : await tx
+          .select()
+          .from(toolType)
+          .where(eq(toolType.id, typeId))
+          .limit(1)
+          .then((rows) =>
+            rows[0] ? { ...rows[0], kind: "TOOL" as const } : null,
+          );
 
     if (!eqType) {
       throw new ApiError(404, "NOT_FOUND", "Katalog peralatan tidak ditemukan.");
     }
 
-    const assets = await tx
-      .select({ id: equipmentAsset.id, assetCode: equipmentAsset.assetCode })
-      .from(equipmentAsset)
-      .where(eq(equipmentAsset.equipmentTypeId, typeId));
+    if (eqType.kind === "INSTRUMENT") {
+      const assets = await tx
+        .select({ id: instrumentAsset.id, assetCode: instrumentAsset.assetCode })
+        .from(instrumentAsset)
+        .where(eq(instrumentAsset.instrumentTypeId, typeId));
 
-    if (assets.length > 0) {
-      throw new ApiError(
-        400,
-        "HAS_ACTIVE_ASSETS",
-        `Katalog "${eqType.name}" masih memiliki ${assets.length} aset terdaftar (${assets.map((a) => a.assetCode).join(", ")}). Hapus aset terlebih dahulu.`,
-      );
+      if (assets.length > 0) {
+        throw new ApiError(
+          400,
+          "HAS_ACTIVE_ASSETS",
+          `Katalog "${eqType.name}" masih memiliki ${assets.length} aset terdaftar (${assets.map((a) => a.assetCode).join(", ")}). Hapus aset terlebih dahulu.`,
+        );
+      }
+
+      await tx.delete(instrumentType).where(eq(instrumentType.id, typeId));
+
+      await writeAudit(tx, {
+        actorId,
+        action: "DELETE",
+        entityType: "instrument_type",
+        entityId: eqType.id,
+        before: { name: eqType.name, classification: "INSTRUMENT" },
+      });
+
+      return { success: true, name: eqType.name };
+    } else {
+      const assets = await tx
+        .select({ id: toolAsset.id, assetCode: toolAsset.assetCode })
+        .from(toolAsset)
+        .where(eq(toolAsset.toolTypeId, typeId));
+
+      if (assets.length > 0) {
+        throw new ApiError(
+          400,
+          "HAS_ACTIVE_ASSETS",
+          `Katalog "${eqType.name}" masih memiliki ${assets.length} aset terdaftar (${assets.map((a) => a.assetCode).join(", ")}). Hapus aset terlebih dahulu.`,
+        );
+      }
+
+      await tx.delete(toolType).where(eq(toolType.id, typeId));
+
+      await writeAudit(tx, {
+        actorId,
+        action: "DELETE",
+        entityType: "tool_type",
+        entityId: eqType.id,
+        before: { name: eqType.name, classification: "TOOL" },
+      });
+
+      return { success: true, name: eqType.name };
     }
-
-    await tx.delete(equipmentType).where(eq(equipmentType.id, typeId));
-
-    await writeAudit(tx, {
-      actorId,
-      action: "DELETE",
-      entityType: "equipment_type",
-      entityId: eqType.id,
-      before: { name: eqType.name, classification: eqType.classification },
-    });
-
-    return { success: true, name: eqType.name };
   });
 }
 
@@ -1793,8 +2466,16 @@ export async function deletePlpMaterialBatch(
 
 export async function deletePlpMaterial(
   actorId: string,
+  scope: RoomScope,
   code: string,
 ) {
+  if (!scope.all && scope.roomCodes.length === 0) {
+    throw new ApiError(
+      403,
+      "FORBIDDEN",
+      "Anda belum memiliki penugasan laboratorium aktif.",
+    );
+  }
   return db.transaction(async (tx) => {
     const [mat] = await tx
       .select()
@@ -1807,9 +2488,18 @@ export async function deletePlpMaterial(
     }
 
     const batches = await tx
-      .select({ id: materialBatch.id, lotNumber: materialBatch.lotNumber })
+      .select({
+        id: materialBatch.id,
+        lotNumber: materialBatch.lotNumber,
+        roomCode: room.code,
+      })
       .from(materialBatch)
+      .innerJoin(room, eq(room.id, materialBatch.roomId))
       .where(eq(materialBatch.materialId, mat.id));
+
+    for (const batch of batches) {
+      assertRoomInScope(scope, batch.roomCode);
+    }
 
     const batchIds = batches.map((b) => b.id);
     if (batchIds.length > 0) {

@@ -1,23 +1,23 @@
 import "server-only";
-import { and, asc, count, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import { ApiError } from "@/lib/api";
 import { db } from "@/db";
 import {
   activity,
-  appSetting,
   assignment,
   auditLog,
-  equipmentAsset,
-  equipmentType,
-  equipmentUnit,
-  incident,
+  instrumentAsset,
+  instrumentType,
+  instrumentUnit,
   laboratory,
   material,
   materialBatch,
   materialDispensingRule,
-  reservation,
   resourceRequest,
   room,
+  toolAsset,
+  toolType,
+  toolUnit,
   user,
 } from "@/db/schema";
 import type { DbExecutor } from "@/services/executor";
@@ -52,11 +52,72 @@ async function requireRow<T>(
 
 async function assertCodeFree(
   exec: DbExecutor,
-  table: "room" | "equipment_asset" | "equipment_unit" | "material" | "laboratory",
+  table:
+    | "room"
+    | "equipment_asset"
+    | "equipment_unit"
+    | "instrument_asset"
+    | "instrument_unit"
+    | "tool_asset"
+    | "tool_unit"
+    | "material"
+    | "laboratory",
   code: string,
   excludeId?: string,
 ) {
-  const column = table === "equipment_asset" ? "asset_code" : "code";
+  if (
+    table === "equipment_asset" ||
+    table === "instrument_asset" ||
+    table === "tool_asset"
+  ) {
+    const [instResult, toolResult] = await Promise.all([
+      excludeId
+        ? exec.execute<{ id: string }>(
+            sql`SELECT id FROM instrument_asset WHERE asset_code = ${code} AND id <> ${excludeId} LIMIT 1`,
+          )
+        : exec.execute<{ id: string }>(
+            sql`SELECT id FROM instrument_asset WHERE asset_code = ${code} LIMIT 1`,
+          ),
+      excludeId
+        ? exec.execute<{ id: string }>(
+            sql`SELECT id FROM tool_asset WHERE asset_code = ${code} AND id <> ${excludeId} LIMIT 1`,
+          )
+        : exec.execute<{ id: string }>(
+            sql`SELECT id FROM tool_asset WHERE asset_code = ${code} LIMIT 1`,
+          ),
+    ]);
+    if (instResult.rows.length > 0 || toolResult.rows.length > 0)
+      throw new ApiError(409, "CODE_TAKEN", `Kode aset ${code} sudah dipakai.`);
+    return;
+  }
+
+  if (
+    table === "equipment_unit" ||
+    table === "instrument_unit" ||
+    table === "tool_unit"
+  ) {
+    const [instResult, toolResult] = await Promise.all([
+      excludeId
+        ? exec.execute<{ id: string }>(
+            sql`SELECT id FROM instrument_unit WHERE code = ${code} AND id <> ${excludeId} LIMIT 1`,
+          )
+        : exec.execute<{ id: string }>(
+            sql`SELECT id FROM instrument_unit WHERE code = ${code} LIMIT 1`,
+          ),
+      excludeId
+        ? exec.execute<{ id: string }>(
+            sql`SELECT id FROM tool_unit WHERE code = ${code} AND id <> ${excludeId} LIMIT 1`,
+          )
+        : exec.execute<{ id: string }>(
+            sql`SELECT id FROM tool_unit WHERE code = ${code} LIMIT 1`,
+          ),
+    ]);
+    if (instResult.rows.length > 0 || toolResult.rows.length > 0)
+      throw new ApiError(409, "CODE_TAKEN", `Kode unit ${code} sudah dipakai.`);
+    return;
+  }
+
+  const column = "code";
   const result = excludeId
     ? await exec.execute<{ id: string }>(
         sql`SELECT id FROM ${sql.identifier(table)} WHERE ${sql.identifier(column)} = ${code} AND id <> ${excludeId} LIMIT 1`,
@@ -253,23 +314,81 @@ export async function updateRoom(
   });
 }
 
-// -------------------------------------------------------------- equipment types
+// -------------------------------------------------------------- equipment / instrument / tool types
 
 export async function listEquipmentTypes() {
-  return db.select().from(equipmentType).orderBy(asc(equipmentType.name));
+  const [instruments, tools] = await Promise.all([
+    db
+      .select({
+        id: instrumentType.id,
+        name: instrumentType.name,
+        category: instrumentType.category,
+        classification: sql<"INSTRUMENT">`'INSTRUMENT'`,
+        description: instrumentType.description,
+        usageType: instrumentType.usageType,
+        imageMediaId: instrumentType.imageMediaId,
+        active: instrumentType.active,
+        createdAt: instrumentType.createdAt,
+        updatedAt: instrumentType.updatedAt,
+      })
+      .from(instrumentType)
+      .orderBy(asc(instrumentType.name)),
+    db
+      .select({
+        id: toolType.id,
+        name: toolType.name,
+        category: toolType.category,
+        classification: sql<"TOOL">`'TOOL'`,
+        description: toolType.description,
+        usageType: toolType.usageType,
+        imageMediaId: toolType.imageMediaId,
+        active: toolType.active,
+        createdAt: toolType.createdAt,
+        updatedAt: toolType.updatedAt,
+      })
+      .from(toolType)
+      .orderBy(asc(toolType.name)),
+  ]);
+  return [...instruments, ...tools].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function createEquipmentType(
   actorId: string,
   input: EquipmentTypeInput,
 ) {
+  const isTool = input.classification === "TOOL";
   return db.transaction(async (tx) => {
+    if (isTool) {
+      const [created] = await tx
+        .insert(toolType)
+        .values({
+          name: input.name,
+          category: input.category ?? null,
+          description: input.description ?? null,
+          usageType: input.usageType,
+          imageMediaId: input.imageMediaId ?? null,
+          active: input.active ?? true,
+        })
+        .returning();
+      await writeAudit(tx, {
+        actorId,
+        action: "CREATE",
+        entityType: "tool_type",
+        entityId: created.id,
+        after: {
+          name: created.name,
+          usageType: created.usageType,
+          classification: "TOOL",
+        },
+      });
+      return { ...created, classification: "TOOL" as const };
+    }
+
     const [created] = await tx
-      .insert(equipmentType)
+      .insert(instrumentType)
       .values({
         name: input.name,
         category: input.category ?? null,
-        classification: input.classification ?? "INSTRUMENT",
         description: input.description ?? null,
         usageType: input.usageType,
         imageMediaId: input.imageMediaId ?? null,
@@ -279,15 +398,15 @@ export async function createEquipmentType(
     await writeAudit(tx, {
       actorId,
       action: "CREATE",
-      entityType: "equipment_type",
+      entityType: "instrument_type",
       entityId: created.id,
       after: {
         name: created.name,
         usageType: created.usageType,
-        classification: created.classification,
+        classification: "INSTRUMENT",
       },
     });
-    return created;
+    return { ...created, classification: "INSTRUMENT" as const };
   });
 }
 
@@ -297,106 +416,191 @@ export async function updateEquipmentType(
   input: Update<EquipmentTypeInput>,
 ) {
   return db.transaction(async (tx) => {
-    const current = await requireRow(
+    const [inst] = await tx
+      .select()
+      .from(instrumentType)
+      .where(eq(instrumentType.id, id))
+      .limit(1);
+
+    if (inst) {
+      const [updated] = await tx
+        .update(instrumentType)
+        .set({
+          name: input.name ?? inst.name,
+          category: input.category === undefined ? inst.category : input.category,
+          description:
+            input.description === undefined ? inst.description : input.description,
+          usageType: input.usageType ?? inst.usageType,
+          imageMediaId:
+            input.imageMediaId === undefined
+              ? inst.imageMediaId
+              : input.imageMediaId,
+          active: input.active ?? inst.active,
+        })
+        .where(eq(instrumentType.id, id))
+        .returning();
+      await writeAudit(tx, {
+        actorId,
+        action: "UPDATE",
+        entityType: "instrument_type",
+        entityId: id,
+        before: {
+          name: inst.name,
+          usageType: inst.usageType,
+          classification: "INSTRUMENT",
+        },
+        after: {
+          name: updated.name,
+          usageType: updated.usageType,
+          classification: "INSTRUMENT",
+        },
+      });
+      return { ...updated, classification: "INSTRUMENT" as const };
+    }
+
+    const tool = await requireRow(
       async () =>
         (
-          await tx
-            .select()
-            .from(equipmentType)
-            .where(eq(equipmentType.id, id))
-            .limit(1)
+          await tx.select().from(toolType).where(eq(toolType.id, id)).limit(1)
         )[0],
       "Equipment type not found.",
     );
+
     const [updated] = await tx
-      .update(equipmentType)
+      .update(toolType)
       .set({
-        name: input.name ?? current.name,
-        category: input.category === undefined ? current.category : input.category,
-        classification: input.classification ?? current.classification,
+        name: input.name ?? tool.name,
+        category: input.category === undefined ? tool.category : input.category,
         description:
-          input.description === undefined
-            ? current.description
-            : input.description,
-        usageType: input.usageType ?? current.usageType,
+          input.description === undefined ? tool.description : input.description,
+        usageType: input.usageType ?? tool.usageType,
         imageMediaId:
           input.imageMediaId === undefined
-            ? current.imageMediaId
+            ? tool.imageMediaId
             : input.imageMediaId,
-        active: input.active ?? current.active,
+        active: input.active ?? tool.active,
       })
-      .where(eq(equipmentType.id, id))
+      .where(eq(toolType.id, id))
       .returning();
     await writeAudit(tx, {
       actorId,
       action: "UPDATE",
-      entityType: "equipment_type",
+      entityType: "tool_type",
       entityId: id,
       before: {
-        name: current.name,
-        usageType: current.usageType,
-        classification: current.classification,
+        name: tool.name,
+        usageType: tool.usageType,
+        classification: "TOOL",
       },
       after: {
         name: updated.name,
         usageType: updated.usageType,
-        classification: updated.classification,
+        classification: "TOOL",
       },
     });
-    return updated;
+    return { ...updated, classification: "TOOL" as const };
   });
 }
 
-// -------------------------------------------------------------- equipment assets
+// -------------------------------------------------------------- equipment / instrument / tool assets
 
 export async function listEquipmentAssetsAdmin() {
-  const assets = await db
-    .select({
-      id: equipmentAsset.id,
-      assetCode: equipmentAsset.assetCode,
-      serialNumber: equipmentAsset.serialNumber,
-      status: equipmentAsset.status,
-      condition: equipmentAsset.condition,
-      notes: equipmentAsset.notes,
-      active: equipmentAsset.active,
-      equipmentTypeId: equipmentAsset.equipmentTypeId,
-      typeName: equipmentType.name,
-      usageType: equipmentType.usageType,
-      roomCode: room.code,
-      roomName: room.name,
-      unitCount: sql<number>`(SELECT count(*)::int FROM equipment_unit u WHERE u.equipment_asset_id = ${equipmentAsset.id} AND u.active = true)`,
-      assetImageMediaId: equipmentAsset.imageMediaId,
-      typeImageMediaId: equipmentType.imageMediaId,
-      imageMediaId: sql<string | null>`COALESCE(${equipmentAsset.imageMediaId}, ${equipmentType.imageMediaId})`,
-    })
-    .from(equipmentAsset)
-    .innerJoin(equipmentType, eq(equipmentType.id, equipmentAsset.equipmentTypeId))
-    .innerJoin(room, eq(room.id, equipmentAsset.roomId))
-    .where(eq(equipmentAsset.active, true))
-    .orderBy(asc(room.name), asc(equipmentAsset.assetCode));
+  const [instAssets, toolAssetsList] = await Promise.all([
+    db
+      .select({
+        id: instrumentAsset.id,
+        assetCode: instrumentAsset.assetCode,
+        serialNumber: instrumentAsset.serialNumber,
+        status: instrumentAsset.status,
+        condition: instrumentAsset.condition,
+        notes: instrumentAsset.notes,
+        active: instrumentAsset.active,
+        equipmentTypeId: instrumentAsset.instrumentTypeId,
+        typeName: instrumentType.name,
+        classification: sql<"INSTRUMENT">`'INSTRUMENT'`,
+        usageType: instrumentType.usageType,
+        roomCode: room.code,
+        roomName: room.name,
+        unitCount: sql<number>`(SELECT count(*)::int FROM instrument_unit u WHERE u.instrument_asset_id = ${instrumentAsset.id} AND u.active = true)`,
+        assetImageMediaId: instrumentAsset.imageMediaId,
+        typeImageMediaId: instrumentType.imageMediaId,
+        imageMediaId: sql<string | null>`COALESCE(${instrumentAsset.imageMediaId}, ${instrumentType.imageMediaId})`,
+      })
+      .from(instrumentAsset)
+      .innerJoin(
+        instrumentType,
+        eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+      )
+      .innerJoin(room, eq(room.id, instrumentAsset.roomId))
+      .where(eq(instrumentAsset.active, true)),
+    db
+      .select({
+        id: toolAsset.id,
+        assetCode: toolAsset.assetCode,
+        serialNumber: toolAsset.serialNumber,
+        status: toolAsset.status,
+        condition: toolAsset.condition,
+        notes: toolAsset.notes,
+        active: toolAsset.active,
+        equipmentTypeId: toolAsset.toolTypeId,
+        typeName: toolType.name,
+        classification: sql<"TOOL">`'TOOL'`,
+        usageType: toolType.usageType,
+        roomCode: room.code,
+        roomName: room.name,
+        unitCount: sql<number>`(SELECT count(*)::int FROM tool_unit u WHERE u.tool_asset_id = ${toolAsset.id} AND u.active = true)`,
+        assetImageMediaId: toolAsset.imageMediaId,
+        typeImageMediaId: toolType.imageMediaId,
+        imageMediaId: sql<string | null>`COALESCE(${toolAsset.imageMediaId}, ${toolType.imageMediaId})`,
+      })
+      .from(toolAsset)
+      .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
+      .innerJoin(room, eq(room.id, toolAsset.roomId))
+      .where(eq(toolAsset.active, true)),
+  ]);
 
-  const units = await db
-    .select({
-      id: equipmentUnit.id,
-      code: equipmentUnit.code,
-      label: equipmentUnit.label,
-      status: equipmentUnit.status,
-      condition: equipmentUnit.condition,
-      notes: equipmentUnit.notes,
-      equipmentAssetId: equipmentUnit.equipmentAssetId,
-    })
-    .from(equipmentUnit)
-    .where(eq(equipmentUnit.active, true))
-    .orderBy(asc(equipmentUnit.code));
+  const [instUnits, toolUnitsList] = await Promise.all([
+    db
+      .select({
+        id: instrumentUnit.id,
+        code: instrumentUnit.code,
+        label: instrumentUnit.label,
+        status: instrumentUnit.status,
+        condition: instrumentUnit.condition,
+        notes: instrumentUnit.notes,
+        equipmentAssetId: instrumentUnit.instrumentAssetId,
+      })
+      .from(instrumentUnit)
+      .where(eq(instrumentUnit.active, true))
+      .orderBy(asc(instrumentUnit.code)),
+    db
+      .select({
+        id: toolUnit.id,
+        code: toolUnit.code,
+        label: toolUnit.label,
+        status: toolUnit.status,
+        condition: toolUnit.condition,
+        notes: toolUnit.notes,
+        equipmentAssetId: toolUnit.toolAssetId,
+      })
+      .from(toolUnit)
+      .where(eq(toolUnit.active, true))
+      .orderBy(asc(toolUnit.code)),
+  ]);
 
-  const unitsByAsset = new Map<string, typeof units>();
-  for (const unit of units) {
+  const allUnits = [...instUnits, ...toolUnitsList];
+  const unitsByAsset = new Map<string, typeof allUnits>();
+  for (const unit of allUnits) {
     const list = unitsByAsset.get(unit.equipmentAssetId) ?? [];
     list.push(unit);
     unitsByAsset.set(unit.equipmentAssetId, list);
   }
 
-  return assets.map((asset) => ({
+  const allAssets = [...instAssets, ...toolAssetsList].sort((a, b) =>
+    a.roomName.localeCompare(b.roomName) || a.assetCode.localeCompare(b.assetCode),
+  );
+
+  return allAssets.map((asset) => ({
     ...asset,
     units: unitsByAsset.get(asset.id) ?? [],
   }));
@@ -407,17 +611,6 @@ export async function createEquipmentAsset(
   input: EquipmentAssetInput,
 ) {
   return db.transaction(async (tx) => {
-    const type = await requireRow(
-      async () =>
-        (
-          await tx
-            .select()
-            .from(equipmentType)
-            .where(eq(equipmentType.id, input.equipmentTypeId))
-            .limit(1)
-        )[0],
-      "Equipment type not found.",
-    );
     const roomRow = await requireRow(
       async () =>
         (
@@ -426,10 +619,53 @@ export async function createEquipmentAsset(
       "Room not found.",
     );
     await assertCodeFree(tx, "equipment_asset", input.assetCode);
+
+    const [instType] = await tx
+      .select()
+      .from(instrumentType)
+      .where(eq(instrumentType.id, input.equipmentTypeId))
+      .limit(1);
+
+    if (instType) {
+      const [created] = await tx
+        .insert(instrumentAsset)
+        .values({
+          instrumentTypeId: instType.id,
+          roomId: roomRow.id,
+          assetCode: input.assetCode,
+          serialNumber: input.serialNumber ? input.serialNumber.trim() : null,
+          status: input.status ?? "AVAILABLE",
+          condition: input.condition ?? "GOOD",
+          notes: input.notes ? input.notes.trim() : null,
+          active: input.active ?? true,
+        })
+        .returning();
+      await writeAudit(tx, {
+        actorId,
+        action: "CREATE",
+        entityType: "instrument_asset",
+        entityId: created.id,
+        after: { assetCode: created.assetCode, room: roomRow.code },
+      });
+      return created;
+    }
+
+    const toolTypeRow = await requireRow(
+      async () =>
+        (
+          await tx
+            .select()
+            .from(toolType)
+            .where(eq(toolType.id, input.equipmentTypeId))
+            .limit(1)
+        )[0],
+      "Equipment type not found.",
+    );
+
     const [created] = await tx
-      .insert(equipmentAsset)
+      .insert(toolAsset)
       .values({
-        equipmentTypeId: type.id,
+        toolTypeId: toolTypeRow.id,
         roomId: roomRow.id,
         assetCode: input.assetCode,
         serialNumber: input.serialNumber ? input.serialNumber.trim() : null,
@@ -442,7 +678,7 @@ export async function createEquipmentAsset(
     await writeAudit(tx, {
       actorId,
       action: "CREATE",
-      entityType: "equipment_asset",
+      entityType: "tool_asset",
       entityId: created.id,
       after: { assetCode: created.assetCode, room: roomRow.code },
     });
@@ -456,20 +692,81 @@ export async function updateEquipmentAsset(
   input: Update<EquipmentAssetInput>,
 ) {
   return db.transaction(async (tx) => {
-    const current = await requireRow(
+    const [instCurrent] = await tx
+      .select()
+      .from(instrumentAsset)
+      .where(eq(instrumentAsset.id, id))
+      .limit(1);
+
+    if (instCurrent) {
+      if (input.assetCode && input.assetCode !== instCurrent.assetCode)
+        await assertCodeFree(tx, "instrument_asset", input.assetCode, id);
+      let roomId = instCurrent.roomId;
+      const roomCode = input.roomCode;
+      if (roomCode) {
+        const roomRow = await requireRow(
+          async () =>
+            (
+              await tx.select().from(room).where(eq(room.code, roomCode)).limit(1)
+            )[0],
+          "Room not found.",
+        );
+        roomId = roomRow.id;
+      }
+      const [updated] = await tx
+        .update(instrumentAsset)
+        .set({
+          instrumentTypeId:
+            input.equipmentTypeId ?? instCurrent.instrumentTypeId,
+          roomId,
+          assetCode: input.assetCode ?? instCurrent.assetCode,
+          serialNumber:
+            input.serialNumber === undefined
+              ? instCurrent.serialNumber
+              : input.serialNumber
+                ? input.serialNumber.trim()
+                : null,
+          status: input.status ?? instCurrent.status,
+          condition: input.condition ?? instCurrent.condition,
+          notes:
+            input.notes === undefined
+              ? instCurrent.notes
+              : input.notes
+                ? input.notes.trim()
+                : null,
+          active: input.active ?? instCurrent.active,
+        })
+        .where(eq(instrumentAsset.id, id))
+        .returning();
+      await writeAudit(tx, {
+        actorId,
+        action: "UPDATE",
+        entityType: "instrument_asset",
+        entityId: id,
+        before: {
+          status: instCurrent.status,
+          condition: instCurrent.condition,
+        },
+        after: { status: updated.status, condition: updated.condition },
+      });
+      return updated;
+    }
+
+    const toolCurrent = await requireRow(
       async () =>
         (
           await tx
             .select()
-            .from(equipmentAsset)
-            .where(eq(equipmentAsset.id, id))
+            .from(toolAsset)
+            .where(eq(toolAsset.id, id))
             .limit(1)
         )[0],
       "Equipment asset not found.",
     );
-    if (input.assetCode && input.assetCode !== current.assetCode)
-      await assertCodeFree(tx, "equipment_asset", input.assetCode, id);
-    let roomId = current.roomId;
+
+    if (input.assetCode && input.assetCode !== toolCurrent.assetCode)
+      await assertCodeFree(tx, "tool_asset", input.assetCode, id);
+    let roomId = toolCurrent.roomId;
     const roomCode = input.roomCode;
     if (roomCode) {
       const roomRow = await requireRow(
@@ -482,67 +779,97 @@ export async function updateEquipmentAsset(
       roomId = roomRow.id;
     }
     const [updated] = await tx
-      .update(equipmentAsset)
+      .update(toolAsset)
       .set({
-        equipmentTypeId: input.equipmentTypeId ?? current.equipmentTypeId,
+        toolTypeId: input.equipmentTypeId ?? toolCurrent.toolTypeId,
         roomId,
-        assetCode: input.assetCode ?? current.assetCode,
+        assetCode: input.assetCode ?? toolCurrent.assetCode,
         serialNumber:
           input.serialNumber === undefined
-            ? current.serialNumber
+            ? toolCurrent.serialNumber
             : input.serialNumber
               ? input.serialNumber.trim()
               : null,
-        status: input.status ?? current.status,
-        condition: input.condition ?? current.condition,
+        status: input.status ?? toolCurrent.status,
+        condition: input.condition ?? toolCurrent.condition,
         notes:
           input.notes === undefined
-            ? current.notes
+            ? toolCurrent.notes
             : input.notes
               ? input.notes.trim()
               : null,
-        active: input.active ?? current.active,
+        active: input.active ?? toolCurrent.active,
       })
-      .where(eq(equipmentAsset.id, id))
+      .where(eq(toolAsset.id, id))
       .returning();
     await writeAudit(tx, {
       actorId,
       action: "UPDATE",
-      entityType: "equipment_asset",
+      entityType: "tool_asset",
       entityId: id,
-      before: { status: current.status, condition: current.condition },
+      before: {
+        status: toolCurrent.status,
+        condition: toolCurrent.condition,
+      },
       after: { status: updated.status, condition: updated.condition },
     });
     return updated;
   });
 }
 
-// --------------------------------------------------------------- equipment units
+// --------------------------------------------------------------- equipment / instrument / tool units
 
 export async function listEquipmentUnitsAdmin(assetCode?: string) {
-  return db
-    .select({
-      id: equipmentUnit.id,
-      code: equipmentUnit.code,
-      label: equipmentUnit.label,
-      qrCode: equipmentUnit.qrCode,
-      storageLocation: equipmentUnit.storageLocation,
-      status: equipmentUnit.status,
-      condition: equipmentUnit.condition,
-      notes: equipmentUnit.notes,
-      active: equipmentUnit.active,
-      assetCode: equipmentAsset.assetCode,
-      assetName: equipmentType.name,
-      classification: equipmentType.classification,
-    })
-    .from(equipmentUnit)
-    .innerJoin(
-      equipmentAsset,
-      eq(equipmentAsset.id, equipmentUnit.equipmentAssetId),
-    )
-    .innerJoin(equipmentType, eq(equipmentType.id, equipmentAsset.equipmentTypeId))
-    .where(assetCode ? eq(equipmentAsset.assetCode, assetCode) : undefined)
-    .orderBy(asc(equipmentUnit.code));
+  const [instUnits, toolUnitsList] = await Promise.all([
+    db
+      .select({
+        id: instrumentUnit.id,
+        code: instrumentUnit.code,
+        label: instrumentUnit.label,
+        qrCode: instrumentUnit.qrCode,
+        storageLocation: instrumentUnit.storageLocation,
+        status: instrumentUnit.status,
+        condition: instrumentUnit.condition,
+        notes: instrumentUnit.notes,
+        active: instrumentUnit.active,
+        assetCode: instrumentAsset.assetCode,
+        assetName: instrumentType.name,
+        classification: sql<"INSTRUMENT">`'INSTRUMENT'`,
+      })
+      .from(instrumentUnit)
+      .innerJoin(
+        instrumentAsset,
+        eq(instrumentAsset.id, instrumentUnit.instrumentAssetId),
+      )
+      .innerJoin(
+        instrumentType,
+        eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+      )
+      .where(assetCode ? eq(instrumentAsset.assetCode, assetCode) : undefined),
+    db
+      .select({
+        id: toolUnit.id,
+        code: toolUnit.code,
+        label: toolUnit.label,
+        qrCode: toolUnit.qrCode,
+        storageLocation: toolUnit.storageLocation,
+        status: toolUnit.status,
+        condition: toolUnit.condition,
+        notes: toolUnit.notes,
+        active: toolUnit.active,
+        assetCode: toolAsset.assetCode,
+        assetName: toolType.name,
+        classification: sql<"TOOL">`'TOOL'`,
+      })
+      .from(toolUnit)
+      .innerJoin(toolAsset, eq(toolAsset.id, toolUnit.toolAssetId))
+      .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
+      .where(assetCode ? eq(toolAsset.assetCode, assetCode) : undefined),
+  ]);
+
+  return [...instUnits, ...toolUnitsList].sort((a, b) =>
+    a.code.localeCompare(b.code),
+  );
 }
 
 export async function createEquipmentUnit(
@@ -550,26 +877,63 @@ export async function createEquipmentUnit(
   input: EquipmentUnitInput,
 ) {
   return db.transaction(async (tx) => {
-    const asset = await requireRow(
+    await assertCodeFree(tx, "equipment_unit", input.code);
+
+    const [instAsset] = await tx
+      .select()
+      .from(instrumentAsset)
+      .where(eq(instrumentAsset.assetCode, input.assetCode))
+      .limit(1);
+
+    if (instAsset) {
+      const [created] = await tx
+        .insert(instrumentUnit)
+        .values({
+          instrumentAssetId: instAsset.id,
+          code: input.code,
+          label: input.label,
+          qrCode: `RK-INS-${input.code}`,
+          storageLocation: input.storageLocation
+            ? input.storageLocation.trim()
+            : null,
+          status: input.status ?? "AVAILABLE",
+          condition: input.condition ?? "GOOD",
+          notes: input.notes ? input.notes.trim() : null,
+          active: input.active ?? true,
+        })
+        .returning();
+      await writeAudit(tx, {
+        actorId,
+        action: "CREATE",
+        entityType: "instrument_unit",
+        entityId: created.id,
+        after: { code: created.code, asset: instAsset.assetCode },
+      });
+      return created;
+    }
+
+    const toolAssetRow = await requireRow(
       async () =>
         (
           await tx
             .select()
-            .from(equipmentAsset)
-            .where(eq(equipmentAsset.assetCode, input.assetCode))
+            .from(toolAsset)
+            .where(eq(toolAsset.assetCode, input.assetCode))
             .limit(1)
         )[0],
       "Equipment asset not found.",
     );
-    await assertCodeFree(tx, "equipment_unit", input.code);
+
     const [created] = await tx
-      .insert(equipmentUnit)
+      .insert(toolUnit)
       .values({
-        equipmentAssetId: asset.id,
+        toolAssetId: toolAssetRow.id,
         code: input.code,
         label: input.label,
-        qrCode: `RK-UNT-${input.code}`,
-        storageLocation: input.storageLocation ? input.storageLocation.trim() : null,
+        qrCode: `RK-TOL-${input.code}`,
+        storageLocation: input.storageLocation
+          ? input.storageLocation.trim()
+          : null,
         status: input.status ?? "AVAILABLE",
         condition: input.condition ?? "GOOD",
         notes: input.notes ? input.notes.trim() : null,
@@ -579,9 +943,9 @@ export async function createEquipmentUnit(
     await writeAudit(tx, {
       actorId,
       action: "CREATE",
-      entityType: "equipment_unit",
+      entityType: "tool_unit",
       entityId: created.id,
-      after: { code: created.code, asset: asset.assetCode },
+      after: { code: created.code, asset: toolAssetRow.assetCode },
     });
     return created;
   });
@@ -593,51 +957,133 @@ export async function updateEquipmentUnit(
   input: Update<EquipmentUnitInput>,
 ) {
   return db.transaction(async (tx) => {
-    const current = await requireRow(
+    const [instUnit] = await tx
+      .select()
+      .from(instrumentUnit)
+      .where(eq(instrumentUnit.id, id))
+      .limit(1);
+
+    if (instUnit) {
+      if (input.code && input.code !== instUnit.code)
+        await assertCodeFree(tx, "instrument_unit", input.code, id);
+      const [updated] = await tx
+        .update(instrumentUnit)
+        .set({
+          code: input.code ?? instUnit.code,
+          label: input.label ?? instUnit.label,
+          storageLocation:
+            input.storageLocation === undefined
+              ? instUnit.storageLocation
+              : input.storageLocation
+                ? input.storageLocation.trim()
+                : null,
+          status: input.status ?? instUnit.status,
+          condition: input.condition ?? instUnit.condition,
+          notes:
+            input.notes === undefined
+              ? instUnit.notes
+              : input.notes
+                ? input.notes.trim()
+                : null,
+          active: input.active ?? instUnit.active,
+        })
+        .where(eq(instrumentUnit.id, id))
+        .returning();
+
+      if (input.status && input.status !== instUnit.status) {
+        const activeUnits = await tx
+          .select({ status: instrumentUnit.status })
+          .from(instrumentUnit)
+          .where(
+            and(
+              eq(instrumentUnit.instrumentAssetId, instUnit.instrumentAssetId),
+              eq(instrumentUnit.active, true),
+            ),
+          );
+        const hasAvailable = activeUnits.some((u) => u.status === "AVAILABLE");
+        const allMaintenance =
+          activeUnits.length > 0 &&
+          activeUnits.every((u) =>
+            ["MAINTENANCE", "DAMAGED", "RETIRED"].includes(u.status),
+          );
+        if (hasAvailable) {
+          await tx
+            .update(instrumentAsset)
+            .set({ status: "AVAILABLE" })
+            .where(eq(instrumentAsset.id, instUnit.instrumentAssetId));
+        } else if (allMaintenance) {
+          await tx
+            .update(instrumentAsset)
+            .set({ status: "MAINTENANCE" })
+            .where(eq(instrumentAsset.id, instUnit.instrumentAssetId));
+        }
+      }
+
+      await writeAudit(tx, {
+        actorId,
+        action: "UPDATE",
+        entityType: "instrument_unit",
+        entityId: id,
+        before: {
+          status: instUnit.status,
+          condition: instUnit.condition,
+          active: instUnit.active,
+        },
+        after: {
+          status: updated.status,
+          condition: updated.condition,
+          active: updated.active,
+        },
+      });
+      return updated;
+    }
+
+    const toolUnitRow = await requireRow(
       async () =>
         (
           await tx
             .select()
-            .from(equipmentUnit)
-            .where(eq(equipmentUnit.id, id))
+            .from(toolUnit)
+            .where(eq(toolUnit.id, id))
             .limit(1)
         )[0],
       "Equipment unit not found.",
     );
-    if (input.code && input.code !== current.code)
-      await assertCodeFree(tx, "equipment_unit", input.code, id);
+
+    if (input.code && input.code !== toolUnitRow.code)
+      await assertCodeFree(tx, "tool_unit", input.code, id);
     const [updated] = await tx
-      .update(equipmentUnit)
+      .update(toolUnit)
       .set({
-        code: input.code ?? current.code,
-        label: input.label ?? current.label,
+        code: input.code ?? toolUnitRow.code,
+        label: input.label ?? toolUnitRow.label,
         storageLocation:
           input.storageLocation === undefined
-            ? current.storageLocation
+            ? toolUnitRow.storageLocation
             : input.storageLocation
               ? input.storageLocation.trim()
               : null,
-        status: input.status ?? current.status,
-        condition: input.condition ?? current.condition,
+        status: input.status ?? toolUnitRow.status,
+        condition: input.condition ?? toolUnitRow.condition,
         notes:
           input.notes === undefined
-            ? current.notes
+            ? toolUnitRow.notes
             : input.notes
               ? input.notes.trim()
               : null,
-        active: input.active ?? current.active,
+        active: input.active ?? toolUnitRow.active,
       })
-      .where(eq(equipmentUnit.id, id))
+      .where(eq(toolUnit.id, id))
       .returning();
 
-    if (input.status && input.status !== current.status) {
+    if (input.status && input.status !== toolUnitRow.status) {
       const activeUnits = await tx
-        .select({ status: equipmentUnit.status })
-        .from(equipmentUnit)
+        .select({ status: toolUnit.status })
+        .from(toolUnit)
         .where(
           and(
-            eq(equipmentUnit.equipmentAssetId, current.equipmentAssetId),
-            eq(equipmentUnit.active, true),
+            eq(toolUnit.toolAssetId, toolUnitRow.toolAssetId),
+            eq(toolUnit.active, true),
           ),
         );
       const hasAvailable = activeUnits.some((u) => u.status === "AVAILABLE");
@@ -648,25 +1094,26 @@ export async function updateEquipmentUnit(
         );
       if (hasAvailable) {
         await tx
-          .update(equipmentAsset)
+          .update(toolAsset)
           .set({ status: "AVAILABLE" })
-          .where(eq(equipmentAsset.id, current.equipmentAssetId));
+          .where(eq(toolAsset.id, toolUnitRow.toolAssetId));
       } else if (allMaintenance) {
         await tx
-          .update(equipmentAsset)
+          .update(toolAsset)
           .set({ status: "MAINTENANCE" })
-          .where(eq(equipmentAsset.id, current.equipmentAssetId));
+          .where(eq(toolAsset.id, toolUnitRow.toolAssetId));
       }
     }
+
     await writeAudit(tx, {
       actorId,
       action: "UPDATE",
-      entityType: "equipment_unit",
+      entityType: "tool_unit",
       entityId: id,
       before: {
-        status: current.status,
-        condition: current.condition,
-        active: current.active,
+        status: toolUnitRow.status,
+        condition: toolUnitRow.condition,
+        active: toolUnitRow.active,
       },
       after: {
         status: updated.status,
@@ -1280,35 +1727,33 @@ export async function deleteUserAccount(
     await tx.delete(assignment).where(eq(assignment.userId, targetUserId));
 
     // 2. Clean up user's resource requests and their child records
-    const userRequests = await tx
-      .select({ id: resourceRequest.id })
-      .from(resourceRequest)
-      .where(eq(resourceRequest.studentId, targetUserId));
-
-    for (const req of userRequests) {
-      await tx.execute(
-        sql`DELETE FROM return_transaction WHERE issue_transaction_id IN (SELECT id FROM issue_transaction WHERE request_id = ${req.id})`,
-      );
-      await tx.execute(
-        sql`DELETE FROM issue_transaction WHERE request_id = ${req.id}`,
-      );
-      await tx.execute(
-        sql`DELETE FROM shared_usage_request WHERE reservation_id IN (SELECT id FROM reservation WHERE request_id = ${req.id})`,
-      );
-      await tx.execute(
-        sql`DELETE FROM shared_usage WHERE reservation_id IN (SELECT id FROM reservation WHERE request_id = ${req.id})`,
-      );
-      await tx.execute(
-        sql`DELETE FROM reservation WHERE request_id = ${req.id}`,
-      );
-      await tx.execute(
-        sql`DELETE FROM equipment_request_item WHERE request_id = ${req.id}`,
-      );
-      await tx.execute(
-        sql`DELETE FROM material_request_item WHERE request_id = ${req.id}`,
-      );
-      await tx.delete(resourceRequest).where(eq(resourceRequest.id, req.id));
-    }
+    // Set-based deletes keep this to a fixed number of statements no matter
+    // how many requests the user owns. Item tables cascade from
+    // resource_request, so only the NO ACTION children are removed here.
+    const userRequestIds = sql`(SELECT id FROM resource_request WHERE student_id = ${targetUserId})`;
+    const userReservationIds = sql`(SELECT id FROM reservation WHERE request_id IN ${userRequestIds} OR primary_user_id = ${targetUserId})`;
+    await tx.execute(
+      sql`UPDATE incident SET request_id = NULL WHERE request_id IN ${userRequestIds}`,
+    );
+    await tx.execute(
+      sql`UPDATE incident SET reservation_id = NULL WHERE reservation_id IN ${userReservationIds}`,
+    );
+    await tx.execute(
+      sql`DELETE FROM return_transaction WHERE issue_transaction_id IN (SELECT id FROM issue_transaction WHERE request_id IN ${userRequestIds})`,
+    );
+    await tx.execute(
+      sql`DELETE FROM issue_transaction WHERE request_id IN ${userRequestIds}`,
+    );
+    await tx.execute(
+      sql`DELETE FROM shared_usage_request WHERE reservation_id IN ${userReservationIds}`,
+    );
+    await tx.execute(
+      sql`DELETE FROM shared_usage WHERE reservation_id IN ${userReservationIds}`,
+    );
+    await tx.execute(
+      sql`DELETE FROM reservation WHERE request_id IN ${userRequestIds}`,
+    );
+    await tx.delete(resourceRequest).where(eq(resourceRequest.studentId, targetUserId));
 
     // 3. Clean up direct shared usage and reservations
     await tx.execute(
@@ -1346,7 +1791,10 @@ export async function deleteUserAccount(
       sql`UPDATE incident_resolution SET resolved_by_id = ${operatorUserId} WHERE resolved_by_id = ${targetUserId}`,
     );
     await tx.execute(
-      sql`UPDATE equipment_condition_history SET recorded_by_id = ${operatorUserId} WHERE recorded_by_id = ${targetUserId}`,
+      sql`UPDATE instrument_condition_history SET recorded_by_id = ${operatorUserId} WHERE recorded_by_id = ${targetUserId}`,
+    );
+    await tx.execute(
+      sql`UPDATE tool_condition_history SET recorded_by_id = ${operatorUserId} WHERE recorded_by_id = ${targetUserId}`,
     );
     await tx.execute(
       sql`UPDATE issue_transaction SET issued_by_id = ${operatorUserId} WHERE issued_by_id = ${targetUserId}`,
@@ -1429,76 +1877,75 @@ export async function deleteUserAccount(
 // ------------------------------------------------------------ dashboard counts
 
 export async function getAdminDashboard() {
-  const [
-    userCount,
-    labCount,
-    roomCount,
-    assetCount,
-    materialCount,
-    pendingRequests,
-    openIncidents,
-    activeReservations,
-    auditRows,
-    settingRows,
-    inventoryHealth,
-    activeAssignments,
-  ] = await Promise.all([
-    db.select({ count: count() }).from(user),
-    db.select({ count: count() }).from(laboratory).where(eq(laboratory.active, true)),
-    db.select({ count: count() }).from(room).where(eq(room.active, true)),
-    db.select({ count: count() }).from(equipmentAsset),
-    db.select({ count: count() }).from(material).where(eq(material.active, true)),
-    db
-      .select({ count: count() })
-      .from(resourceRequest)
-      .where(eq(resourceRequest.status, "PENDING_PLP")),
-    db
-      .select({ count: count() })
-      .from(incident)
-      .where(
-        and(
-          sql`${incident.status} <> 'RESOLVED'`,
-        ),
-      ),
-    db
-      .select({ count: count() })
-      .from(reservation)
-      .where(and(eq(reservation.status, "RESERVED"))),
-    db
-      .select({
-        id: auditLog.id,
-        action: auditLog.action,
-        entityType: auditLog.entityType,
-        entityId: auditLog.entityId,
-        actorName: user.name,
-        createdAt: auditLog.createdAt,
-        reason: auditLog.reason,
-      })
-      .from(auditLog)
-      .leftJoin(user, eq(user.id, auditLog.actorId))
-      .orderBy(desc(auditLog.createdAt))
-      .limit(8),
-    db.select({ count: count() }).from(appSetting),
-    getInventoryHealth(),
-    countActiveAssignments(),
-  ]);
+  const [countsResult, auditRows, inventoryHealth, activeAssignments] =
+    await Promise.all([
+      db.execute<{
+        users: number;
+        laboratories: number;
+        rooms: number;
+        assets: number;
+        materials: number;
+        pending_requests: number;
+        open_incidents: number;
+        active_reservations: number;
+        configured_settings: number;
+      }>(sql`
+        SELECT
+          (SELECT count(*)::int FROM "user") AS users,
+          (SELECT count(*)::int FROM laboratory WHERE active = true) AS laboratories,
+          (SELECT count(*)::int FROM room WHERE active = true) AS rooms,
+          ((SELECT count(*)::int FROM instrument_asset) + (SELECT count(*)::int FROM tool_asset)) AS assets,
+          (SELECT count(*)::int FROM material WHERE active = true) AS materials,
+          (SELECT count(*)::int FROM resource_request WHERE status = 'PENDING_PLP') AS pending_requests,
+          (SELECT count(*)::int FROM incident WHERE status <> 'RESOLVED') AS open_incidents,
+          (SELECT count(*)::int FROM reservation WHERE status = 'RESERVED') AS active_reservations,
+          (SELECT count(*)::int FROM app_setting) AS configured_settings
+      `),
+      db
+        .select({
+          id: auditLog.id,
+          action: auditLog.action,
+          entityType: auditLog.entityType,
+          entityId: auditLog.entityId,
+          actorName: user.name,
+          createdAt: auditLog.createdAt,
+          reason: auditLog.reason,
+        })
+        .from(auditLog)
+        .leftJoin(user, eq(user.id, auditLog.actorId))
+        .orderBy(desc(auditLog.createdAt))
+        .limit(8),
+      getInventoryHealth(),
+      countActiveAssignments(),
+    ]);
+  const summary = countsResult.rows[0];
   return {
     counts: {
-      users: userCount[0]?.count ?? 0,
-      laboratories: labCount[0]?.count ?? 0,
-      rooms: roomCount[0]?.count ?? 0,
-      assets: assetCount[0]?.count ?? 0,
-      materials: materialCount[0]?.count ?? 0,
-      pendingRequests: pendingRequests[0]?.count ?? 0,
-      openIncidents: openIncidents[0]?.count ?? 0,
-      activeReservations: activeReservations[0]?.count ?? 0,
-      configuredSettings: settingRows[0]?.count ?? 0,
+      users: summary?.users ?? 0,
+      laboratories: summary?.laboratories ?? 0,
+      rooms: summary?.rooms ?? 0,
+      assets: summary?.assets ?? 0,
+      materials: summary?.materials ?? 0,
+      pendingRequests: summary?.pending_requests ?? 0,
+      openIncidents: summary?.open_incidents ?? 0,
+      activeReservations: summary?.active_reservations ?? 0,
+      configuredSettings: summary?.configured_settings ?? 0,
       lowStockMaterials: inventoryHealth.lowStock,
       expiringBatches: inventoryHealth.expiring,
       expiredBatches: inventoryHealth.expired,
       activeAssignments,
     },
-    recentAudit: auditRows.map((row) => ({
+    recentAudit: (
+      auditRows as Array<{
+        id: string;
+        action: string;
+        entityType: string;
+        entityId: string | null;
+        actorName: string | null;
+        createdAt: Date;
+        reason: string | null;
+      }>
+    ).map((row) => ({
       ...row,
       createdAt: row.createdAt.toISOString(),
     })),

@@ -15,29 +15,29 @@ export function plpNav(counts: {
           icon: "dashboard",
         },
         {
-          label: "Schedule",
+          label: "Jadwal Lab",
           href: "/plp/schedule",
           icon: "schedule",
         },
       ],
     },
     {
-      label: "Fulfillment",
+      label: "Peminjaman & Permohonan",
       items: [
         {
-          label: "Request review",
+          label: "Tinjau Permohonan",
           href: "/plp/requests",
           icon: "requests",
           badge: counts.pending,
         },
         {
-          label: "Issue",
+          label: "Serah Terima (Issue)",
           href: "/plp/fulfillment/issue",
           icon: "issue",
           badge: counts.issue,
         },
         {
-          label: "Return & inspeksi",
+          label: "Pengembalian & Inspeksi",
           href: "/plp/fulfillment/return",
           icon: "return",
           badge: counts.returns,
@@ -70,10 +70,10 @@ export function plpNav(counts: {
       ],
     },
     {
-      label: "Support",
+      label: "Laporan & Riwayat",
       items: [
-        { label: "Incidents", href: "/plp/incidents", icon: "incidents" },
-        { label: "History", href: "/plp/history", icon: "history" },
+        { label: "Insiden Lab", href: "/plp/incidents", icon: "incidents" },
+        { label: "Riwayat Aktivitas", href: "/plp/history", icon: "history" },
       ],
     },
   ];

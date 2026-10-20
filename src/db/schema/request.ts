@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   jsonb,
   numeric,
@@ -9,7 +10,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { requestStatusEnum } from "./enums";
 import { activity } from "./activity";
-import { equipmentAsset, equipmentUnit } from "./equipment";
+import { instrumentAsset, instrumentUnit } from "./instrument";
+import { toolAsset, toolUnit } from "./tool";
 import { material, materialBatch } from "./material";
 import { room } from "./laboratory";
 import { user } from "./user";
@@ -60,28 +62,57 @@ export const resourceRequest = pgTable(
   ],
 );
 
-export const equipmentRequestItem = pgTable(
-  "equipment_request_item",
+export const instrumentRequestItem = pgTable(
+  "instrument_request_item",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     requestId: uuid("request_id")
       .notNull()
       .references(() => resourceRequest.id, { onDelete: "cascade" }),
-    equipmentAssetId: uuid("equipment_asset_id")
+    instrumentAssetId: uuid("instrument_asset_id")
       .notNull()
-      .references(() => equipmentAsset.id),
-    equipmentUnitId: uuid("equipment_unit_id")
+      .references(() => instrumentAsset.id),
+    instrumentUnitId: uuid("instrument_unit_id")
       .notNull()
-      .references(() => equipmentUnit.id),
+      .references(() => instrumentUnit.id),
+    startAt: timestamp("start_at", { withTimezone: true }).notNull(),
+    endAt: timestamp("end_at", { withTimezone: true }).notNull(),
+    allowSharedUsage: boolean("allow_shared_usage").default(false).notNull(),
+    purpose: text("purpose"),
+    usagePlan: jsonb("usage_plan"),
+  },
+  (table) => [
+    index("instrument_request_item_request_idx").on(table.requestId),
+    index("instrument_request_item_unit_period_idx").on(
+      table.instrumentUnitId,
+      table.startAt,
+      table.endAt,
+    ),
+  ],
+);
+
+export const toolRequestItem = pgTable(
+  "tool_request_item",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    requestId: uuid("request_id")
+      .notNull()
+      .references(() => resourceRequest.id, { onDelete: "cascade" }),
+    toolAssetId: uuid("tool_asset_id")
+      .notNull()
+      .references(() => toolAsset.id),
+    toolUnitId: uuid("tool_unit_id")
+      .notNull()
+      .references(() => toolUnit.id),
     startAt: timestamp("start_at", { withTimezone: true }).notNull(),
     endAt: timestamp("end_at", { withTimezone: true }).notNull(),
     purpose: text("purpose"),
     usagePlan: jsonb("usage_plan"),
   },
   (table) => [
-    index("equipment_request_item_request_idx").on(table.requestId),
-    index("equipment_request_item_unit_period_idx").on(
-      table.equipmentUnitId,
+    index("tool_request_item_request_idx").on(table.requestId),
+    index("tool_request_item_unit_period_idx").on(
+      table.toolUnitId,
       table.startAt,
       table.endAt,
     ),

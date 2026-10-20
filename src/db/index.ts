@@ -5,10 +5,13 @@ import { env } from "@/lib/env";
 import * as schema from "./schema";
 
 function connect() {
+  const configuredMax = Number(process.env.DB_POOL_MAX ?? 20);
+  const max =
+    Number.isFinite(configuredMax) && configuredMax >= 2 ? configuredMax : 20;
   const pool = new Pool({
     connectionString: env.DATABASE_URL,
-    max: 5,
-    connectionTimeoutMillis: 5000,
+    max,
+    connectionTimeoutMillis: 10000,
     idleTimeoutMillis: 30000,
   });
   pool.on("error", () => {

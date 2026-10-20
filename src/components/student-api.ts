@@ -39,19 +39,62 @@ async function parseError(response: Response): Promise<ApiFailure> {
 
 export async function apiRequest<T>(
   url: string,
-  options: { method?: string; body?: unknown } = {},
+  options: { method?: string; body?: unknown; timeoutMs?: number } = {},
 ): Promise<T> {
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      method: options.method ?? "GET",
-      headers:
-        options.body === undefined
-          ? undefined
-          : { "Content-Type": "application/json" },
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    });
-  } catch {
+  const method = (options.method ?? "GET").toUpperCase();
+  const isIdempotent = method === "GET" || method === "HEAD";
+  const maxAttempts = isIdempotent ? 3 : 1;
+  const timeoutMs = options.timeoutMs ?? 15_000;
+
+  let response: Response | undefined;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      response = await fetch(url, {
+        method,
+        headers:
+          options.body === undefined
+            ? undefined
+            : { "Content-Type": "application/json" },
+        body:
+          options.body === undefined ? undefined : JSON.stringify(options.body),
+        signal:
+          typeof AbortSignal !== "undefined" && "timeout" in AbortSignal
+            ? AbortSignal.timeout(timeoutMs)
+            : undefined,
+      });
+
+      if (
+        isIdempotent &&
+        attempt < maxAttempts &&
+        (response.status === 502 ||
+          response.status === 503 ||
+          response.status === 504)
+      ) {
+        const delayMs = 200 * 2 ** (attempt - 1) + Math.floor(Math.random() * 100);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        continue;
+      }
+      break;
+    } catch (err) {
+      const isTimeout =
+        err instanceof DOMException &&
+        (err.name === "TimeoutError" || err.name === "AbortError");
+      if (isIdempotent && attempt < maxAttempts) {
+        const delayMs = 200 * 2 ** (attempt - 1) + Math.floor(Math.random() * 100);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        continue;
+      }
+      throw new StudentApiError({
+        status: 0,
+        code: isTimeout ? "TIMEOUT_ERROR" : "NETWORK_ERROR",
+        message: isTimeout
+          ? "Waktu tunggu koneksi habis. Silakan coba lagi."
+          : "Tidak bisa terhubung ke Reaksan. Coba lagi.",
+      });
+    }
+  }
+
+  if (!response) {
     throw new StudentApiError({
       status: 0,
       code: "NETWORK_ERROR",

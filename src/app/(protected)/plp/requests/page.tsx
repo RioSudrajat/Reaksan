@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CalendarRefresh } from "@/components/calendar-refresh";
 import {
   EmptyState,
   FilterBar,
@@ -93,6 +94,7 @@ export default async function PlpRequestsPage({
         eyebrow="Fulfillment loop"
         title="Request review"
         description="Tinjau permintaan mahasiswa, cek konflik jadwal dan stok, lalu setujui, minta revisi, atau tolak."
+        actions={<CalendarRefresh />}
       />
 
       <FilterBar

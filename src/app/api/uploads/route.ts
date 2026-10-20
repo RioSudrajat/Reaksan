@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { ApiError, withApiSession } from "@/lib/api";
+import { assertRateLimit } from "@/lib/rate-limit";
 import { hasPermission } from "@/lib/session";
 import { currentStorageProvider, deleteObject, putObject } from "@/lib/storage";
 import { createMedia } from "@/services/media.service";
@@ -14,6 +15,12 @@ export const runtime = "nodejs";
 
 export function POST(request: Request) {
   return withApiSession(request, async (session) => {
+    assertRateLimit(request, {
+      namespace: "uploads:post",
+      limit: 20,
+      windowMs: 60_000,
+      identifier: session.user.id,
+    });
     const userRoles = session.user.role ? session.user.role.split(",").map((r) => r.trim()) : [];
     const allowed =
       (await hasPermission(session.user.id, { equipment: ["manage-any"] })) ||

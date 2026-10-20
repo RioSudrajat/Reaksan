@@ -1,6 +1,7 @@
 import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { reservationStatusEnum } from "./enums";
-import { equipmentAsset, equipmentUnit } from "./equipment";
+import { instrumentAsset, instrumentUnit } from "./instrument";
+import { toolAsset, toolUnit } from "./tool";
 import { user } from "./user";
 import { resourceRequest } from "./request";
 
@@ -8,12 +9,14 @@ export const reservation = pgTable(
   "reservation",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    equipmentAssetId: uuid("equipment_asset_id")
-      .notNull()
-      .references(() => equipmentAsset.id),
-    equipmentUnitId: uuid("equipment_unit_id")
-      .notNull()
-      .references(() => equipmentUnit.id),
+    instrumentAssetId: uuid("instrument_asset_id").references(
+      () => instrumentAsset.id,
+    ),
+    instrumentUnitId: uuid("instrument_unit_id").references(
+      () => instrumentUnit.id,
+    ),
+    toolAssetId: uuid("tool_asset_id").references(() => toolAsset.id),
+    toolUnitId: uuid("tool_unit_id").references(() => toolUnit.id),
     requestId: uuid("request_id")
       .notNull()
       .references(() => resourceRequest.id, { onDelete: "cascade" }),
@@ -33,13 +36,23 @@ export const reservation = pgTable(
       .notNull(),
   },
   (table) => [
-    index("reservation_unit_period_idx").on(
-      table.equipmentUnitId,
+    index("reservation_instrument_unit_period_idx").on(
+      table.instrumentUnitId,
       table.startAt,
       table.endAt,
     ),
-    index("reservation_asset_period_idx").on(
-      table.equipmentAssetId,
+    index("reservation_tool_unit_period_idx").on(
+      table.toolUnitId,
+      table.startAt,
+      table.endAt,
+    ),
+    index("reservation_instrument_asset_period_idx").on(
+      table.instrumentAssetId,
+      table.startAt,
+      table.endAt,
+    ),
+    index("reservation_tool_asset_period_idx").on(
+      table.toolAssetId,
       table.startAt,
       table.endAt,
     ),

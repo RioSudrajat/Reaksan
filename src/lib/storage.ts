@@ -215,9 +215,32 @@ async function s3Request(
     Authorization: `AWS4-HMAC-SHA256 Credential=${config.accessKeyId}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`,
   };
   if (contentType) headers["content-type"] = contentType;
-  return fetch(`https://${config.host}${canonicalUri}`, {
-    method,
-    headers,
-    body: body as unknown as BodyInit | undefined,
-  });
+  const maxAttempts = 2;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetch(`https://${config.host}${canonicalUri}`, {
+        method,
+        headers,
+        body: body as unknown as BodyInit | undefined,
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (
+        attempt < maxAttempts &&
+        (response.status === 502 ||
+          response.status === 503 ||
+          response.status === 504)
+      ) {
+        await new Promise((r) => setTimeout(r, 250 * attempt));
+        continue;
+      }
+      return response;
+    } catch (error) {
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 250 * attempt));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error("Object storage request failed after retries.");
 }

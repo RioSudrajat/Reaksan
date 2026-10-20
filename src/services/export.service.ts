@@ -5,11 +5,11 @@ import { ApiError } from "@/lib/api";
 import { db } from "@/db";
 import {
   auditLog,
-  equipmentAsset,
-  equipmentType,
-  equipmentUnit,
   incident,
   incidentResolution,
+  instrumentAsset,
+  instrumentType,
+  instrumentUnit,
   issueTransaction,
   material,
   materialBatch,
@@ -19,6 +19,9 @@ import {
   stockOpnameEntry,
   stockOpnameSession,
   stockTransaction,
+  toolAsset,
+  toolType,
+  toolUnit,
   user,
 } from "@/db/schema";
 import { toCsv, type CsvColumn } from "@/lib/csv";
@@ -271,8 +274,8 @@ export async function exportIssueReturn(
     .select({
       requestCode: resourceRequest.code,
       studentName: issuedTo.name,
-      unitCode: equipmentUnit.code,
-      assetCode: equipmentAsset.assetCode,
+      unitCode: sql<string | null>`coalesce(${instrumentUnit.code}, ${toolUnit.code})`,
+      assetCode: sql<string | null>`coalesce(${instrumentAsset.assetCode}, ${toolAsset.assetCode})`,
       materialName: material.name,
       lotNumber: materialBatch.lotNumber,
       quantity: issueTransaction.quantity,
@@ -289,12 +292,20 @@ export async function exportIssueReturn(
     .innerJoin(room, eq(room.id, resourceRequest.roomId))
     .innerJoin(issuedTo, eq(issuedTo.id, issueTransaction.issuedToId))
     .leftJoin(
-      equipmentUnit,
-      eq(equipmentUnit.id, issueTransaction.equipmentUnitId),
+      instrumentUnit,
+      eq(instrumentUnit.id, issueTransaction.instrumentUnitId),
     )
     .leftJoin(
-      equipmentAsset,
-      eq(equipmentAsset.id, issueTransaction.equipmentAssetId),
+      instrumentAsset,
+      eq(instrumentAsset.id, issueTransaction.instrumentAssetId),
+    )
+    .leftJoin(
+      toolUnit,
+      eq(toolUnit.id, issueTransaction.toolUnitId),
+    )
+    .leftJoin(
+      toolAsset,
+      eq(toolAsset.id, issueTransaction.toolAssetId),
     )
     .leftJoin(
       materialBatch,
@@ -377,14 +388,15 @@ export async function exportIncidents(
       severity: incident.severity,
       status: incident.status,
       reporterName: user.name,
-      assetCode: equipmentAsset.assetCode,
+      assetCode: sql<string | null>`coalesce(${instrumentAsset.assetCode}, ${toolAsset.assetCode})`,
       roomName: room.name,
       occurredAt: incident.occurredAt,
       resolvedAt: incidentResolution.resolvedAt,
     })
     .from(incident)
     .innerJoin(user, eq(user.id, incident.reporterId))
-    .leftJoin(equipmentAsset, eq(equipmentAsset.id, incident.equipmentAssetId))
+    .leftJoin(instrumentAsset, eq(instrumentAsset.id, incident.instrumentAssetId))
+    .leftJoin(toolAsset, eq(toolAsset.id, incident.toolAssetId))
     .leftJoin(room, eq(room.id, incident.roomId))
     .leftJoin(
       incidentResolution,
@@ -512,10 +524,10 @@ export async function exportOpnameVariance(sessionId: string) {
       materialUnit: material.baseUnit,
       batchLot: materialBatch.lotNumber,
       batchLocation: materialBatch.storageLocation,
-      // Equipment
-      assetCode: equipmentAsset.assetCode,
-      assetCondition: equipmentAsset.condition,
-      typeName: equipmentType.name,
+      // Instrument & Tool
+      assetCode: sql<string | null>`coalesce(${instrumentAsset.assetCode}, ${toolAsset.assetCode})`,
+      assetCondition: sql<string | null>`coalesce(${instrumentAsset.condition}, ${toolAsset.condition})`,
+      typeName: sql<string | null>`coalesce(${instrumentType.name}, ${toolType.name})`,
     })
     .from(stockOpnameEntry)
     .leftJoin(
@@ -524,12 +536,20 @@ export async function exportOpnameVariance(sessionId: string) {
     )
     .leftJoin(material, eq(material.id, materialBatch.materialId))
     .leftJoin(
-      equipmentAsset,
-      eq(equipmentAsset.id, stockOpnameEntry.equipmentAssetId),
+      instrumentAsset,
+      eq(instrumentAsset.id, stockOpnameEntry.instrumentAssetId),
     )
     .leftJoin(
-      equipmentType,
-      eq(equipmentType.id, equipmentAsset.equipmentTypeId),
+      instrumentType,
+      eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+    )
+    .leftJoin(
+      toolAsset,
+      eq(toolAsset.id, stockOpnameEntry.toolAssetId),
+    )
+    .leftJoin(
+      toolType,
+      eq(toolType.id, toolAsset.toolTypeId),
     )
     .leftJoin(user, eq(user.id, stockOpnameEntry.countedById))
     .where(eq(stockOpnameEntry.sessionId, sessionId))

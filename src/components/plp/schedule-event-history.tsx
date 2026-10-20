@@ -17,7 +17,7 @@ import { cn } from "cn";
 import { StatusBadge } from "@/components/status-badge";
 import type { ScheduleEvent, RequestStatus } from "@/components/schedule-data";
 import { requestStatusLabels, monthName, parseJakartaDate } from "@/components/schedule-data";
-import { exportElementToPdf } from "@/lib/pdf-export";
+import { exportScheduleEventsToPdf } from "@/lib/schedule-pdf";
 
 export type StatusFilterOption = "ALL" | RequestStatus;
 
@@ -228,13 +228,14 @@ export function ScheduleEventHistory({
     const periodSlug = `${monthName(month.month).toLowerCase()}_${month.year}`;
     const roomSlug = currentRoomCode ? `_${currentRoomCode}` : "";
     try {
-      await exportElementToPdf("schedule-history-printable", {
+      exportScheduleEventsToPdf({
+        events: filteredEvents,
+        periodLabel,
+        roomDisplay,
         filename: `laporan_jadwal_lab${roomSlug}_${periodSlug}.pdf`,
-        orientation: "landscape",
       });
     } catch (err) {
       console.error("Gagal mengunduh PDF:", err);
-      window.print();
     } finally {
       setDownloadingPdf(false);
     }
@@ -483,7 +484,7 @@ export function ScheduleEventHistory({
           <table className="w-full border-collapse text-left text-[12px]">
             <thead>
               <tr className="border-b border-[#EEEEEE] bg-[#FBFBFA] text-[11px] font-semibold text-[#6B6B6B]">
-                <th scope="col" className="px-3.5 py-2.5 w-10 text-center">
+                <th scope="col" className="w-14 px-2 py-2.5 text-center whitespace-nowrap">
                   No
                 </th>
                 <th scope="col" className="px-3.5 py-2.5 min-w-[220px]">
@@ -541,7 +542,7 @@ export function ScheduleEventHistory({
                       )}
                     >
                       {/* No */}
-                      <td className="px-3.5 py-2.5 text-center font-mono text-[11px] text-[#6B6B6B] tabular-nums">
+                      <td className="w-14 px-2 py-2.5 text-center font-mono text-[11px] text-[#6B6B6B] tabular-nums whitespace-nowrap">
                         {idx + 1}
                       </td>
 
@@ -672,14 +673,34 @@ export function ScheduleEventHistory({
 
                       {/* Status */}
                       <td className="px-3.5 py-2.5">
-                        <StatusBadge tone={tone}>
-                          {requestStatusLabels[evt.status] || evt.status}
-                        </StatusBadge>
-                        {evt.status === "OVERDUE" && (
-                          <span className="block mt-0.5 text-[10px] font-bold text-[#DC2626]">
-                            Belum kembali
+                        <div className="print:hidden">
+                          <StatusBadge tone={tone}>
+                            {requestStatusLabels[evt.status] || evt.status}
+                          </StatusBadge>
+                          {evt.status === "OVERDUE" && (
+                            <span className="block mt-0.5 text-[10px] font-bold text-[#DC2626]">
+                              Belum kembali
+                            </span>
+                          )}
+                        </div>
+                        <div className="hidden print:block text-[10px] leading-tight font-medium text-[#1E293B]">
+                          <span
+                            className={cn(
+                              "font-bold uppercase tracking-wider text-[10px]",
+                              evt.status === "APPROVED" && "text-[#048444]",
+                              evt.status === "COMPLETED" && "text-[#475569]",
+                              evt.status === "ACTIVE" && "text-[#AE7C1D]",
+                              evt.status === "OVERDUE" && "text-[#DC2626]",
+                            )}
+                          >
+                            {requestStatusLabels[evt.status] || evt.status}
                           </span>
-                        )}
+                          {evt.status === "OVERDUE" && (
+                            <div className="text-[9px] text-[#DC2626] font-semibold mt-0.5">
+                              (Belum Kembali)
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       {/* Actions */}

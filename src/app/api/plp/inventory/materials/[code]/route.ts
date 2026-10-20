@@ -33,7 +33,8 @@ export function DELETE(request: Request, context: Context) {
     { inventory: ["manage-any"] },
     async (session) => {
       const code = entityCodeSchema.parse((await context.params).code);
-      const result = await deletePlpMaterial(session.user.id, code);
+      const { scope } = await scopeForSession(session);
+      const result = await deletePlpMaterial(session.user.id, scope, code);
       return Response.json({ data: result });
     },
   );

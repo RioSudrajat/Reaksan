@@ -68,12 +68,15 @@ export function requestToScheduleEvent(
   request: RequestDto,
   month: Month,
   viewerId: string,
+  options?: { allowUnapproved?: boolean },
 ): ScheduleEvent | null {
   // Aturan Privasi & Integritas: Request yang belum disetujui (review, revisi, ditolak, dll)
   // TIDAK BOLEH muncul sebagai event bar di jadwal publik/ruangan.
-  // Hanya boleh tampil di My Schedule milik mahasiswa pemohon.
-  if (UNAPPROVED_REQUEST_STATUSES.has(request.status) && request.actorId !== viewerId) {
-    return null;
+  // Hanya boleh tampil di Kalender Saya jika allowUnapproved aktif dan request milik viewer.
+  if (UNAPPROVED_REQUEST_STATUSES.has(request.status)) {
+    if (!options?.allowUnapproved || request.actorId !== viewerId) {
+      return null;
+    }
   }
 
   const start = jakartaParts(request.startAt);
@@ -166,6 +169,13 @@ export function reservationToScheduleEvent(
     end.year > start.year || end.month > start.month
       ? daysInMonth(month)
       : clampDay(end.day, month);
+  const effectiveStatus =
+    reservation.kind === "shared"
+      ? "CONFIRMED"
+      : reservation.requestStatus === "OVERDUE"
+        ? "OVERDUE"
+        : reservationStatusMap[reservation.status];
+
   return {
     id: `${reservation.kind}-${reservation.id}`,
     reservationId: reservation.kind === "reservation" ? reservation.id : undefined,
@@ -174,7 +184,7 @@ export function reservationToScheduleEvent(
     title:
       reservation.kind === "shared"
         ? `${reservation.assetName} · ${reservation.unitCode}`
-        : reservation.requestTitle,
+        : `${reservation.assetName} (${reservation.unitCode})`,
     startAt: reservation.startAt,
     endAt: reservation.endAt,
     startDay: clampDay(start.day, month),
@@ -185,12 +195,13 @@ export function reservationToScheduleEvent(
     actor: reservation.primaryUserName,
     mine: reservation.mine,
     purpose: reservation.purpose,
-    status:
-      reservation.kind === "shared"
-        ? "CONFIRMED"
-        : reservationStatusMap[reservation.status],
+    status: effectiveStatus,
     kind: reservation.kind === "shared" ? "shared" : "reservation",
     mode: reservation.kind === "shared" ? "shared" : "borrow",
+    supervisor: reservation.supervisor ?? undefined,
+    fieldPic: reservation.fieldPic ?? undefined,
+    issuedAt: reservation.issuedAt,
+    returnedAt: reservation.returnedAt,
     resourceId: reservation.assetCode,
     resourceUnit: reservation.unitCode,
     imageMediaId: reservation.imageMediaId,
@@ -200,9 +211,17 @@ export function reservationToScheduleEvent(
         name: reservation.assetName,
         unitId: reservation.unitCode,
         unitLabel: reservation.unitLabel,
+        classification: reservation.classification,
         imageMediaId: reservation.imageMediaId,
       },
     ],
+    materials: (reservation.materials ?? []).map((item) => ({
+      id: item.code,
+      name: item.name,
+      quantity: item.quantity,
+      unit: item.unit,
+      imageMediaId: item.imageMediaId,
+    })),
   };
 }
 
@@ -224,19 +243,25 @@ export function buildCalendarEvents(input: {
   month: Month;
   months?: Month[];
   viewerId: string;
+  allowUnapproved?: boolean;
+  skipSubsumedReservations?: boolean;
 }): ScheduleEvent[] {
   const months = input.months ?? [input.month];
+  const skipSubsumed = input.skipSubsumedReservations ?? true;
   // One event per record: the first month in the window that contains its start
   // date wins, so multi-month requests do not render twice.
   const events = new Map<string, ScheduleEvent>();
   const requestIds = new Set((input.requests ?? []).map((r) => r.id));
   for (const month of months) {
     for (const request of input.requests ?? []) {
-      const event = requestToScheduleEvent(request, month, input.viewerId);
+      const event = requestToScheduleEvent(request, month, input.viewerId, {
+        allowUnapproved: input.allowUnapproved,
+      });
       if (event && !events.has(event.id)) events.set(event.id, event);
     }
     for (const reservation of input.reservations ?? []) {
       if (
+        skipSubsumed &&
         reservation.kind !== "shared" &&
         reservation.requestId &&
         requestIds.has(reservation.requestId)

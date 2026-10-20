@@ -7,7 +7,8 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { equipmentConditionEnum } from "./enums";
-import { equipmentAsset, equipmentUnit } from "./equipment";
+import { instrumentAsset, instrumentUnit } from "./instrument";
+import { toolAsset, toolUnit } from "./tool";
 import { user } from "./user";
 import { materialBatch } from "./material";
 import { resourceRequest } from "./request";
@@ -19,12 +20,14 @@ export const issueTransaction = pgTable(
     requestId: uuid("request_id")
       .notNull()
       .references(() => resourceRequest.id),
-    equipmentAssetId: uuid("equipment_asset_id").references(
-      () => equipmentAsset.id,
+    instrumentAssetId: uuid("instrument_asset_id").references(
+      () => instrumentAsset.id,
     ),
-    equipmentUnitId: uuid("equipment_unit_id").references(
-      () => equipmentUnit.id,
+    instrumentUnitId: uuid("instrument_unit_id").references(
+      () => instrumentUnit.id,
     ),
+    toolAssetId: uuid("tool_asset_id").references(() => toolAsset.id),
+    toolUnitId: uuid("tool_unit_id").references(() => toolUnit.id),
     materialBatchId: uuid("material_batch_id").references(
       () => materialBatch.id,
     ),
@@ -42,7 +45,10 @@ export const issueTransaction = pgTable(
   },
   (table) => [
     index("issue_transaction_request_idx").on(table.requestId),
-    index("issue_transaction_asset_idx").on(table.equipmentAssetId),
+    index("issue_transaction_instrument_asset_idx").on(
+      table.instrumentAssetId,
+    ),
+    index("issue_transaction_tool_asset_idx").on(table.toolAssetId),
     index("issue_transaction_batch_idx").on(table.materialBatchId),
     index("issue_transaction_recipient_idx").on(table.issuedToId),
   ],
@@ -56,9 +62,14 @@ export const returnTransaction = pgTable(
       .notNull()
       .unique()
       .references(() => issueTransaction.id),
-    equipmentAssetId: uuid("equipment_asset_id")
-      .notNull()
-      .references(() => equipmentAsset.id),
+    instrumentAssetId: uuid("instrument_asset_id").references(
+      () => instrumentAsset.id,
+    ),
+    instrumentUnitId: uuid("instrument_unit_id").references(
+      () => instrumentUnit.id,
+    ),
+    toolAssetId: uuid("tool_asset_id").references(() => toolAsset.id),
+    toolUnitId: uuid("tool_unit_id").references(() => toolUnit.id),
     returnedById: text("returned_by_id")
       .notNull()
       .references(() => user.id),
@@ -71,5 +82,10 @@ export const returnTransaction = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [index("return_transaction_asset_idx").on(table.equipmentAssetId)],
+  (table) => [
+    index("return_transaction_instrument_asset_idx").on(
+      table.instrumentAssetId,
+    ),
+    index("return_transaction_tool_asset_idx").on(table.toolAssetId),
+  ],
 );

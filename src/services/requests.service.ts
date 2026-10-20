@@ -14,16 +14,17 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { ApiError } from "@/lib/api";
 import { db } from "@/db";
 import {
   activity,
   auditLog,
-  equipmentAsset,
-  equipmentConditionHistory,
-  equipmentRequestItem,
-  equipmentType,
-  equipmentUnit,
+  instrumentAsset,
+  instrumentConditionHistory,
+  instrumentRequestItem,
+  instrumentType,
+  instrumentUnit,
   issueTransaction,
   material,
   materialBatch,
@@ -34,9 +35,15 @@ import {
   returnTransaction,
   room,
   stockTransaction,
+  toolAsset,
+  toolConditionHistory,
+  toolRequestItem,
+  toolType,
+  toolUnit,
   user,
 } from "@/db/schema";
 import type { DbExecutor } from "@/services/executor";
+import { nextYearlyCode } from "@/services/code-sequence";
 import { writeAudit } from "@/services/audit.service";
 import {
   createNotification,
@@ -109,11 +116,13 @@ export type ReservationDto = {
   unitLabel: string;
   assetCode: string;
   assetName: string;
+  classification?: "INSTRUMENT" | "TOOL";
   roomCode: string;
   roomName: string;
   requestId: string;
   requestCode: string;
   requestTitle: string;
+  requestStatus?: (typeof resourceRequest.$inferSelect)["status"];
   primaryUserId: string;
   primaryUserName: string;
   startAt: string;
@@ -122,17 +131,17 @@ export type ReservationDto = {
   purpose: string;
   mine: boolean;
   imageMediaId: string | null;
+  supervisor?: string | null;
+  fieldPic?: string | null;
+  issuedAt?: string | null;
+  returnedAt?: string | null;
+  materials?: MaterialItemDto[];
 };
 
 const conflictStatuses = ["RESERVED", "ACTIVE"] as const;
 
-async function requestCode(exec: DbExecutor) {
-  const year = new Date().getFullYear();
-  const [row] = await exec
-    .select({ count: sql<number>`count(*)::int` })
-    .from(resourceRequest)
-    .where(sql`${resourceRequest.code} LIKE ${`REQ-${year}-%`}`);
-  return `REQ-${year}-${String((row?.count ?? 0) + 1).padStart(3, "0")}`;
+function requestCode(exec: DbExecutor) {
+  return nextYearlyCode(exec, "resource_request", "REQ");
 }
 
 async function ensureDefaultActivity(
@@ -171,27 +180,62 @@ async function resolveEquipment(
   codes: string[],
 ) {
   if (codes.length === 0) return [];
-  const rows = await exec
+  const instrumentRows = await exec
     .select({
-      unitId: equipmentUnit.id,
-      unitCode: equipmentUnit.code,
-      unitLabel: equipmentUnit.label,
-      unitStatus: equipmentUnit.status,
-      unitActive: equipmentUnit.active,
-      assetId: equipmentAsset.id,
-      assetCode: equipmentAsset.assetCode,
-      assetName: equipmentType.name,
-      roomId: equipmentAsset.roomId,
+      unitId: instrumentUnit.id,
+      unitCode: instrumentUnit.code,
+      unitLabel: instrumentUnit.label,
+      unitStatus: instrumentUnit.status,
+      unitActive: instrumentUnit.active,
+      assetId: instrumentAsset.id,
+      assetCode: instrumentAsset.assetCode,
+      assetName: instrumentType.name,
+      roomId: instrumentAsset.roomId,
       roomName: room.name,
+      classification: sql<"INSTRUMENT">`'INSTRUMENT'`,
+      usageType: instrumentType.usageType,
     })
-    .from(equipmentUnit)
+    .from(instrumentUnit)
     .innerJoin(
-      equipmentAsset,
-      eq(equipmentAsset.id, equipmentUnit.equipmentAssetId),
+      instrumentAsset,
+      eq(instrumentAsset.id, instrumentUnit.instrumentAssetId),
     )
-    .innerJoin(equipmentType, eq(equipmentType.id, equipmentAsset.equipmentTypeId))
-    .innerJoin(room, eq(room.id, equipmentAsset.roomId))
-    .where(inArray(equipmentUnit.code, codes));
+    .innerJoin(instrumentType, eq(instrumentType.id, instrumentAsset.instrumentTypeId))
+    .innerJoin(room, eq(room.id, instrumentAsset.roomId))
+    .where(inArray(instrumentUnit.code, codes));
+
+  const remainingCodes = codes.filter(
+    (code) => !instrumentRows.some((row) => row.unitCode === code),
+  );
+
+  const toolRows =
+    remainingCodes.length > 0
+      ? await exec
+          .select({
+            unitId: toolUnit.id,
+            unitCode: toolUnit.code,
+            unitLabel: toolUnit.label,
+            unitStatus: toolUnit.status,
+            unitActive: toolUnit.active,
+            assetId: toolAsset.id,
+            assetCode: toolAsset.assetCode,
+            assetName: toolType.name,
+            roomId: toolAsset.roomId,
+            roomName: room.name,
+            classification: sql<"TOOL">`'TOOL'`,
+            usageType: toolType.usageType,
+          })
+          .from(toolUnit)
+          .innerJoin(
+            toolAsset,
+            eq(toolAsset.id, toolUnit.toolAssetId),
+          )
+          .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
+          .innerJoin(room, eq(room.id, toolAsset.roomId))
+          .where(inArray(toolUnit.code, remainingCodes))
+      : [];
+
+  const rows = [...instrumentRows, ...toolRows];
   if (rows.length !== codes.length)
     throw new ApiError(
       422,
@@ -218,6 +262,38 @@ async function resolveEquipment(
   return rows;
 }
 
+// Row locks on the physical units serialise every writer that checks and then
+// claims the same unit (submission, edit, approval), closing the window between
+// the conflict SELECT and the INSERT. Ids are sorted so concurrent transactions
+// always acquire locks in the same order and cannot deadlock each other.
+async function lockEquipmentUnits(
+  exec: DbExecutor,
+  rows: { unitId: string; classification: string }[],
+) {
+  const instrumentIds = rows
+    .filter((row) => row.classification === "INSTRUMENT")
+    .map((row) => row.unitId)
+    .sort();
+  const toolIds = rows
+    .filter((row) => row.classification !== "INSTRUMENT")
+    .map((row) => row.unitId)
+    .sort();
+  if (instrumentIds.length > 0)
+    await exec
+      .select({ id: instrumentUnit.id })
+      .from(instrumentUnit)
+      .where(inArray(instrumentUnit.id, instrumentIds))
+      .orderBy(instrumentUnit.id)
+      .for("update");
+  if (toolIds.length > 0)
+    await exec
+      .select({ id: toolUnit.id })
+      .from(toolUnit)
+      .where(inArray(toolUnit.id, toolIds))
+      .orderBy(toolUnit.id)
+      .for("update");
+}
+
 async function assertNoReservationConflict(
   exec: DbExecutor,
   unitIds: string[],
@@ -227,7 +303,10 @@ async function assertNoReservationConflict(
 ) {
   if (unitIds.length === 0) return;
   const filters = [
-    inArray(reservation.equipmentUnitId, unitIds),
+    or(
+      inArray(reservation.instrumentUnitId, unitIds),
+      inArray(reservation.toolUnitId, unitIds),
+    ),
     inArray(reservation.status, [...conflictStatuses]),
     sql`${reservation.startAt} < ${endAt}`,
     sql`${reservation.endAt} > ${startAt}`,
@@ -236,20 +315,24 @@ async function assertNoReservationConflict(
     filters.push(ne(reservation.requestId, excludeRequestId));
   const conflicts = await exec
     .select({
-      unitCode: equipmentUnit.code,
+      instrumentUnitCode: instrumentUnit.code,
+      toolUnitCode: toolUnit.code,
       startAt: reservation.startAt,
       endAt: reservation.endAt,
     })
     .from(reservation)
-    .innerJoin(equipmentUnit, eq(equipmentUnit.id, reservation.equipmentUnitId))
+    .leftJoin(instrumentUnit, eq(instrumentUnit.id, reservation.instrumentUnitId))
+    .leftJoin(toolUnit, eq(toolUnit.id, reservation.toolUnitId))
     .where(and(...filters))
     .limit(1);
   if (conflicts.length > 0) {
     const conflict = conflicts[0];
+    const unitCode =
+      conflict.instrumentUnitCode ?? conflict.toolUnitCode ?? "Unit";
     throw new ApiError(
       409,
       "RESERVATION_CONFLICT",
-      `${conflict.unitCode} sudah dipesan pada waktu yang dipilih. Pilih slot lain.`,
+      `${unitCode} sudah dipesan pada waktu yang dipilih. Pilih slot lain.`,
     );
   }
 }
@@ -460,31 +543,62 @@ export async function loadRequestDtos(
   if (requestRows.length === 0) return [];
   const requestIds = requestRows.map((row) => row.id);
 
-  const equipmentRows = await exec
-    .select({
-      id: equipmentRequestItem.id,
-      requestId: equipmentRequestItem.requestId,
-      purpose: equipmentRequestItem.purpose,
-      unitCode: equipmentUnit.code,
-      unitLabel: equipmentUnit.label,
-      assetCode: equipmentAsset.assetCode,
-      assetName: equipmentType.name,
-      classification: equipmentType.classification,
-      usageType: equipmentType.usageType,
-      assetImageMediaId: equipmentAsset.imageMediaId,
-      typeImageMediaId: equipmentType.imageMediaId,
-    })
-    .from(equipmentRequestItem)
-    .innerJoin(
-      equipmentUnit,
-      eq(equipmentUnit.id, equipmentRequestItem.equipmentUnitId),
-    )
-    .innerJoin(
-      equipmentAsset,
-      eq(equipmentAsset.id, equipmentRequestItem.equipmentAssetId),
-    )
-    .innerJoin(equipmentType, eq(equipmentType.id, equipmentAsset.equipmentTypeId))
-    .where(inArray(equipmentRequestItem.requestId, requestIds));
+  const [instrumentRows, toolRows] = await Promise.all([
+    exec
+      .select({
+        id: instrumentRequestItem.id,
+        requestId: instrumentRequestItem.requestId,
+        purpose: instrumentRequestItem.purpose,
+        unitCode: instrumentUnit.code,
+        unitLabel: instrumentUnit.label,
+        assetCode: instrumentAsset.assetCode,
+        assetName: instrumentType.name,
+        classification: sql<"INSTRUMENT">`'INSTRUMENT'`,
+        usageType: instrumentType.usageType,
+        assetImageMediaId: instrumentAsset.imageMediaId,
+        typeImageMediaId: instrumentType.imageMediaId,
+      })
+      .from(instrumentRequestItem)
+      .innerJoin(
+        instrumentUnit,
+        eq(instrumentUnit.id, instrumentRequestItem.instrumentUnitId),
+      )
+      .innerJoin(
+        instrumentAsset,
+        eq(instrumentAsset.id, instrumentRequestItem.instrumentAssetId),
+      )
+      .innerJoin(
+        instrumentType,
+        eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+      )
+      .where(inArray(instrumentRequestItem.requestId, requestIds)),
+    exec
+      .select({
+        id: toolRequestItem.id,
+        requestId: toolRequestItem.requestId,
+        purpose: toolRequestItem.purpose,
+        unitCode: toolUnit.code,
+        unitLabel: toolUnit.label,
+        assetCode: toolAsset.assetCode,
+        assetName: toolType.name,
+        classification: sql<"TOOL">`'TOOL'`,
+        usageType: toolType.usageType,
+        assetImageMediaId: toolAsset.imageMediaId,
+        typeImageMediaId: toolType.imageMediaId,
+      })
+      .from(toolRequestItem)
+      .innerJoin(
+        toolUnit,
+        eq(toolUnit.id, toolRequestItem.toolUnitId),
+      )
+      .innerJoin(
+        toolAsset,
+        eq(toolAsset.id, toolRequestItem.toolAssetId),
+      )
+      .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
+      .where(inArray(toolRequestItem.requestId, requestIds)),
+  ]);
+  const equipmentRows = [...instrumentRows, ...toolRows];
 
   const materialRows = await exec
     .select({
@@ -733,41 +847,77 @@ export async function getRequestReviewContext(
   requestId: string,
 ): Promise<RequestReviewContext> {
   const request = await loadRequestDto(db, requestId);
-  const equipmentRows = await db
-    .select({
-      itemId: equipmentRequestItem.id,
-      unitId: equipmentUnit.id,
-      unitCode: equipmentUnit.code,
-      unitLabel: equipmentUnit.label,
-      unitStatus: equipmentUnit.status,
-      unitCondition: equipmentUnit.condition,
-      assetCode: equipmentAsset.assetCode,
-      assetName: equipmentType.name,
-      classification: equipmentType.classification,
-      assetCondition: equipmentAsset.condition,
-      usageType: equipmentType.usageType,
-      assetImageMediaId: equipmentAsset.imageMediaId,
-      typeImageMediaId: equipmentType.imageMediaId,
-      roomCode: room.code,
-      roomName: room.name,
-    })
-    .from(equipmentRequestItem)
-    .innerJoin(
-      equipmentUnit,
-      eq(equipmentUnit.id, equipmentRequestItem.equipmentUnitId),
-    )
-    .innerJoin(
-      equipmentAsset,
-      eq(equipmentAsset.id, equipmentRequestItem.equipmentAssetId),
-    )
-    .innerJoin(equipmentType, eq(equipmentType.id, equipmentAsset.equipmentTypeId))
-    .innerJoin(room, eq(room.id, equipmentAsset.roomId))
-    .where(eq(equipmentRequestItem.requestId, requestId));
+  const [instrumentRows, toolRows] = await Promise.all([
+    db
+      .select({
+        itemId: instrumentRequestItem.id,
+        unitId: instrumentUnit.id,
+        unitCode: instrumentUnit.code,
+        unitLabel: instrumentUnit.label,
+        unitStatus: instrumentUnit.status,
+        unitCondition: instrumentUnit.condition,
+        assetCode: instrumentAsset.assetCode,
+        assetName: instrumentType.name,
+        classification: sql<"INSTRUMENT">`'INSTRUMENT'`,
+        assetCondition: instrumentAsset.condition,
+        usageType: instrumentType.usageType,
+        assetImageMediaId: instrumentAsset.imageMediaId,
+        typeImageMediaId: instrumentType.imageMediaId,
+        roomCode: room.code,
+        roomName: room.name,
+      })
+      .from(instrumentRequestItem)
+      .innerJoin(
+        instrumentUnit,
+        eq(instrumentUnit.id, instrumentRequestItem.instrumentUnitId),
+      )
+      .innerJoin(
+        instrumentAsset,
+        eq(instrumentAsset.id, instrumentRequestItem.instrumentAssetId),
+      )
+      .innerJoin(
+        instrumentType,
+        eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+      )
+      .innerJoin(room, eq(room.id, instrumentAsset.roomId))
+      .where(eq(instrumentRequestItem.requestId, requestId)),
+    db
+      .select({
+        itemId: toolRequestItem.id,
+        unitId: toolUnit.id,
+        unitCode: toolUnit.code,
+        unitLabel: toolUnit.label,
+        unitStatus: toolUnit.status,
+        unitCondition: toolUnit.condition,
+        assetCode: toolAsset.assetCode,
+        assetName: toolType.name,
+        classification: sql<"TOOL">`'TOOL'`,
+        assetCondition: toolAsset.condition,
+        usageType: toolType.usageType,
+        assetImageMediaId: toolAsset.imageMediaId,
+        typeImageMediaId: toolType.imageMediaId,
+        roomCode: room.code,
+        roomName: room.name,
+      })
+      .from(toolRequestItem)
+      .innerJoin(
+        toolUnit,
+        eq(toolUnit.id, toolRequestItem.toolUnitId),
+      )
+      .innerJoin(
+        toolAsset,
+        eq(toolAsset.id, toolRequestItem.toolAssetId),
+      )
+      .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
+      .innerJoin(room, eq(room.id, toolAsset.roomId))
+      .where(eq(toolRequestItem.requestId, requestId)),
+  ]);
+  const equipmentRows = [...instrumentRows, ...toolRows];
 
   const conflictRows = equipmentRows.length
     ? await db
         .select({
-          unitId: reservation.equipmentUnitId,
+          unitId: sql<string>`COALESCE(${reservation.instrumentUnitId}, ${reservation.toolUnitId})`,
           requestId: reservation.requestId,
           requestCode: resourceRequest.code,
           actorName: user.name,
@@ -782,9 +932,15 @@ export async function getRequestReviewContext(
         .innerJoin(user, eq(user.id, reservation.primaryUserId))
         .where(
           and(
-            inArray(
-              reservation.equipmentUnitId,
-              equipmentRows.map((row) => row.unitId),
+            or(
+              inArray(
+                reservation.instrumentUnitId,
+                equipmentRows.map((row) => row.unitId),
+              ),
+              inArray(
+                reservation.toolUnitId,
+                equipmentRows.map((row) => row.unitId),
+              ),
             ),
             inArray(reservation.status, [...conflictStatuses]),
             ne(reservation.requestId, requestId),
@@ -1009,16 +1165,16 @@ export async function completeRequest(
       );
 
     if (request.status !== "RETURNED") {
-      const openBorrowable = await tx
+      const openBorrowableInstrument = await tx
         .select({ id: issueTransaction.id })
         .from(issueTransaction)
         .innerJoin(
-          equipmentAsset,
-          eq(equipmentAsset.id, issueTransaction.equipmentAssetId),
+          instrumentAsset,
+          eq(instrumentAsset.id, issueTransaction.instrumentAssetId),
         )
         .innerJoin(
-          equipmentType,
-          eq(equipmentType.id, equipmentAsset.equipmentTypeId),
+          instrumentType,
+          eq(instrumentType.id, instrumentAsset.instrumentTypeId),
         )
         .leftJoin(
           returnTransaction,
@@ -1027,12 +1183,40 @@ export async function completeRequest(
         .where(
           and(
             eq(issueTransaction.requestId, requestId),
-            eq(equipmentType.usageType, "BORROWABLE"),
+            eq(instrumentType.usageType, "BORROWABLE"),
             isNull(returnTransaction.id),
           ),
         )
         .limit(1);
-      if (openBorrowable.length > 0)
+
+      const openBorrowableTool =
+        openBorrowableInstrument.length === 0
+          ? await tx
+              .select({ id: issueTransaction.id })
+              .from(issueTransaction)
+              .innerJoin(
+                toolAsset,
+                eq(toolAsset.id, issueTransaction.toolAssetId),
+              )
+              .innerJoin(
+                toolType,
+                eq(toolType.id, toolAsset.toolTypeId),
+              )
+              .leftJoin(
+                returnTransaction,
+                eq(returnTransaction.issueTransactionId, issueTransaction.id),
+              )
+              .where(
+                and(
+                  eq(issueTransaction.requestId, requestId),
+                  eq(toolType.usageType, "BORROWABLE"),
+                  isNull(returnTransaction.id),
+                ),
+              )
+              .limit(1)
+          : [];
+
+      if (openBorrowableInstrument.length > 0 || openBorrowableTool.length > 0)
         throw new ApiError(
           409,
           "OUTSTANDING_RETURN",
@@ -1040,105 +1224,239 @@ export async function completeRequest(
         );
     }
 
-    const reservationRows = await tx
-      .select({
-        id: reservation.id,
-        unitId: reservation.equipmentUnitId,
-        assetId: reservation.equipmentAssetId,
-      })
-      .from(reservation)
-      .where(
-        and(
-          eq(reservation.requestId, requestId),
-          inArray(reservation.status, [...conflictStatuses]),
-        ),
-      )
-      .for("update");
+    const [instrumentResRows, toolResRows] = await Promise.all([
+      tx
+        .select({
+          id: reservation.id,
+          unitId: reservation.instrumentUnitId,
+          assetId: reservation.instrumentAssetId,
+          kind: sql<"INSTRUMENT">`'INSTRUMENT'`,
+        })
+        .from(reservation)
+        .where(
+          and(
+            eq(reservation.requestId, requestId),
+            isNotNull(reservation.instrumentUnitId),
+            isNotNull(reservation.instrumentAssetId),
+            inArray(reservation.status, [...conflictStatuses]),
+          ),
+        )
+        .for("update"),
+      tx
+        .select({
+          id: reservation.id,
+          unitId: reservation.toolUnitId,
+          assetId: reservation.toolAssetId,
+          kind: sql<"TOOL">`'TOOL'`,
+        })
+        .from(reservation)
+        .where(
+          and(
+            eq(reservation.requestId, requestId),
+            isNotNull(reservation.toolUnitId),
+            isNotNull(reservation.toolAssetId),
+            inArray(reservation.status, [...conflictStatuses]),
+          ),
+        )
+        .for("update"),
+    ]);
+    const reservationRows = [...instrumentResRows, ...toolResRows];
 
     // Reservations for borrowed units were closed at return, so those units are
     // found through their return transaction. Reservations still active here
     // belong to usage-only equipment and are released directly.
-    const returnedRows = await tx
-      .select({
-        unitId: issueTransaction.equipmentUnitId,
-        assetId: issueTransaction.equipmentAssetId,
-      })
-      .from(returnTransaction)
-      .innerJoin(
-        issueTransaction,
-        eq(issueTransaction.id, returnTransaction.issueTransactionId),
-      )
-      .where(eq(issueTransaction.requestId, requestId));
-
-    const targets = new Map<string, { unitId: string; assetId: string }>();
-    for (const row of reservationRows)
-      targets.set(row.unitId, { unitId: row.unitId, assetId: row.assetId });
-    for (const row of returnedRows)
-      if (row.unitId && row.assetId && !targets.has(row.unitId))
-        targets.set(row.unitId, { unitId: row.unitId, assetId: row.assetId });
-
-    for (const row of targets.values()) {
-      const [unit] = await tx
+    const [instrumentRetRows, toolRetRows] = await Promise.all([
+      tx
         .select({
-          status: equipmentUnit.status,
-          condition: equipmentUnit.condition,
+          unitId: issueTransaction.instrumentUnitId,
+          assetId: issueTransaction.instrumentAssetId,
+          kind: sql<"INSTRUMENT">`'INSTRUMENT'`,
         })
-        .from(equipmentUnit)
-        .where(eq(equipmentUnit.id, row.unitId))
-        .limit(1);
-      const unitOverride = input.unitStatuses?.find((u) => u.unitId === row.unitId);
-      const inspectionResult =
-        unitOverride?.status ??
-        input.equipmentStatus ??
-        (unit?.condition === "GOOD" ? "AVAILABLE" : "MAINTENANCE");
-      const nextStatus =
-        unit && ["UNDER_INSPECTION", "IN_USE", "RESERVED"].includes(unit.status)
-          ? inspectionResult
-          : "AVAILABLE";
-      await tx
-        .update(equipmentUnit)
-        .set({ status: nextStatus })
-        .where(eq(equipmentUnit.id, row.unitId));
-      if (unit?.status === "UNDER_INSPECTION") {
-        await tx.insert(equipmentConditionHistory).values({
-          equipmentAssetId: row.assetId,
-          equipmentUnitId: row.unitId,
-          condition: nextStatus === "MAINTENANCE" ? "MINOR_ISSUE" : "GOOD",
-          source: "PLP_INSPECTION",
-          recordedById: actorId,
-          notes: input.notes || null,
-        });
-      }
-      const remaining = await tx
-        .select({ count: sql<number>`count(*)::int` })
-        .from(equipmentUnit)
+        .from(returnTransaction)
+        .innerJoin(
+          issueTransaction,
+          eq(issueTransaction.id, returnTransaction.issueTransactionId),
+        )
         .where(
           and(
-            eq(equipmentUnit.equipmentAssetId, row.assetId),
-            inArray(equipmentUnit.status, [
-              "RESERVED",
-              "IN_USE",
-              "UNDER_INSPECTION",
-            ]),
+            eq(issueTransaction.requestId, requestId),
+            isNotNull(issueTransaction.instrumentUnitId),
+            isNotNull(issueTransaction.instrumentAssetId),
           ),
+        ),
+      tx
+        .select({
+          unitId: issueTransaction.toolUnitId,
+          assetId: issueTransaction.toolAssetId,
+          kind: sql<"TOOL">`'TOOL'`,
+        })
+        .from(returnTransaction)
+        .innerJoin(
+          issueTransaction,
+          eq(issueTransaction.id, returnTransaction.issueTransactionId),
+        )
+        .where(
+          and(
+            eq(issueTransaction.requestId, requestId),
+            isNotNull(issueTransaction.toolUnitId),
+            isNotNull(issueTransaction.toolAssetId),
+          ),
+        ),
+    ]);
+    const returnedRows = [...instrumentRetRows, ...toolRetRows];
+
+    const targets = new Map<
+      string,
+      { unitId: string; assetId: string; kind: "INSTRUMENT" | "TOOL" }
+    >();
+    for (const row of reservationRows)
+      if (row.unitId && row.assetId)
+        targets.set(row.unitId, {
+          unitId: row.unitId,
+          assetId: row.assetId,
+          kind: row.kind,
+        });
+    for (const row of returnedRows)
+      if (row.unitId && row.assetId && !targets.has(row.unitId))
+        targets.set(row.unitId, {
+          unitId: row.unitId,
+          assetId: row.assetId,
+          kind: row.kind,
+        });
+
+    for (const row of targets.values()) {
+      if (row.kind === "INSTRUMENT") {
+        const [unit] = await tx
+          .select({
+            status: instrumentUnit.status,
+            condition: instrumentUnit.condition,
+          })
+          .from(instrumentUnit)
+          .where(eq(instrumentUnit.id, row.unitId))
+          .limit(1);
+        const unitOverride = input.unitStatuses?.find(
+          (u) => u.unitId === row.unitId,
         );
-      if ((remaining[0]?.count ?? 0) === 0) {
-        const attention = await tx
+        const inspectionResult =
+          unitOverride?.status ??
+          input.equipmentStatus ??
+          (unit?.condition === "GOOD" ? "AVAILABLE" : "MAINTENANCE");
+        const nextStatus =
+          unit &&
+          ["UNDER_INSPECTION", "IN_USE", "RESERVED"].includes(unit.status)
+            ? inspectionResult
+            : "AVAILABLE";
+        await tx
+          .update(instrumentUnit)
+          .set({ status: nextStatus })
+          .where(eq(instrumentUnit.id, row.unitId));
+        if (unit?.status === "UNDER_INSPECTION") {
+          await tx.insert(instrumentConditionHistory).values({
+            instrumentAssetId: row.assetId,
+            instrumentUnitId: row.unitId,
+            condition: nextStatus === "MAINTENANCE" ? "MINOR_ISSUE" : "GOOD",
+            source: "PLP_INSPECTION",
+            recordedById: actorId,
+            notes: input.notes || null,
+          });
+        }
+        const remaining = await tx
           .select({ count: sql<number>`count(*)::int` })
-          .from(equipmentUnit)
+          .from(instrumentUnit)
           .where(
             and(
-              eq(equipmentUnit.equipmentAssetId, row.assetId),
-              inArray(equipmentUnit.status, ["MAINTENANCE", "DAMAGED"]),
+              eq(instrumentUnit.instrumentAssetId, row.assetId),
+              inArray(instrumentUnit.status, [
+                "RESERVED",
+                "IN_USE",
+                "UNDER_INSPECTION",
+              ]),
             ),
           );
-        await tx
-          .update(equipmentAsset)
-          .set({
-            status:
-              (attention[0]?.count ?? 0) > 0 ? "MAINTENANCE" : "AVAILABLE",
+        if ((remaining[0]?.count ?? 0) === 0) {
+          const attention = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(instrumentUnit)
+            .where(
+              and(
+                eq(instrumentUnit.instrumentAssetId, row.assetId),
+                inArray(instrumentUnit.status, ["MAINTENANCE", "DAMAGED"]),
+              ),
+            );
+          await tx
+            .update(instrumentAsset)
+            .set({
+              status:
+                (attention[0]?.count ?? 0) > 0 ? "MAINTENANCE" : "AVAILABLE",
+            })
+            .where(eq(instrumentAsset.id, row.assetId));
+        }
+      } else {
+        const [unit] = await tx
+          .select({
+            status: toolUnit.status,
+            condition: toolUnit.condition,
           })
-          .where(eq(equipmentAsset.id, row.assetId));
+          .from(toolUnit)
+          .where(eq(toolUnit.id, row.unitId))
+          .limit(1);
+        const unitOverride = input.unitStatuses?.find(
+          (u) => u.unitId === row.unitId,
+        );
+        const inspectionResult =
+          unitOverride?.status ??
+          input.equipmentStatus ??
+          (unit?.condition === "GOOD" ? "AVAILABLE" : "MAINTENANCE");
+        const nextStatus =
+          unit &&
+          ["UNDER_INSPECTION", "IN_USE", "RESERVED"].includes(unit.status)
+            ? inspectionResult
+            : "AVAILABLE";
+        await tx
+          .update(toolUnit)
+          .set({ status: nextStatus })
+          .where(eq(toolUnit.id, row.unitId));
+        if (unit?.status === "UNDER_INSPECTION") {
+          await tx.insert(toolConditionHistory).values({
+            toolAssetId: row.assetId,
+            toolUnitId: row.unitId,
+            condition: nextStatus === "MAINTENANCE" ? "MINOR_ISSUE" : "GOOD",
+            source: "PLP_INSPECTION",
+            recordedById: actorId,
+            notes: input.notes || null,
+          });
+        }
+        const remaining = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(toolUnit)
+          .where(
+            and(
+              eq(toolUnit.toolAssetId, row.assetId),
+              inArray(toolUnit.status, [
+                "RESERVED",
+                "IN_USE",
+                "UNDER_INSPECTION",
+              ]),
+            ),
+          );
+        if ((remaining[0]?.count ?? 0) === 0) {
+          const attention = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(toolUnit)
+            .where(
+              and(
+                eq(toolUnit.toolAssetId, row.assetId),
+                inArray(toolUnit.status, ["MAINTENANCE", "DAMAGED"]),
+              ),
+            );
+          await tx
+            .update(toolAsset)
+            .set({
+              status:
+                (attention[0]?.count ?? 0) > 0 ? "MAINTENANCE" : "AVAILABLE",
+            })
+            .where(eq(toolAsset.id, row.assetId));
+        }
       }
     }
 
@@ -1183,6 +1501,13 @@ export async function runRequestMaintenance(actorId: string) {
   const now = new Date();
   const reminderWindow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   return db.transaction(async (tx) => {
+    const lockResult = await tx.execute<{ locked: boolean }>(
+      sql`SELECT pg_try_advisory_xact_lock(hashtext('reaksan_request_maintenance')) AS locked`,
+    );
+    if (!lockResult.rows[0]?.locked) {
+      return { overdue: 0, reminders: 0 };
+    }
+
     const overdue = await tx
       .select({
         id: resourceRequest.id,
@@ -1200,7 +1525,8 @@ export async function runRequestMaintenance(actorId: string) {
           sql`${resourceRequest.endAt} < ${now}`,
         ),
       )
-      .limit(200);
+      .limit(200)
+      .for("update", { skipLocked: true });
     for (const request of overdue) {
       await tx
         .update(resourceRequest)
@@ -1293,6 +1619,7 @@ export async function createRequest(userId: string, input: CreateRequestInput) {
       roomRow.name,
       input.equipment.map((item) => item.unitCode),
     );
+    await lockEquipmentUnits(tx, equipmentRows);
     await assertNoReservationConflict(
       tx,
       equipmentRows.map((row) => row.unitId),
@@ -1336,14 +1663,25 @@ export async function createRequest(userId: string, input: CreateRequestInput) {
       const detail = input.equipment.find(
         (entry) => entry.unitCode === item.unitCode,
       );
-      await tx.insert(equipmentRequestItem).values({
-        requestId: created.id,
-        equipmentAssetId: item.assetId,
-        equipmentUnitId: item.unitId,
-        startAt,
-        endAt,
-        purpose: detail?.purpose ?? null,
-      });
+      if (item.classification === "INSTRUMENT") {
+        await tx.insert(instrumentRequestItem).values({
+          requestId: created.id,
+          instrumentAssetId: item.assetId,
+          instrumentUnitId: item.unitId,
+          startAt,
+          endAt,
+          purpose: detail?.purpose ?? null,
+        });
+      } else {
+        await tx.insert(toolRequestItem).values({
+          requestId: created.id,
+          toolAssetId: item.assetId,
+          toolUnitId: item.unitId,
+          startAt,
+          endAt,
+          purpose: detail?.purpose ?? null,
+        });
+      }
     }
     for (const item of materialRows) {
       await tx.insert(materialRequestItem).values({
@@ -1354,7 +1692,7 @@ export async function createRequest(userId: string, input: CreateRequestInput) {
       });
     }
 
-    const staff = await listStaffRecipients(tx);
+    const staff = await listStaffRecipients(tx, roomRow.id);
     await createNotifications(
       tx,
       staff.map((recipientId) => ({
@@ -1425,6 +1763,7 @@ export async function updateRequest(
       roomRow.name,
       input.equipment.map((item) => item.unitCode),
     );
+    await lockEquipmentUnits(tx, equipmentRows);
     await assertNoReservationConflict(
       tx,
       equipmentRows.map((row) => row.unitId),
@@ -1440,8 +1779,11 @@ export async function updateRequest(
     );
 
     await tx
-      .delete(equipmentRequestItem)
-      .where(eq(equipmentRequestItem.requestId, requestId));
+      .delete(instrumentRequestItem)
+      .where(eq(instrumentRequestItem.requestId, requestId));
+    await tx
+      .delete(toolRequestItem)
+      .where(eq(toolRequestItem.requestId, requestId));
     await tx
       .delete(materialRequestItem)
       .where(eq(materialRequestItem.requestId, requestId));
@@ -1449,14 +1791,25 @@ export async function updateRequest(
       const detail = input.equipment.find(
         (entry) => entry.unitCode === item.unitCode,
       );
-      await tx.insert(equipmentRequestItem).values({
-        requestId,
-        equipmentAssetId: item.assetId,
-        equipmentUnitId: item.unitId,
-        startAt,
-        endAt,
-        purpose: detail?.purpose ?? null,
-      });
+      if (item.classification === "INSTRUMENT") {
+        await tx.insert(instrumentRequestItem).values({
+          requestId,
+          instrumentAssetId: item.assetId,
+          instrumentUnitId: item.unitId,
+          startAt,
+          endAt,
+          purpose: detail?.purpose ?? null,
+        });
+      } else {
+        await tx.insert(toolRequestItem).values({
+          requestId,
+          toolAssetId: item.assetId,
+          toolUnitId: item.unitId,
+          startAt,
+          endAt,
+          purpose: detail?.purpose ?? null,
+        });
+      }
     }
     for (const item of materialRows) {
       await tx.insert(materialRequestItem).values({
@@ -1485,7 +1838,7 @@ export async function updateRequest(
       .where(eq(resourceRequest.id, requestId))
       .returning({ code: resourceRequest.code });
     if (resubmit) {
-      const staff = await listStaffRecipients(tx);
+      const staff = await listStaffRecipients(tx, roomRow.id);
       await createNotifications(
         tx,
         staff.map((recipientId) => ({
@@ -1552,7 +1905,6 @@ export async function cancelRequest(userId: string, requestId: string) {
           id: stockTransaction.id,
           batchId: stockTransaction.materialBatchId,
           quantity: stockTransaction.quantity,
-          after: stockTransaction.afterQuantity,
         })
         .from(stockTransaction)
         .where(
@@ -1562,18 +1914,51 @@ export async function cancelRequest(userId: string, requestId: string) {
             eq(stockTransaction.type, "RESERVE"),
           ),
         );
-      for (const row of reservedRows) {
-        await recordStockTransaction(tx, {
-          batchId: row.batchId,
-          type: "RELEASE",
-          quantity: Number(row.quantity),
-          before: Number(row.after),
-          after: Math.max(0, Number(row.after) - Number(row.quantity)),
-          referenceType: "resource_request",
-          referenceId: requestId,
-          performedById: userId,
-          reason: `Request ${current.code} dibatalkan`,
-        });
+      if (reservedRows.length > 0) {
+        const batchIds = [
+          ...new Set(reservedRows.map((row) => row.batchId)),
+        ].sort();
+        await tx
+          .select({ id: materialBatch.id })
+          .from(materialBatch)
+          .where(inArray(materialBatch.id, batchIds))
+          .orderBy(materialBatch.id)
+          .for("update");
+        const balanceRows = await tx
+          .select({
+            batchId: stockTransaction.materialBatchId,
+            reserved: sql<string>`COALESCE(SUM(CASE
+              WHEN ${stockTransaction.type} = 'RESERVE' THEN ${stockTransaction.quantity}
+              WHEN ${stockTransaction.type} IN ('RELEASE', 'ISSUE') THEN -${stockTransaction.quantity}
+              ELSE 0
+            END), 0)`,
+          })
+          .from(stockTransaction)
+          .where(inArray(stockTransaction.materialBatchId, batchIds))
+          .groupBy(stockTransaction.materialBatchId);
+        const currentReserved = new Map(
+          balanceRows.map((row) => [
+            row.batchId,
+            Math.max(0, Number(row.reserved)),
+          ]),
+        );
+        for (const row of reservedRows) {
+          const qty = Number(row.quantity);
+          const before = currentReserved.get(row.batchId) ?? 0;
+          const after = Math.max(0, Math.round((before - qty) * 1000) / 1000);
+          currentReserved.set(row.batchId, after);
+          await recordStockTransaction(tx, {
+            batchId: row.batchId,
+            type: "RELEASE",
+            quantity: qty,
+            before,
+            after,
+            referenceType: "resource_request",
+            referenceId: requestId,
+            performedById: userId,
+            reason: `Request ${current.code} dibatalkan`,
+          });
+        }
       }
       await tx
         .update(materialRequestItem)
@@ -1582,7 +1967,11 @@ export async function cancelRequest(userId: string, requestId: string) {
     }
 
     const reservationRows = await tx
-      .select({ id: reservation.id, unitId: reservation.equipmentUnitId })
+      .select({
+        id: reservation.id,
+        instrumentUnitId: reservation.instrumentUnitId,
+        toolUnitId: reservation.toolUnitId,
+      })
       .from(reservation)
       .where(eq(reservation.requestId, requestId));
     for (const row of reservationRows) {
@@ -1590,27 +1979,52 @@ export async function cancelRequest(userId: string, requestId: string) {
         .update(reservation)
         .set({ status: "CANCELLED" })
         .where(eq(reservation.id, row.id));
-      const [other] = await tx
-        .select({ id: reservation.id })
-        .from(reservation)
-        .where(
-          and(
-            eq(reservation.equipmentUnitId, row.unitId),
-            inArray(reservation.status, [...conflictStatuses]),
-            ne(reservation.id, row.id),
-          ),
-        )
-        .limit(1);
-      if (!other) {
-        await tx
-          .update(equipmentUnit)
-          .set({ status: "AVAILABLE" })
+      if (row.instrumentUnitId) {
+        const [other] = await tx
+          .select({ id: reservation.id })
+          .from(reservation)
           .where(
             and(
-              eq(equipmentUnit.id, row.unitId),
-              eq(equipmentUnit.status, "RESERVED"),
+              eq(reservation.instrumentUnitId, row.instrumentUnitId),
+              inArray(reservation.status, [...conflictStatuses]),
+              ne(reservation.id, row.id),
             ),
-          );
+          )
+          .limit(1);
+        if (!other) {
+          await tx
+            .update(instrumentUnit)
+            .set({ status: "AVAILABLE" })
+            .where(
+              and(
+                eq(instrumentUnit.id, row.instrumentUnitId),
+                eq(instrumentUnit.status, "RESERVED"),
+              ),
+            );
+        }
+      } else if (row.toolUnitId) {
+        const [other] = await tx
+          .select({ id: reservation.id })
+          .from(reservation)
+          .where(
+            and(
+              eq(reservation.toolUnitId, row.toolUnitId),
+              inArray(reservation.status, [...conflictStatuses]),
+              ne(reservation.id, row.id),
+            ),
+          )
+          .limit(1);
+        if (!other) {
+          await tx
+            .update(toolUnit)
+            .set({ status: "AVAILABLE" })
+            .where(
+              and(
+                eq(toolUnit.id, row.toolUnitId),
+                eq(toolUnit.status, "RESERVED"),
+              ),
+            );
+        }
       }
     }
 
@@ -1698,24 +2112,47 @@ export async function reviewRequest(
       return loadRequestDto(tx, requestId);
     }
 
-    const equipmentItems = await tx
-      .select({
-        itemId: equipmentRequestItem.id,
-        unitId: equipmentRequestItem.equipmentUnitId,
-        assetId: equipmentRequestItem.equipmentAssetId,
-        unitCode: equipmentUnit.code,
-        unitStatus: equipmentUnit.status,
-        startAt: equipmentRequestItem.startAt,
-        endAt: equipmentRequestItem.endAt,
-        purpose: equipmentRequestItem.purpose,
-      })
-      .from(equipmentRequestItem)
-      .innerJoin(
-        equipmentUnit,
-        eq(equipmentUnit.id, equipmentRequestItem.equipmentUnitId),
-      )
-      .where(eq(equipmentRequestItem.requestId, requestId))
-      .for("update");
+    const [instrumentItems, toolItems] = await Promise.all([
+      tx
+        .select({
+          itemId: instrumentRequestItem.id,
+          unitId: instrumentRequestItem.instrumentUnitId,
+          assetId: instrumentRequestItem.instrumentAssetId,
+          unitCode: instrumentUnit.code,
+          unitStatus: instrumentUnit.status,
+          startAt: instrumentRequestItem.startAt,
+          endAt: instrumentRequestItem.endAt,
+          purpose: instrumentRequestItem.purpose,
+          kind: sql<"INSTRUMENT">`'INSTRUMENT'`,
+        })
+        .from(instrumentRequestItem)
+        .innerJoin(
+          instrumentUnit,
+          eq(instrumentUnit.id, instrumentRequestItem.instrumentUnitId),
+        )
+        .where(eq(instrumentRequestItem.requestId, requestId))
+        .for("update"),
+      tx
+        .select({
+          itemId: toolRequestItem.id,
+          unitId: toolRequestItem.toolUnitId,
+          assetId: toolRequestItem.toolAssetId,
+          unitCode: toolUnit.code,
+          unitStatus: toolUnit.status,
+          startAt: toolRequestItem.startAt,
+          endAt: toolRequestItem.endAt,
+          purpose: toolRequestItem.purpose,
+          kind: sql<"TOOL">`'TOOL'`,
+        })
+        .from(toolRequestItem)
+        .innerJoin(
+          toolUnit,
+          eq(toolUnit.id, toolRequestItem.toolUnitId),
+        )
+        .where(eq(toolRequestItem.requestId, requestId))
+        .for("update"),
+    ]);
+    const equipmentItems = [...instrumentItems, ...toolItems];
     for (const item of equipmentItems) {
       if (item.unitStatus !== "AVAILABLE")
         throw new ApiError(
@@ -1791,20 +2228,37 @@ export async function reviewRequest(
     }
 
     for (const item of equipmentItems) {
-      await tx.insert(reservation).values({
-        equipmentAssetId: item.assetId,
-        equipmentUnitId: item.unitId,
-        requestId,
-        primaryUserId: current.studentId,
-        startAt: item.startAt,
-        endAt: item.endAt,
-        status: "RESERVED",
-        purpose: item.purpose,
-      });
-      await tx
-        .update(equipmentUnit)
-        .set({ status: "RESERVED" })
-        .where(eq(equipmentUnit.id, item.unitId));
+      if (item.kind === "INSTRUMENT") {
+        await tx.insert(reservation).values({
+          instrumentAssetId: item.assetId,
+          instrumentUnitId: item.unitId,
+          requestId,
+          primaryUserId: current.studentId,
+          startAt: item.startAt,
+          endAt: item.endAt,
+          status: "RESERVED",
+          purpose: item.purpose,
+        });
+        await tx
+          .update(instrumentUnit)
+          .set({ status: "RESERVED" })
+          .where(eq(instrumentUnit.id, item.unitId));
+      } else {
+        await tx.insert(reservation).values({
+          toolAssetId: item.assetId,
+          toolUnitId: item.unitId,
+          requestId,
+          primaryUserId: current.studentId,
+          startAt: item.startAt,
+          endAt: item.endAt,
+          status: "RESERVED",
+          purpose: item.purpose,
+        });
+        await tx
+          .update(toolUnit)
+          .set({ status: "RESERVED" })
+          .where(eq(toolUnit.id, item.unitId));
+      }
     }
 
     await tx
@@ -1844,42 +2298,94 @@ export async function issueRequest(actorId: string, requestId: string) {
     if (!["APPROVED", "READY_FOR_PICKUP", "OVERDUE"].includes(request.status))
       throw new ApiError(409, "INVALID_STATE", "Request belum siap di-issue.");
 
-    const reservationRows = await tx
-      .select({
-        id: reservation.id,
-        unitId: reservation.equipmentUnitId,
-        assetId: reservation.equipmentAssetId,
-        condition: equipmentAsset.condition,
-      })
-      .from(reservation)
-      .innerJoin(
-        equipmentAsset,
-        eq(equipmentAsset.id, reservation.equipmentAssetId),
-      )
-      .where(
-        and(
-          eq(reservation.requestId, requestId),
-          eq(reservation.status, "RESERVED"),
-        ),
-      )
-      .for("update");
+    const [instrumentReservationRows, toolReservationRows] = await Promise.all([
+      tx
+        .select({
+          id: reservation.id,
+          unitId: reservation.instrumentUnitId,
+          assetId: reservation.instrumentAssetId,
+          condition: instrumentAsset.condition,
+          kind: sql<"INSTRUMENT">`'INSTRUMENT'`,
+        })
+        .from(reservation)
+        .innerJoin(
+          instrumentAsset,
+          eq(instrumentAsset.id, reservation.instrumentAssetId),
+        )
+        .where(
+          and(
+            eq(reservation.requestId, requestId),
+            eq(reservation.status, "RESERVED"),
+            isNotNull(reservation.instrumentAssetId),
+          ),
+        )
+        .for("update"),
+      tx
+        .select({
+          id: reservation.id,
+          unitId: reservation.toolUnitId,
+          assetId: reservation.toolAssetId,
+          condition: toolAsset.condition,
+          kind: sql<"TOOL">`'TOOL'`,
+        })
+        .from(reservation)
+        .innerJoin(
+          toolAsset,
+          eq(toolAsset.id, reservation.toolAssetId),
+        )
+        .where(
+          and(
+            eq(reservation.requestId, requestId),
+            eq(reservation.status, "RESERVED"),
+            isNotNull(reservation.toolAssetId),
+          ),
+        )
+        .for("update"),
+    ]);
+    const reservationRows = [
+      ...instrumentReservationRows,
+      ...toolReservationRows,
+    ];
     for (const item of reservationRows) {
-      await tx.insert(issueTransaction).values({
-        requestId,
-        equipmentAssetId: item.assetId,
-        equipmentUnitId: item.unitId,
-        issuedToId: request.studentId,
-        issuedById: actorId,
-        conditionAtIssue: item.condition,
-      });
-      await tx
-        .update(reservation)
-        .set({ status: "ACTIVE" })
-        .where(eq(reservation.id, item.id));
-      await tx
-        .update(equipmentUnit)
-        .set({ status: "IN_USE" })
-        .where(eq(equipmentUnit.id, item.unitId));
+      if (item.kind === "INSTRUMENT") {
+        await tx.insert(issueTransaction).values({
+          requestId,
+          instrumentAssetId: item.assetId,
+          instrumentUnitId: item.unitId,
+          issuedToId: request.studentId,
+          issuedById: actorId,
+          conditionAtIssue: item.condition,
+        });
+        await tx
+          .update(reservation)
+          .set({ status: "ACTIVE" })
+          .where(eq(reservation.id, item.id));
+        if (item.unitId) {
+          await tx
+            .update(instrumentUnit)
+            .set({ status: "IN_USE" })
+            .where(eq(instrumentUnit.id, item.unitId));
+        }
+      } else {
+        await tx.insert(issueTransaction).values({
+          requestId,
+          toolAssetId: item.assetId,
+          toolUnitId: item.unitId,
+          issuedToId: request.studentId,
+          issuedById: actorId,
+          conditionAtIssue: item.condition,
+        });
+        await tx
+          .update(reservation)
+          .set({ status: "ACTIVE" })
+          .where(eq(reservation.id, item.id));
+        if (item.unitId) {
+          await tx
+            .update(toolUnit)
+            .set({ status: "IN_USE" })
+            .where(eq(toolUnit.id, item.unitId));
+        }
+      }
     }
 
     const issuedRows = await tx
@@ -1979,34 +2485,67 @@ export async function returnRequest(
     if (request.status !== "ACTIVE" && request.status !== "OVERDUE")
       throw new ApiError(409, "INVALID_STATE", "Request belum aktif.");
 
-    const issues = await tx
-      .select({
-        id: issueTransaction.id,
-        assetId: issueTransaction.equipmentAssetId,
-        unitId: issueTransaction.equipmentUnitId,
-        issuedToId: issueTransaction.issuedToId,
-      })
-      .from(issueTransaction)
-      .innerJoin(
-        equipmentAsset,
-        eq(equipmentAsset.id, issueTransaction.equipmentAssetId),
-      )
-      .innerJoin(
-        equipmentType,
-        eq(equipmentType.id, equipmentAsset.equipmentTypeId),
-      )
-      .leftJoin(
-        returnTransaction,
-        eq(returnTransaction.issueTransactionId, issueTransaction.id),
-      )
-      .where(
-        and(
-          eq(issueTransaction.requestId, requestId),
-          isNotNull(issueTransaction.equipmentAssetId),
-          isNull(returnTransaction.id),
-          eq(equipmentType.usageType, "BORROWABLE"),
+    const [instrumentIssues, toolIssues] = await Promise.all([
+      tx
+        .select({
+          id: issueTransaction.id,
+          assetId: issueTransaction.instrumentAssetId,
+          unitId: issueTransaction.instrumentUnitId,
+          issuedToId: issueTransaction.issuedToId,
+          kind: sql<"INSTRUMENT">`'INSTRUMENT'`,
+        })
+        .from(issueTransaction)
+        .innerJoin(
+          instrumentAsset,
+          eq(instrumentAsset.id, issueTransaction.instrumentAssetId),
+        )
+        .innerJoin(
+          instrumentType,
+          eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+        )
+        .leftJoin(
+          returnTransaction,
+          eq(returnTransaction.issueTransactionId, issueTransaction.id),
+        )
+        .where(
+          and(
+            eq(issueTransaction.requestId, requestId),
+            isNotNull(issueTransaction.instrumentAssetId),
+            isNull(returnTransaction.id),
+            eq(instrumentType.usageType, "BORROWABLE"),
+          ),
         ),
-      );
+      tx
+        .select({
+          id: issueTransaction.id,
+          assetId: issueTransaction.toolAssetId,
+          unitId: issueTransaction.toolUnitId,
+          issuedToId: issueTransaction.issuedToId,
+          kind: sql<"TOOL">`'TOOL'`,
+        })
+        .from(issueTransaction)
+        .innerJoin(
+          toolAsset,
+          eq(toolAsset.id, issueTransaction.toolAssetId),
+        )
+        .innerJoin(
+          toolType,
+          eq(toolType.id, toolAsset.toolTypeId),
+        )
+        .leftJoin(
+          returnTransaction,
+          eq(returnTransaction.issueTransactionId, issueTransaction.id),
+        )
+        .where(
+          and(
+            eq(issueTransaction.requestId, requestId),
+            isNotNull(issueTransaction.toolAssetId),
+            isNull(returnTransaction.id),
+            eq(toolType.usageType, "BORROWABLE"),
+          ),
+        ),
+    ]);
+    const issues = [...instrumentIssues, ...toolIssues];
     if (issues.length === 0)
       throw new ApiError(
         409,
@@ -2015,32 +2554,63 @@ export async function returnRequest(
       );
     for (const issue of issues) {
       if (!issue.assetId) continue;
-      await tx.insert(returnTransaction).values({
-        issueTransactionId: issue.id,
-        equipmentAssetId: issue.assetId,
-        returnedById: issue.issuedToId,
-        receivedById: actorId,
-        conditionAtReturn: input.condition,
-        notes: input.notes || null,
-      });
-      await tx
-        .update(equipmentAsset)
-        .set({ condition: input.condition })
-        .where(eq(equipmentAsset.id, issue.assetId));
-      if (issue.unitId) {
+      if (issue.kind === "INSTRUMENT") {
+        await tx.insert(returnTransaction).values({
+          issueTransactionId: issue.id,
+          instrumentAssetId: issue.assetId,
+          instrumentUnitId: issue.unitId ?? null,
+          returnedById: issue.issuedToId,
+          receivedById: actorId,
+          conditionAtReturn: input.condition,
+          notes: input.notes || null,
+        });
         await tx
-          .update(equipmentUnit)
-          .set({ status: "UNDER_INSPECTION", condition: input.condition })
-          .where(eq(equipmentUnit.id, issue.unitId));
+          .update(instrumentAsset)
+          .set({ condition: input.condition })
+          .where(eq(instrumentAsset.id, issue.assetId));
+        if (issue.unitId) {
+          await tx
+            .update(instrumentUnit)
+            .set({ status: "UNDER_INSPECTION", condition: input.condition })
+            .where(eq(instrumentUnit.id, issue.unitId));
+        }
+        await tx.insert(instrumentConditionHistory).values({
+          instrumentAssetId: issue.assetId,
+          instrumentUnitId: issue.unitId ?? null,
+          condition: input.condition,
+          source: "RETURN",
+          recordedById: actorId,
+          notes: input.notes || null,
+        });
+      } else {
+        await tx.insert(returnTransaction).values({
+          issueTransactionId: issue.id,
+          toolAssetId: issue.assetId,
+          toolUnitId: issue.unitId ?? null,
+          returnedById: issue.issuedToId,
+          receivedById: actorId,
+          conditionAtReturn: input.condition,
+          notes: input.notes || null,
+        });
+        await tx
+          .update(toolAsset)
+          .set({ condition: input.condition })
+          .where(eq(toolAsset.id, issue.assetId));
+        if (issue.unitId) {
+          await tx
+            .update(toolUnit)
+            .set({ status: "UNDER_INSPECTION", condition: input.condition })
+            .where(eq(toolUnit.id, issue.unitId));
+        }
+        await tx.insert(toolConditionHistory).values({
+          toolAssetId: issue.assetId,
+          toolUnitId: issue.unitId ?? null,
+          condition: input.condition,
+          source: "RETURN",
+          recordedById: actorId,
+          notes: input.notes || null,
+        });
       }
-      await tx.insert(equipmentConditionHistory).values({
-        equipmentAssetId: issue.assetId,
-        equipmentUnitId: issue.unitId ?? null,
-        condition: input.condition,
-        source: "RETURN",
-        recordedById: actorId,
-        notes: input.notes || null,
-      });
     }
     // The borrowable reservation closes at return; completeRequest still finds
     // the unit through its return transaction for the inspection result.
@@ -2055,7 +2625,10 @@ export async function returnRequest(
           and(
             eq(reservation.requestId, requestId),
             inArray(reservation.status, [...conflictStatuses]),
-            inArray(reservation.equipmentUnitId, returnedUnitIds),
+            or(
+              inArray(reservation.instrumentUnitId, returnedUnitIds),
+              inArray(reservation.toolUnitId, returnedUnitIds),
+            ),
           ),
         );
 
@@ -2098,17 +2671,29 @@ export async function loadReservations(
   exec: DbExecutor,
   options: ReservationLoadOptions,
 ): Promise<ReservationDto[]> {
+  const instrumentRoom = alias(room, "reservation_instrument_room");
+  const toolRoom = alias(room, "reservation_tool_room");
+
   const conditions = [];
   if (options.primaryUserId)
     conditions.push(eq(reservation.primaryUserId, options.primaryUserId));
-  if (options.roomCode) conditions.push(eq(room.code, options.roomCode));
+  if (options.roomCode)
+    conditions.push(
+      or(
+        eq(instrumentRoom.code, options.roomCode),
+        eq(toolRoom.code, options.roomCode),
+      ),
+    );
   if (options.roomCodes !== undefined)
     conditions.push(
       options.roomCodes === null
         ? sql`true`
         : options.roomCodes.length === 0
           ? sql`false`
-          : inArray(room.code, options.roomCodes),
+          : or(
+              inArray(instrumentRoom.code, options.roomCodes),
+              inArray(toolRoom.code, options.roomCodes),
+            ),
     );
   if (options.statuses?.length)
     conditions.push(inArray(reservation.status, options.statuses));
@@ -2126,28 +2711,95 @@ export async function loadReservations(
       requestId: reservation.requestId,
       requestCode: resourceRequest.code,
       requestTitle: resourceRequest.title,
-      unitCode: equipmentUnit.code,
-      unitLabel: equipmentUnit.label,
-      assetCode: equipmentAsset.assetCode,
-      assetName: equipmentType.name,
-      assetImageMediaId: equipmentAsset.imageMediaId,
-      typeImageMediaId: equipmentType.imageMediaId,
-      roomCode: room.code,
-      roomName: room.name,
+      requestStatus: resourceRequest.status,
+      classification: sql<"INSTRUMENT" | "TOOL">`CASE WHEN ${instrumentAsset.id} IS NOT NULL THEN 'INSTRUMENT' ELSE 'TOOL' END`,
+      supervisorName: resourceRequest.supervisorName,
+      fieldPicName: resourceRequest.fieldPicName,
+      unitCode: sql<string>`COALESCE(${instrumentUnit.code}, ${toolUnit.code})`,
+      unitLabel: sql<string>`COALESCE(${instrumentUnit.label}, ${toolUnit.label})`,
+      assetCode: sql<string>`COALESCE(${instrumentAsset.assetCode}, ${toolAsset.assetCode})`,
+      assetName: sql<string>`COALESCE(${instrumentType.name}, ${toolType.name})`,
+      assetImageMediaId: sql<string | null>`COALESCE(${instrumentAsset.imageMediaId}, ${toolAsset.imageMediaId})`,
+      typeImageMediaId: sql<string | null>`COALESCE(${instrumentType.imageMediaId}, ${toolType.imageMediaId})`,
+      roomCode: sql<string>`COALESCE(${instrumentRoom.code}, ${toolRoom.code})`,
+      roomName: sql<string>`COALESCE(${instrumentRoom.name}, ${toolRoom.name})`,
     })
     .from(reservation)
     .innerJoin(user, eq(user.id, reservation.primaryUserId))
     .innerJoin(resourceRequest, eq(resourceRequest.id, reservation.requestId))
-    .innerJoin(equipmentUnit, eq(equipmentUnit.id, reservation.equipmentUnitId))
-    .innerJoin(
-      equipmentAsset,
-      eq(equipmentAsset.id, reservation.equipmentAssetId),
+    .leftJoin(
+      instrumentUnit,
+      eq(instrumentUnit.id, reservation.instrumentUnitId),
     )
-    .innerJoin(equipmentType, eq(equipmentType.id, equipmentAsset.equipmentTypeId))
-    .innerJoin(room, eq(room.id, equipmentAsset.roomId))
+    .leftJoin(
+      instrumentAsset,
+      eq(instrumentAsset.id, reservation.instrumentAssetId),
+    )
+    .leftJoin(
+      instrumentType,
+      eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+    )
+    .leftJoin(instrumentRoom, eq(instrumentRoom.id, instrumentAsset.roomId))
+    .leftJoin(
+      toolUnit,
+      eq(toolUnit.id, reservation.toolUnitId),
+    )
+    .leftJoin(
+      toolAsset,
+      eq(toolAsset.id, reservation.toolAssetId),
+    )
+    .leftJoin(
+      toolType,
+      eq(toolType.id, toolAsset.toolTypeId),
+    )
+    .leftJoin(toolRoom, eq(toolRoom.id, toolAsset.roomId))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(asc(reservation.startAt))
     .limit(500);
+
+  const requestIds = [...new Set(rows.map((r) => r.requestId).filter(Boolean))];
+  const [materialRows, issueRows, returnRows] =
+    requestIds.length > 0
+      ? await Promise.all([
+          exec
+            .select({
+              id: materialRequestItem.id,
+              requestId: materialRequestItem.requestId,
+              quantity: materialRequestItem.requestedQuantity,
+              unit: materialRequestItem.unit,
+              code: material.code,
+              name: material.name,
+              imageMediaId: material.imageMediaId,
+            })
+            .from(materialRequestItem)
+            .innerJoin(
+              material,
+              eq(material.id, materialRequestItem.materialId),
+            )
+            .where(inArray(materialRequestItem.requestId, requestIds)),
+          exec
+            .select({
+              requestId: issueTransaction.requestId,
+              issuedAt: issueTransaction.issuedAt,
+            })
+            .from(issueTransaction)
+            .where(inArray(issueTransaction.requestId, requestIds))
+            .orderBy(asc(issueTransaction.issuedAt)),
+          exec
+            .select({
+              requestId: issueTransaction.requestId,
+              returnedAt: returnTransaction.returnedAt,
+            })
+            .from(returnTransaction)
+            .innerJoin(
+              issueTransaction,
+              eq(issueTransaction.id, returnTransaction.issueTransactionId),
+            )
+            .where(inArray(issueTransaction.requestId, requestIds))
+            .orderBy(asc(returnTransaction.returnedAt)),
+        ])
+      : [[], [], []];
+
   const viewerId = options.viewerId;
   return rows.map<ReservationDto>((row) => ({
     id: row.id,
@@ -2156,11 +2808,13 @@ export async function loadReservations(
     unitLabel: row.unitLabel,
     assetCode: row.assetCode,
     assetName: row.assetName,
+    classification: row.classification,
     roomCode: row.roomCode,
     roomName: row.roomName,
     requestId: row.requestId,
     requestCode: row.requestCode,
     requestTitle: row.requestTitle,
+    requestStatus: row.requestStatus,
     primaryUserId: row.primaryUserId,
     primaryUserName: row.primaryUserName,
     startAt: row.startAt.toISOString(),
@@ -2169,6 +2823,26 @@ export async function loadReservations(
     purpose: row.purpose ?? row.requestTitle,
     mine: viewerId ? row.primaryUserId === viewerId : true,
     imageMediaId: row.assetImageMediaId ?? row.typeImageMediaId ?? null,
+    supervisor: row.supervisorName,
+    fieldPic: row.fieldPicName,
+    materials: materialRows
+      .filter((item) => item.requestId === row.requestId)
+      .map((item) => ({
+        id: item.id,
+        code: item.code,
+        name: item.name,
+        quantity: Number(item.quantity),
+        unit: item.unit,
+        imageMediaId: item.imageMediaId ?? null,
+      })),
+    issuedAt:
+      issueRows.find((item) => item.requestId === row.requestId)?.issuedAt.toISOString() ??
+      null,
+    returnedAt:
+      returnRows
+        .filter((item) => item.requestId === row.requestId)
+        .at(-1)
+        ?.returnedAt.toISOString() ?? null,
   }));
 }
 

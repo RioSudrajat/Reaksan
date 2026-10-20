@@ -1,7 +1,10 @@
 import "server-only";
 import { and, asc, eq, inArray, ne, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { materialBatch, room, equipmentAsset, equipmentUnit } from "@/db/schema";
+import {
+  materialBatch,
+  room,
+} from "@/db/schema";
 import {
   listMaterialRows,
   type MaterialAggregateRow,
@@ -346,34 +349,46 @@ async function listRooms() {
 export async function getEquipmentRoomDistribution(
   roomCodes?: string[] | null,
 ) {
-  const conditions = [
-    eq(equipmentUnit.active, true),
-    eq(equipmentAsset.active, true),
-  ];
-  if (roomCodes !== undefined && roomCodes !== null) {
-    if (roomCodes.length === 0) {
-      conditions.push(sql`false`);
-    } else {
-      conditions.push(inArray(room.code, roomCodes));
-    }
-  }
+  const scopeCondition =
+    roomCodes === undefined || roomCodes === null
+      ? sql`true`
+      : roomCodes.length === 0
+        ? sql`false`
+        : sql`r.code IN (${sql.join(roomCodes.map((code) => sql`${code}`), sql`, `)})`;
 
-  const rows = await db
-    .select({
-      roomCode: room.code,
-      roomName: room.name,
-      total: sql<number>`COUNT(*)::int`,
-      available: sql<number>`COUNT(*) FILTER (WHERE ${equipmentUnit.status} = 'AVAILABLE')::int`,
-      reserved: sql<number>`COUNT(*) FILTER (WHERE ${equipmentUnit.status} IN ('RESERVED', 'IN_USE'))::int`,
-      attention: sql<number>`COUNT(*) FILTER (WHERE ${equipmentUnit.status} IN ('MAINTENANCE', 'DAMAGED', 'UNDER_INSPECTION'))::int`,
-      retired: sql<number>`COUNT(*) FILTER (WHERE ${equipmentUnit.status} = 'RETIRED')::int`,
-    })
-    .from(equipmentUnit)
-    .innerJoin(equipmentAsset, eq(equipmentAsset.id, equipmentUnit.equipmentAssetId))
-    .innerJoin(room, eq(room.id, equipmentAsset.roomId))
-    .where(and(...conditions))
-    .groupBy(room.id)
-    .orderBy(asc(room.name));
+  const result = await db.execute<{
+    roomCode: string;
+    roomName: string;
+    total: number;
+    available: number;
+    reserved: number;
+    attention: number;
+    retired: number;
+  }>(sql`
+    SELECT
+      r.code as "roomCode",
+      r.name as "roomName",
+      COUNT(u.id)::int as "total",
+      COUNT(u.id) FILTER (WHERE u.status = 'AVAILABLE')::int as "available",
+      COUNT(u.id) FILTER (WHERE u.status IN ('RESERVED', 'IN_USE'))::int as "reserved",
+      COUNT(u.id) FILTER (WHERE u.status IN ('MAINTENANCE', 'DAMAGED', 'UNDER_INSPECTION'))::int as "attention",
+      COUNT(u.id) FILTER (WHERE u.status = 'RETIRED')::int as "retired"
+    FROM room r
+    LEFT JOIN (
+      SELECT iu.id, iu.status, ia.room_id
+      FROM instrument_unit iu
+      JOIN instrument_asset ia ON ia.id = iu.instrument_asset_id
+      WHERE iu.active AND ia.active
+      UNION ALL
+      SELECT tu.id, tu.status, ta.room_id
+      FROM tool_unit tu
+      JOIN tool_asset ta ON ta.id = tu.tool_asset_id
+      WHERE tu.active AND ta.active
+    ) u ON u.room_id = r.id
+    WHERE r.active AND ${scopeCondition}
+    GROUP BY r.id, r.code, r.name
+    ORDER BY r.name ASC
+  `);
 
   return {
     groups: [
@@ -382,15 +397,25 @@ export async function getEquipmentRoomDistribution(
       { key: "attention", label: "Perlu perhatian", tone: "rose" as const },
       { key: "retired", label: "Pensiun", tone: "neutral" as const },
     ],
-    buckets: rows.map((row) => ({
+    buckets: (
+      result.rows as Array<{
+        roomCode: string;
+        roomName: string;
+        total: number;
+        available: number;
+        reserved: number;
+        attention: number;
+        retired: number;
+      }>
+    ).map((row) => ({
       key: row.roomCode,
       label: row.roomName,
       href: `/plp/inventory/equipment?room=${encodeURIComponent(row.roomCode)}`,
       segments: [
-        { key: "available", label: "Tersedia", value: row.available, tone: "green" as const },
-        { key: "reserved", label: "Dipesan / dipakai", value: row.reserved, tone: "blue" as const },
-        { key: "attention", label: "Perlu perhatian", value: row.attention, tone: "rose" as const },
-        { key: "retired", label: "Pensiun", value: row.retired, tone: "neutral" as const },
+        { key: "available", label: "Tersedia", value: Number(row.available), tone: "green" as const },
+        { key: "reserved", label: "Dipesan / dipakai", value: Number(row.reserved), tone: "blue" as const },
+        { key: "attention", label: "Perlu perhatian", value: Number(row.attention), tone: "rose" as const },
+        { key: "retired", label: "Pensiun", value: Number(row.retired), tone: "neutral" as const },
       ],
     })),
   };
@@ -597,23 +622,22 @@ export async function getTopUsage(options: {
       totalDaysBorrowed: number;
     }>(sql`
       SELECT 
-        et.id::text as "id",
-        et.classification::text as "classification",
-        et.name as "name",
-        et.category as "category",
+        it.id::text as "id",
+        'INSTRUMENT' as "classification",
+        it.name as "name",
+        it.category as "category",
         COUNT(DISTINCT rr.id)::int as "totalRequests",
-        COALESCE(SUM(GREATEST(1, CEIL(EXTRACT(EPOCH FROM (COALESCE(eri.end_at, rr.end_at) - COALESCE(eri.start_at, rr.start_at))) / 86400))), 0)::int as "totalDaysBorrowed"
-      FROM equipment_request_item eri
-      JOIN resource_request rr ON rr.id = eri.request_id
-      JOIN equipment_asset ea ON ea.id = eri.equipment_asset_id
-      JOIN equipment_type et ON et.id = ea.equipment_type_id
+        COALESCE(SUM(GREATEST(1, CEIL(EXTRACT(EPOCH FROM (COALESCE(iri.end_at, rr.end_at) - COALESCE(iri.start_at, rr.start_at))) / 86400))), 0)::int as "totalDaysBorrowed"
+      FROM instrument_request_item iri
+      JOIN resource_request rr ON rr.id = iri.request_id
+      JOIN instrument_asset ia ON ia.id = iri.instrument_asset_id
+      JOIN instrument_type it ON it.id = ia.instrument_type_id
       JOIN room r ON r.id = rr.room_id
-        WHERE et.classification = 'INSTRUMENT'
-        AND rr.status NOT IN ('CANCELLED', 'REJECTED', 'DRAFT')
+      WHERE rr.status NOT IN ('CANCELLED', 'REJECTED', 'DRAFT')
         AND COALESCE(rr.submitted_at, rr.created_at) >= ${from}
         AND COALESCE(rr.submitted_at, rr.created_at) <= ${to}
         AND ${roomScopeSql(sql`r.code`, scopedCodes)}
-      GROUP BY et.id, et.classification, et.name, et.category
+      GROUP BY it.id, it.name, it.category
       ORDER BY "totalRequests" DESC, "totalDaysBorrowed" DESC
       LIMIT 10
     `),
@@ -626,23 +650,22 @@ export async function getTopUsage(options: {
       totalDaysBorrowed: number;
     }>(sql`
       SELECT 
-        et.id::text as "id",
-        et.classification::text as "classification",
-        et.name as "name",
-        et.category as "category",
+        tt.id::text as "id",
+        'TOOL' as "classification",
+        tt.name as "name",
+        tt.category as "category",
         COUNT(DISTINCT rr.id)::int as "totalRequests",
-        COALESCE(SUM(GREATEST(1, CEIL(EXTRACT(EPOCH FROM (COALESCE(eri.end_at, rr.end_at) - COALESCE(eri.start_at, rr.start_at))) / 86400))), 0)::int as "totalDaysBorrowed"
-      FROM equipment_request_item eri
-      JOIN resource_request rr ON rr.id = eri.request_id
-      JOIN equipment_asset ea ON ea.id = eri.equipment_asset_id
-      JOIN equipment_type et ON et.id = ea.equipment_type_id
+        COALESCE(SUM(GREATEST(1, CEIL(EXTRACT(EPOCH FROM (COALESCE(tri.end_at, rr.end_at) - COALESCE(tri.start_at, rr.start_at))) / 86400))), 0)::int as "totalDaysBorrowed"
+      FROM tool_request_item tri
+      JOIN resource_request rr ON rr.id = tri.request_id
+      JOIN tool_asset ta ON ta.id = tri.tool_asset_id
+      JOIN tool_type tt ON tt.id = ta.tool_type_id
       JOIN room r ON r.id = rr.room_id
-      WHERE et.classification = 'TOOL'
-        AND rr.status NOT IN ('CANCELLED', 'REJECTED', 'DRAFT')
+      WHERE rr.status NOT IN ('CANCELLED', 'REJECTED', 'DRAFT')
         AND COALESCE(rr.submitted_at, rr.created_at) >= ${from}
         AND COALESCE(rr.submitted_at, rr.created_at) <= ${to}
         AND ${roomScopeSql(sql`r.code`, scopedCodes)}
-      GROUP BY et.id, et.classification, et.name, et.category
+      GROUP BY tt.id, tt.name, tt.category
       ORDER BY "totalRequests" DESC, "totalDaysBorrowed" DESC
       LIMIT 10
     `),
@@ -677,7 +700,15 @@ export async function getTopUsage(options: {
     `),
   ]);
 
-  const instruments: TopUsageItem[] = instrumentRows.rows.map((row) => ({
+  const instruments: TopUsageItem[] = (
+    instrumentRows.rows as Array<{
+      id: string;
+      name: string;
+      category: string | null;
+      totalRequests: number | string;
+      totalDaysBorrowed: number | string;
+    }>
+  ).map((row) => ({
     id: row.id,
     name: row.name,
     category: row.category,
@@ -685,7 +716,15 @@ export async function getTopUsage(options: {
     totalDaysBorrowed: Number(row.totalDaysBorrowed),
   }));
 
-  const tools: TopUsageItem[] = toolRows.rows.map((row) => ({
+  const tools: TopUsageItem[] = (
+    toolRows.rows as Array<{
+      id: string;
+      name: string;
+      category: string | null;
+      totalRequests: number | string;
+      totalDaysBorrowed: number | string;
+    }>
+  ).map((row) => ({
     id: row.id,
     name: row.name,
     category: row.category,
@@ -693,12 +732,22 @@ export async function getTopUsage(options: {
     totalDaysBorrowed: Number(row.totalDaysBorrowed),
   }));
 
-  const materials: TopUsageItem[] = materialRows.rows.map((row) => ({
+  const materials: TopUsageItem[] = (
+    materialRows.rows as Array<{
+      id: string;
+      name: string;
+      code: string;
+      category: string | null;
+      unit: string | null;
+      totalRequests: number | string;
+      totalQuantity: number | string;
+    }>
+  ).map((row) => ({
     id: row.id,
     name: row.name,
     code: row.code,
     category: row.category,
-    unit: row.unit,
+    unit: row.unit ?? undefined,
     totalRequests: Number(row.totalRequests),
     totalDaysBorrowed: 0,
     totalQuantity: Number(row.totalQuantity),

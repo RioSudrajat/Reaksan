@@ -32,10 +32,10 @@ test("every seeded lab owns equipment and material stock", async () => {
 
     for (const code of LAB_CODES) {
       const assets = await db.query(
-        `SELECT count(*)::int AS count
-         FROM equipment_asset a
-         JOIN room r ON r.id = a.room_id
-         WHERE r.code = $1 AND a.active`,
+        `SELECT (
+           (SELECT count(*)::int FROM instrument_asset a JOIN room r ON r.id = a.room_id WHERE r.code = $1 AND a.active) +
+           (SELECT count(*)::int FROM tool_asset a JOIN room r ON r.id = a.room_id WHERE r.code = $1 AND a.active)
+         ) AS count`,
         [code],
       );
       assert.ok(assets.rows[0].count > 0, `${code} needs equipment assets`);
@@ -63,7 +63,8 @@ test("every seeded lab owns equipment and material stock", async () => {
 
     const missingArt = await db.query(
       `SELECT
-        (SELECT count(*)::int FROM equipment_type WHERE image_media_id IS NULL) AS types,
+        ((SELECT count(*)::int FROM instrument_type WHERE image_media_id IS NULL) +
+         (SELECT count(*)::int FROM tool_type WHERE image_media_id IS NULL)) AS types,
         (SELECT count(*)::int FROM material WHERE image_media_id IS NULL) AS materials`,
     );
     assert.equal(missingArt.rows[0].types, 0);

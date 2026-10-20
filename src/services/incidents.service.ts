@@ -3,10 +3,14 @@ import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { ApiError } from "@/lib/api";
 import { db } from "@/db";
 import {
-  equipmentAsset,
-  equipmentConditionHistory,
-  equipmentType,
-  equipmentUnit,
+  instrumentAsset,
+  instrumentConditionHistory,
+  instrumentType,
+  instrumentUnit,
+  toolAsset,
+  toolConditionHistory,
+  toolType,
+  toolUnit,
   incident,
   incidentAssessment,
   incidentResolution,
@@ -17,6 +21,7 @@ import {
   user,
 } from "@/db/schema";
 import type { DbExecutor } from "@/services/executor";
+import { nextYearlyCode } from "@/services/code-sequence";
 import { writeAudit } from "@/services/audit.service";
 import {
   createNotification,
@@ -62,13 +67,8 @@ export type IncidentDto = {
   } | null;
 };
 
-async function incidentCode(exec: DbExecutor) {
-  const year = new Date().getFullYear();
-  const [row] = await exec
-    .select({ count: sql<number>`count(*)::int` })
-    .from(incident)
-    .where(sql`${incident.code} LIKE ${`INC-${year}-%`}`);
-  return `INC-${year}-${String((row?.count ?? 0) + 1).padStart(3, "0")}`;
+function incidentCode(exec: DbExecutor) {
+  return nextYearlyCode(exec, "incident", "INC");
 }
 
 export type IncidentLoadFilters = {
@@ -112,7 +112,8 @@ function incidentConditions(options: IncidentLoadFilters) {
         ilike(incident.title, pattern),
         ilike(incident.description, pattern),
         ilike(user.name, pattern),
-        ilike(equipmentAsset.assetCode, pattern),
+        ilike(instrumentAsset.assetCode, pattern),
+        ilike(toolAsset.assetCode, pattern),
       ),
     );
   }
@@ -136,8 +137,10 @@ export async function loadIncidentDtos(
       createdAt: incident.createdAt,
       reporterId: incident.reporterId,
       reporterName: user.name,
-      equipmentCode: equipmentAsset.assetCode,
-      equipmentName: equipmentType.name,
+      instrumentCode: instrumentAsset.assetCode,
+      instrumentName: instrumentType.name,
+      toolCode: toolAsset.assetCode,
+      toolName: toolType.name,
       roomCode: room.code,
       roomName: room.name,
       requestId: incident.requestId,
@@ -146,10 +149,15 @@ export async function loadIncidentDtos(
     })
     .from(incident)
     .innerJoin(user, eq(user.id, incident.reporterId))
-    .leftJoin(equipmentAsset, eq(equipmentAsset.id, incident.equipmentAssetId))
+    .leftJoin(instrumentAsset, eq(instrumentAsset.id, incident.instrumentAssetId))
     .leftJoin(
-      equipmentType,
-      eq(equipmentType.id, equipmentAsset.equipmentTypeId),
+      instrumentType,
+      eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+    )
+    .leftJoin(toolAsset, eq(toolAsset.id, incident.toolAssetId))
+    .leftJoin(
+      toolType,
+      eq(toolType.id, toolAsset.toolTypeId),
     )
     .leftJoin(room, eq(room.id, incident.roomId))
     .leftJoin(resourceRequest, eq(resourceRequest.id, incident.requestId))
@@ -197,8 +205,8 @@ export async function loadIncidentDtos(
       createdAt: row.createdAt.toISOString(),
       reporterId: row.reporterId,
       reporterName: row.reporterName,
-      equipmentCode: row.equipmentCode ?? null,
-      equipmentName: row.equipmentName ?? null,
+      equipmentCode: row.instrumentCode ?? row.toolCode ?? null,
+      equipmentName: row.instrumentName ?? row.toolName ?? null,
       roomCode: row.roomCode ?? null,
       roomName: row.roomName ?? null,
       requestId: row.requestId ?? null,
@@ -237,6 +245,7 @@ export async function createIncident(
     let assetRow:
       | {
           id: string;
+          type: "INSTRUMENT" | "TOOL";
           assetCode: string;
           name: string;
           roomId: string;
@@ -244,34 +253,61 @@ export async function createIncident(
         }
       | undefined;
     if (input.equipmentCode) {
-      const [row] = await tx
+      const [insRow] = await tx
         .select({
-          id: equipmentAsset.id,
-          assetCode: equipmentAsset.assetCode,
-          name: equipmentType.name,
-          roomId: equipmentAsset.roomId,
+          id: instrumentAsset.id,
+          assetCode: instrumentAsset.assetCode,
+          name: instrumentType.name,
+          roomId: instrumentAsset.roomId,
           roomName: room.name,
         })
-        .from(equipmentAsset)
+        .from(instrumentAsset)
         .innerJoin(
-          equipmentType,
-          eq(equipmentType.id, equipmentAsset.equipmentTypeId),
+          instrumentType,
+          eq(instrumentType.id, instrumentAsset.instrumentTypeId),
         )
-        .innerJoin(room, eq(room.id, equipmentAsset.roomId))
+        .innerJoin(room, eq(room.id, instrumentAsset.roomId))
         .where(
           and(
-            eq(equipmentAsset.assetCode, input.equipmentCode),
-            eq(equipmentAsset.active, true),
+            eq(instrumentAsset.assetCode, input.equipmentCode),
+            eq(instrumentAsset.active, true),
           ),
         )
         .limit(1);
-      if (!row)
+
+      if (insRow) {
+        assetRow = { ...insRow, type: "INSTRUMENT" };
+      } else {
+        const [tolRow] = await tx
+          .select({
+            id: toolAsset.id,
+            assetCode: toolAsset.assetCode,
+            name: toolType.name,
+            roomId: toolAsset.roomId,
+            roomName: room.name,
+          })
+          .from(toolAsset)
+          .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
+          .innerJoin(room, eq(room.id, toolAsset.roomId))
+          .where(
+            and(
+              eq(toolAsset.assetCode, input.equipmentCode),
+              eq(toolAsset.active, true),
+            ),
+          )
+          .limit(1);
+
+        if (tolRow) {
+          assetRow = { ...tolRow, type: "TOOL" };
+        }
+      }
+
+      if (!assetRow)
         throw new ApiError(
           422,
           "UNKNOWN_EQUIPMENT",
           "Equipment is not tracked in the catalog.",
         );
-      assetRow = row;
     }
 
     let roomRow: { id: string; name: string } | undefined;
@@ -354,15 +390,15 @@ export async function createIncident(
         .select({
           id: reservation.id,
           primaryUserId: reservation.primaryUserId,
-          roomId: equipmentAsset.roomId,
+          roomId: instrumentAsset.roomId,
           roomCode: room.code,
         })
         .from(reservation)
         .innerJoin(
-          equipmentAsset,
-          eq(equipmentAsset.id, reservation.equipmentAssetId),
+          instrumentAsset,
+          eq(instrumentAsset.id, reservation.instrumentAssetId),
         )
-        .innerJoin(room, eq(room.id, equipmentAsset.roomId))
+        .innerJoin(room, eq(room.id, instrumentAsset.roomId))
         .where(eq(reservation.id, input.reservationId))
         .limit(1);
       if (!resRow) {
@@ -415,7 +451,8 @@ export async function createIncident(
       .insert(incident)
       .values({
         code,
-        equipmentAssetId: assetRow?.id ?? null,
+        instrumentAssetId: assetRow?.type === "INSTRUMENT" ? assetRow.id : null,
+        toolAssetId: assetRow?.type === "TOOL" ? assetRow.id : null,
         roomId,
         requestId: input.requestId ?? null,
         reservationId: input.reservationId ?? null,
@@ -430,7 +467,7 @@ export async function createIncident(
 
     const resourceLabel =
       assetRow?.name ?? roomRow?.name ?? "laboratorium";
-    const staff = await listStaffRecipients(tx);
+    const staff = await listStaffRecipients(tx, roomId);
     const actorRoleLabel = options?.allowStaffScope ? "Petugas lab" : "Mahasiswa";
     await createNotifications(
       tx,
@@ -475,7 +512,8 @@ export async function countIncidentRows(
     .select({ count: sql<number>`count(*)::int` })
     .from(incident)
     .innerJoin(user, eq(user.id, incident.reporterId))
-    .leftJoin(equipmentAsset, eq(equipmentAsset.id, incident.equipmentAssetId))
+    .leftJoin(instrumentAsset, eq(instrumentAsset.id, incident.instrumentAssetId))
+    .leftJoin(toolAsset, eq(toolAsset.id, incident.toolAssetId))
     .leftJoin(room, eq(room.id, incident.roomId))
     .where(conditions.length > 0 ? and(...conditions) : undefined);
   return row?.count ?? 0;
@@ -515,7 +553,8 @@ export async function assessIncident(
         id: incident.id,
         code: incident.code,
         reporterId: incident.reporterId,
-        assetId: incident.equipmentAssetId,
+        instrumentAssetId: incident.instrumentAssetId,
+        toolAssetId: incident.toolAssetId,
       })
       .from(incident)
       .where(eq(incident.code, code))
@@ -546,24 +585,45 @@ export async function assessIncident(
       .update(incident)
       .set({ status: nextStatus })
       .where(eq(incident.id, row.id));
-    if (row.assetId && input.equipmentCondition) {
+
+    if (row.instrumentAssetId && input.equipmentCondition) {
       await tx
-        .update(equipmentAsset)
+        .update(instrumentAsset)
         .set({
           condition: input.equipmentCondition,
           ...(input.equipmentCondition === "DAMAGED"
             ? { status: "DAMAGED" as const }
             : {}),
         })
-        .where(eq(equipmentAsset.id, row.assetId));
-      await tx.insert(equipmentConditionHistory).values({
-        equipmentAssetId: row.assetId,
+        .where(eq(instrumentAsset.id, row.instrumentAssetId));
+      await tx.insert(instrumentConditionHistory).values({
+        instrumentAssetId: row.instrumentAssetId,
         condition: input.equipmentCondition,
         source: "INCIDENT_ASSESSMENT",
         recordedById: actorId,
         notes: input.assessment,
       });
     }
+
+    if (row.toolAssetId && input.equipmentCondition) {
+      await tx
+        .update(toolAsset)
+        .set({
+          condition: input.equipmentCondition,
+          ...(input.equipmentCondition === "DAMAGED"
+            ? { status: "DAMAGED" as const }
+            : {}),
+        })
+        .where(eq(toolAsset.id, row.toolAssetId));
+      await tx.insert(toolConditionHistory).values({
+        toolAssetId: row.toolAssetId,
+        condition: input.equipmentCondition,
+        source: "INCIDENT_ASSESSMENT",
+        recordedById: actorId,
+        notes: input.assessment,
+      });
+    }
+
     await createNotification(tx, {
       recipientId: row.reporterId,
       type: "INCIDENT_UPDATED",
@@ -595,7 +655,8 @@ export async function resolveIncident(
         id: incident.id,
         code: incident.code,
         reporterId: incident.reporterId,
-        assetId: incident.equipmentAssetId,
+        instrumentAssetId: incident.instrumentAssetId,
+        toolAssetId: incident.toolAssetId,
       })
       .from(incident)
       .where(eq(incident.code, code))
@@ -624,21 +685,39 @@ export async function resolveIncident(
       .update(incident)
       .set({ status: "RESOLVED" })
       .where(eq(incident.id, row.id));
-    if (row.assetId && input.equipmentStatus) {
+
+    if (row.instrumentAssetId && input.equipmentStatus) {
       await tx
-        .update(equipmentAsset)
+        .update(instrumentAsset)
         .set({ status: input.equipmentStatus })
-        .where(eq(equipmentAsset.id, row.assetId));
+        .where(eq(instrumentAsset.id, row.instrumentAssetId));
       await tx
-        .update(equipmentUnit)
+        .update(instrumentUnit)
         .set({ status: input.equipmentStatus })
         .where(
           and(
-            eq(equipmentUnit.equipmentAssetId, row.assetId),
-            eq(equipmentUnit.status, "UNDER_INSPECTION"),
+            eq(instrumentUnit.instrumentAssetId, row.instrumentAssetId),
+            eq(instrumentUnit.status, "UNDER_INSPECTION"),
           ),
         );
     }
+
+    if (row.toolAssetId && input.equipmentStatus) {
+      await tx
+        .update(toolAsset)
+        .set({ status: input.equipmentStatus })
+        .where(eq(toolAsset.id, row.toolAssetId));
+      await tx
+        .update(toolUnit)
+        .set({ status: input.equipmentStatus })
+        .where(
+          and(
+            eq(toolUnit.toolAssetId, row.toolAssetId),
+            eq(toolUnit.status, "UNDER_INSPECTION"),
+          ),
+        );
+    }
+
     await createNotification(tx, {
       recipientId: row.reporterId,
       type: "INCIDENT_UPDATED",

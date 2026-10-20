@@ -7,7 +7,7 @@ import { RefreshCw } from "lucide-react";
 // Keeps a calendar current: a visible refresh action plus an automatic refresh
 // when the tab becomes active again, so a PLP approval shows up without a hard
 // reload.
-export function CalendarRefresh() {
+export function CalendarRefresh({ intervalMs = 30_000 }: { intervalMs?: number } = {}) {
   const router = useRouter();
 
   useEffect(() => {
@@ -15,8 +15,19 @@ export function CalendarRefresh() {
       if (document.visibilityState === "visible") router.refresh();
     };
     document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [router]);
+    const timer =
+      intervalMs > 0
+        ? window.setInterval(() => {
+            if (document.visibilityState === "visible") {
+              router.refresh();
+            }
+          }, intervalMs)
+        : undefined;
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (timer) window.clearInterval(timer);
+    };
+  }, [router, intervalMs]);
 
   return (
     <button
