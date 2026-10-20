@@ -5,9 +5,12 @@ import { env } from "@/lib/env";
 import * as schema from "./schema";
 
 function connect() {
-  const configuredMax = Number(process.env.DB_POOL_MAX ?? 20);
+  const defaultMax = process.env.VERCEL ? 5 : 20;
+  const configuredMax = Number(process.env.DB_POOL_MAX ?? defaultMax);
   const max =
-    Number.isFinite(configuredMax) && configuredMax >= 2 ? configuredMax : 20;
+    Number.isFinite(configuredMax) && configuredMax >= 2
+      ? configuredMax
+      : defaultMax;
   const pool = new Pool({
     connectionString: env.DATABASE_URL,
     max,
@@ -22,9 +25,9 @@ function connect() {
   return drizzle(pool, { schema });
 }
 
-// Prevent extra connection pools during development hot reloads.
+// Prevent extra connection pools during development hot reloads and reuse across warm serverless invocations.
 const globalDb = globalThis as unknown as {
   starterPostgresDb?: ReturnType<typeof connect>;
 };
 export const db = globalDb.starterPostgresDb ?? connect();
-if (process.env.NODE_ENV !== "production") globalDb.starterPostgresDb = db;
+globalDb.starterPostgresDb = db;
