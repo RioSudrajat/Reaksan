@@ -25,8 +25,9 @@ export async function nextYearlyCode(
     sql`SELECT pg_advisory_xact_lock(hashtext(${`code:${table}:${base}`}))`,
   );
   const pattern = `^${prefix}-${year}-[0-9]+$`;
+  const startPos = base.length + 1;
   const result = await tx.execute<{ max: number | null }>(
-    sql`SELECT MAX(CAST(SUBSTRING(code FROM ${base.length + 1}) AS integer))::int AS max
+    sql`SELECT MAX(CAST(SUBSTRING(code FROM ${startPos}::int) AS integer))::int AS max
         FROM ${sql.identifier(table)}
         WHERE code ~ ${pattern}`,
   );

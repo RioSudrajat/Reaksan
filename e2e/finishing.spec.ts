@@ -142,7 +142,7 @@ test("admin material batches dan assignments membuka data, bukan error render", 
   request,
 }) => {
   const adminEmail = await ensureAccount(request, "admin");
-  await ensureAccount(request, "plp");
+  const plpEmail = await ensureAccount(request, "plp");
   const admin = await sessionFor(playwright.request, "admin");
   const lot = `E2E-${randomUUID().slice(0, 8)}`;
   try {
@@ -166,10 +166,6 @@ test("admin material batches dan assignments membuka data, bukan error render", 
   await signInPage(page, adminEmail);
   await expect(page).toHaveURL(/\/admin\/dashboard$/);
 
-  await page.goto(`${origin}/plp/inventory/materials/MAT-027`);
-  await expect(page.getByText(lot).first()).toBeVisible();
-  await expect(page.getByText("Something went wrong")).toHaveCount(0);
-
   await page.goto(`${origin}/admin/assignments`);
   await expect(
     page.getByRole("heading", {
@@ -177,6 +173,14 @@ test("admin material batches dan assignments membuka data, bukan error render", 
     }),
   ).toBeVisible();
   await expect(page.getByText("Lab Organik").first()).toBeVisible();
+  await expect(page.getByText("Something went wrong")).toHaveCount(0);
+
+  await page.context().clearCookies();
+  await signInPage(page, plpEmail);
+  await expect(page).toHaveURL(/\/plp\/dashboard$/);
+
+  await page.goto(`${origin}/plp/inventory/materials/MAT-027`);
+  await expect(page.getByText(lot).first()).toBeVisible();
   await expect(page.getByText("Something went wrong")).toHaveCount(0);
 });
 
@@ -216,18 +220,8 @@ test("assignment menolak duplikasi, role salah, scope tidak ada, dan periode ter
     expect(duplicate.status()).toBe(409);
     expect((await duplicate.json()).error.code).toBe("DUPLICATE_ASSIGNMENT");
 
-    const student = await request.post("/api/auth/sign-up/email", {
-      headers,
-      data: {
-        name: "Finishing Student",
-        email: `finishing-student-${randomUUID()}@example.com`,
-        password,
-      },
-    });
-    expect(student.status()).toBe(200);
-    const studentId = await userIdFor(
-      (await student.json()).user.email as string,
-    );
+    const studentEmail = await signUp(request, "Finishing Student");
+    const studentId = await userIdFor(studentEmail);
     const wrongRole = await admin.post("/api/admin/assignments", {
       headers,
       data: {
@@ -479,7 +473,7 @@ test("dashboard dan inventory menampilkan chart dengan data nyata dan tautan sum
       await expect(
         page.getByRole("heading", { name: /Tren Dinamika Permintaan Lab/i }),
       ).toBeVisible();
-      await expect(page.getByText(/7 hari terakhir, per hari/i)).toBeVisible();
+      await expect(page.getByText(/\(7 hari\)/i)).toBeVisible();
       await expect(
         page.getByRole("heading", {
           name: /Sebaran Beban Risiko Antar-Ruang Lab/i,

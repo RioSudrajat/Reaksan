@@ -25,6 +25,8 @@ export default defineConfig({
       BETTER_AUTH_URL: "http://localhost:3101",
       DATABASE_URL: testUrl,
       MIGRATION_DATABASE_URL: testUrl,
+      STARTER_TEST_DATABASE_URL: testUrl,
+      STARTER_TEST_RUN: process.env.STARTER_TEST_RUN,
     },
     gracefulShutdown: { signal: "SIGTERM", timeout: 5000 },
   },

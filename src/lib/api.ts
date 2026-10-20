@@ -10,6 +10,22 @@ export { ApiError };
 
 type Session = NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>;
 
+function pgErrorCode(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null) return undefined;
+  if ("code" in error && typeof (error as { code?: unknown }).code === "string")
+    return (error as { code: string }).code;
+  if (
+    "cause" in error &&
+    typeof (error as { cause?: unknown }).cause === "object" &&
+    (error as { cause?: unknown }).cause !== null &&
+    "code" in (error as { cause: Record<string, unknown> }).cause &&
+    typeof (error as { cause: { code?: unknown } }).cause.code === "string"
+  ) {
+    return (error as { cause: { code: string } }).cause.code;
+  }
+  return undefined;
+}
+
 // Shared HTTP concerns only. Domain rules and Drizzle queries live in services.
 export async function withApiSession(
   request: Request,
@@ -59,12 +75,7 @@ export async function withApiSession(
         },
         { status: 422 },
       );
-    } else if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      (error as { code?: unknown }).code === "23505"
-    ) {
+    } else if (pgErrorCode(error) === "23505") {
       response = Response.json(
         {
           error: {
@@ -75,12 +86,7 @@ export async function withApiSession(
         },
         { status: 409 },
       );
-    } else if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      (error as { code?: unknown }).code === "23503"
-    ) {
+    } else if (pgErrorCode(error) === "23503") {
       response = Response.json(
         {
           error: {

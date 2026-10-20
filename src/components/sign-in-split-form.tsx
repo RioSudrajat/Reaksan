@@ -276,7 +276,9 @@ export function SignInSplitForm() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#929292] hover:text-[#212121] transition-colors focus:outline-none"
                   aria-label={
-                    showPassword ? "Sembunyikan password" : "Tampilkan password"
+                    showPassword
+                      ? "Sembunyikan kata sandi"
+                      : "Tampilkan kata sandi"
                   }
                 >
                   {showPassword ? (

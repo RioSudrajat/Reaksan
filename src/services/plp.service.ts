@@ -824,8 +824,34 @@ export async function getPlpMaterialDetail(
     room: options.room,
     roomCodes: options.roomCodes,
   });
-  const material = rows.data.find((row) => row.code === code);
-  if (!material) return null;
+  const matching = rows.data.filter((row) => row.code === code);
+  if (matching.length === 0) return null;
+  const first = matching[0];
+  const allBatches = matching.flatMap((row) => row.batches);
+  const physical = matching.reduce((sum, row) => sum + row.physical, 0);
+  const reserved = matching.reduce((sum, row) => sum + row.reserved, 0);
+  const issued = matching.reduce((sum, row) => sum + row.issued, 0);
+  const totalCapacity = matching.reduce(
+    (sum, row) => sum + row.totalCapacity,
+    0,
+  );
+  const available = matching.reduce((sum, row) => sum + row.available, 0);
+  const expiries = matching
+    .map((row) => row.expiry)
+    .filter((exp): exp is string => Boolean(exp))
+    .sort();
+  const material: PlpMaterialRow = {
+    ...first,
+    physical,
+    reserved,
+    issued,
+    totalCapacity,
+    available,
+    expiry: expiries[0] ?? first.expiry,
+    hasExpired: matching.some((row) => row.hasExpired),
+    hasExpiringSoon: matching.some((row) => row.hasExpiringSoon),
+    batches: allBatches,
+  };
   const batchIds = material.batches.map((batch) => batch.batchId);
   const transactions = batchIds.length
     ? await db

@@ -17,6 +17,13 @@ export const auth = betterAuth({
   trustedOrigins: trustedOrigins(),
   database: drizzleAdapter(db, { provider: "pg", schema }),
   advanced: { cookiePrefix: `ngodingpakeai-${siteConfig.id}` },
+  rateLimit: {
+    enabled: !Boolean(
+      process.env.STARTER_TEST_RUN ||
+      process.env.STARTER_TEST_DATABASE_URL ||
+      env.BETTER_AUTH_URL === "http://localhost:3101",
+    ),
+  },
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,

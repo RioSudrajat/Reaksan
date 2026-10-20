@@ -240,7 +240,7 @@ test("PLP memenuhi flow borrowable dan menutup usage-only", async ({
   try {
     // Borrowable: APPROVED -> READY_FOR_PICKUP -> ACTIVE -> RETURNED -> COMPLETED.
     const created = await createRequest(student, {
-      unitCodes: ["OVN-001-05"],
+      unitCodes: ["HTP-001-01"],
       startAt: "2027-06-02T09:00:00+07:00",
       endAt: "2027-06-02T11:00:00+07:00",
     });
@@ -271,7 +271,7 @@ test("PLP memenuhi flow borrowable dan menutup usage-only", async ({
     });
     expect(returned.status()).toBe(200);
     expect((await returned.json()).data.status).toBe("RETURNED");
-    expect(await unitStatus(student, "OVN-001-05")).toBe("Awaiting return");
+    expect(await unitStatus(student, "HTP-001-01")).toBe("Awaiting return");
 
     const completed = await plp.post(
       `/api/plp/requests/${borrowable.id}/complete`,
@@ -282,7 +282,7 @@ test("PLP memenuhi flow borrowable dan menutup usage-only", async ({
     );
     expect(completed.status()).toBe(200);
     expect((await completed.json()).data.status).toBe("COMPLETED");
-    expect(await unitStatus(student, "OVN-001-05")).toBe("Available");
+    expect(await unitStatus(student, "HTP-001-01")).toBe("Available");
 
     // Usage-only: no return transaction, completion closes the request directly.
     const usage = await createRequest(student, {
@@ -343,7 +343,7 @@ test("PLP request list memuat filter, pagination, dan konteks review", async ({
   try {
     const created = await createRequest(student, {
       roomCode: "lab-fisik",
-      unitCodes: ["FNB-001-01"],
+      unitCodes: ["VIS-001-01"],
       materials: [{ materialCode: "MAT-064", quantity: 100 }],
       startAt: "2027-06-05T09:00:00+07:00",
       endAt: "2027-06-05T11:00:00+07:00",
@@ -375,7 +375,7 @@ test("PLP request list memuat filter, pagination, dan konteks review", async ({
     // Overlapping usage of the same unit is surfaced as a conflict warning.
     const overlap = await createRequest(student, {
       roomCode: "lab-fisik",
-      unitCodes: ["FNB-001-01"],
+      unitCodes: ["VIS-001-01"],
       startAt: "2027-06-05T10:00:00+07:00",
       endAt: "2027-06-05T12:00:00+07:00",
     });

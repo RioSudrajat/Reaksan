@@ -728,7 +728,7 @@ test("the student workspace renders real server data", async ({ page }) => {
       endAt: `${now.getFullYear()}-${month}-16T11:00:00+07:00`,
       supervisor: "Dr. UI",
       fieldPic: "Aslab UI",
-      equipment: [{ unitCode: "OVN-001-04" }],
+      equipment: [{ unitCode: "HTP-001-02" }],
       materials: [],
     },
   });
@@ -747,7 +747,7 @@ test("the student workspace renders real server data", async ({ page }) => {
       endAt: `${next.getFullYear()}-${nextMonth}-16T11:00:00+07:00`,
       supervisor: "Dr. UI",
       fieldPic: "Aslab UI",
-      equipment: [{ unitCode: "OVN-001-03" }],
+      equipment: [{ unitCode: "HTP-001-03" }],
       materials: [],
     },
   });
