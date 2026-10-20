@@ -177,6 +177,55 @@ export function WorkspaceShell({
     };
   }, [profileOpen]);
 
+  useEffect(() => {
+    let checking = false;
+    async function verifySession() {
+      if (checking) return;
+      checking = true;
+      try {
+        if (
+          typeof window !== "undefined" &&
+          sessionStorage.getItem("reaksan_active_tab_session") !== "true"
+        ) {
+          await authClient.signOut();
+          router.replace("/sign-in");
+          router.refresh();
+          return;
+        }
+        const { data } = await authClient.getSession();
+        if (!data) {
+          router.replace("/sign-in?expired=1");
+          router.refresh();
+        }
+      } catch {
+        // Ignore network glitch
+      } finally {
+        checking = false;
+      }
+    }
+
+    void verifySession();
+
+    function onVisibility() {
+      if (document.visibilityState === "visible") {
+        void verifySession();
+      }
+    }
+
+    window.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onVisibility);
+
+    const interval = setInterval(() => {
+      void verifySession();
+    }, 2 * 60 * 1000);
+
+    return () => {
+      window.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onVisibility);
+      clearInterval(interval);
+    };
+  }, [router]);
+
   const firstName = userName.trim().split(/\s+/)[0] || "PENELITI";
   const formattedDate = useMemo(() => {
     try {
@@ -207,6 +256,9 @@ export function WorkspaceShell({
   async function handleSignOut() {
     try {
       setSigningOut(true);
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("reaksan_active_tab_session");
+      }
       await authClient.signOut();
       router.replace("/sign-in");
       router.refresh();

@@ -14,6 +14,9 @@ export function SignOutButton() {
     setPending(true);
     setError(false);
     try {
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("reaksan_active_tab_session");
+      }
       const result = await authClient.signOut();
       if (result.error) throw new Error("Sign out failed");
       router.replace("/sign-in");

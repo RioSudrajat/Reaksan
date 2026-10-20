@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { landingPathForRole } from "@/lib/landing";
+import { TAB_SESSION_KEY } from "@/components/tab-session-guard";
 
 export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
   const signingUp = mode === "sign-up";
@@ -32,7 +33,10 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
             ...credentials,
             name: String(data.get("name")).trim(),
           })
-        : await authClient.signIn.email(credentials);
+        : await authClient.signIn.email({
+            ...credentials,
+            rememberMe: false,
+          });
       if (result.error) {
         setError(
           signingUp
@@ -41,6 +45,9 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
             : "We couldn't sign you in. Check your email and password and try again.",
         );
         return;
+      }
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(TAB_SESSION_KEY, "true");
       }
       // The session response carries the stored role, so PLP and admin land in
       // their own workspace instead of the student dashboard.

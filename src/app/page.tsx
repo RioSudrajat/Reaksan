@@ -6,25 +6,16 @@ import {
   FlaskConical,
   Users,
 } from "lucide-react";
-import { getSession } from "@/lib/session";
-import { landingPathForRole } from "@/lib/landing";
 import { ReaksanLogo } from "@/components/reaksan-logo";
 import { LandingLabIllustration } from "@/components/illustrations/landing-lab-illustration";
+import { TabSessionGuard } from "@/components/tab-session-guard";
 
-export default async function Home() {
-  const session = await getSession();
-  const targetPath = session
-    ? landingPathForRole(session.user.role)
-    : "/sign-in";
-  const userRoleLabel =
-    session?.user.role === "admin"
-      ? "Admin"
-      : session?.user.role === "plp"
-        ? "PLP Laboratorium"
-        : "Mahasiswa";
+export const dynamic = "force-dynamic";
 
+export default function Home() {
   return (
     <div className="min-h-screen bg-[#FAF7F2] text-[#212121] flex flex-col justify-between selection:bg-[#F9B129]/30">
+      <TabSessionGuard />
       {/* Top Navigation Bar */}
       <header className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-6 flex items-center justify-between">
         {/* Brand Logo - Official Reaksan Unpad Wordmark */}
@@ -47,10 +38,10 @@ export default async function Home() {
           </div>
 
           <Link
-            href={targetPath}
+            href="/sign-in"
             className="inline-flex items-center justify-center px-6 py-2 rounded-full bg-[#F9B129] text-[#212121] text-sm font-bold shadow-xs hover:bg-[#E5A020] active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9B129] focus-visible:ring-offset-2"
           >
-            {session ? "Buka Dashboard" : "Login"}
+            Login
           </Link>
         </div>
       </header>
@@ -126,22 +117,16 @@ export default async function Home() {
           {/* Primary CTA Button */}
           <div className="pt-3 flex flex-wrap items-center gap-4">
             <Link
-              href={targetPath}
+              href="/sign-in"
               className="inline-flex items-center gap-3 px-8 py-3.5 rounded-full bg-[#F9B129] text-[#212121] font-bold shadow-md hover:bg-[#E5A020] hover:shadow-lg active:scale-95 transition-all text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9B129] focus-visible:ring-offset-2"
             >
-              <span>
-                {session
-                  ? `Masuk ke Workspace (${userRoleLabel})`
-                  : "Masuk ke Sistem Reaksan"}
-              </span>
+              <span>Masuk ke Sistem Reaksan</span>
               <ArrowRight className="w-5 h-5" />
             </Link>
 
-            {!session && (
-              <span className="text-xs text-[#6B6B6B] font-medium">
-                Gunakan SSO Unpad atau akun terdaftar
-              </span>
-            )}
+            <span className="text-xs text-[#6B6B6B] font-medium">
+              Gunakan SSO Unpad atau akun terdaftar
+            </span>
           </div>
         </div>
 

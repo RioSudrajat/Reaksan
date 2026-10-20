@@ -17,6 +17,12 @@ export const auth = betterAuth({
   trustedOrigins: trustedOrigins(),
   database: drizzleAdapter(db, { provider: "pg", schema }),
   advanced: { cookiePrefix: `ngodingpakeai-${siteConfig.id}` },
+  session: {
+    // Session expires after inactivity (default: 2 hours).
+    expiresIn: env.SESSION_EXPIRES_IN_SECONDS,
+    // When active, refresh expiration every interval (default: 15 minutes).
+    updateAge: env.SESSION_UPDATE_AGE_SECONDS,
+  },
   rateLimit: {
     enabled: !Boolean(
       process.env.STARTER_TEST_RUN ||

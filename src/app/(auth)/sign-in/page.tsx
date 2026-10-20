@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { SignInSplitForm } from "@/components/sign-in-split-form";
 
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function SignInPage() {
-  return <SignInSplitForm />;
+  return (
+    <Suspense fallback={null}>
+      <SignInSplitForm />
+    </Suspense>
+  );
 }

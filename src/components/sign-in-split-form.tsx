@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   User,
   Lock,
@@ -19,6 +19,7 @@ import { authClient } from "@/lib/auth-client";
 import { ReaksanLogo } from "@/components/reaksan-logo";
 import { LoginResearchIllustration } from "@/components/illustrations/login-research-illustration";
 import { landingPathForRole } from "@/lib/landing";
+import { TAB_SESSION_KEY } from "@/components/tab-session-guard";
 
 const DEMO_ACCOUNTS = [
   {
@@ -43,6 +44,8 @@ const DEMO_ACCOUNTS = [
 
 export function SignInSplitForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isExpired = searchParams.get("expired") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -69,6 +72,7 @@ export function SignInSplitForm() {
       const result = await authClient.signIn.email({
         email: email.trim(),
         password,
+        rememberMe: false,
       });
 
       if (result.error) {
@@ -77,6 +81,11 @@ export function SignInSplitForm() {
             "Email atau kata sandi tidak valid. Silakan coba lagi.",
         );
         return;
+      }
+
+      // Mark this tab as actively authenticated so closing the tab or exit resets the session
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(TAB_SESSION_KEY, "true");
       }
 
       // Check user role to navigate directly to their dedicated workspace
@@ -228,6 +237,17 @@ export function SignInSplitForm() {
 
           {/* Local Account Form */}
           <form onSubmit={onSubmit} className="space-y-3.5">
+            {isExpired && !error && (
+              <div
+                role="status"
+                className="p-2.5 rounded-lg bg-[#FEF1CC] border border-[#FDE68A] text-xs text-[#8D6500] flex items-center gap-2"
+              >
+                <Info className="w-4 h-4 shrink-0 text-[#AE7C1D]" />
+                <span>
+                  Sesi Anda telah berakhir karena tidak ada aktivitas. Silakan masuk kembali.
+                </span>
+              </div>
+            )}
             {/* Username / Email Field */}
             <div className="space-y-1">
               <label htmlFor="login-email" className="sr-only">

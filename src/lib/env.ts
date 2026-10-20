@@ -55,6 +55,14 @@ const schema = z.object({
       }
       return entries;
     }),
+  SESSION_EXPIRES_IN_SECONDS: z.coerce
+    .number()
+    .positive()
+    .default(60 * 60 * 2),
+  SESSION_UPDATE_AGE_SECONDS: z.coerce
+    .number()
+    .positive()
+    .default(60 * 15),
 });
 
 export const env = schema.parse({
@@ -62,4 +70,6 @@ export const env = schema.parse({
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
   BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
   BETTER_AUTH_TRUSTED_ORIGINS: process.env.BETTER_AUTH_TRUSTED_ORIGINS,
+  SESSION_EXPIRES_IN_SECONDS: process.env.SESSION_EXPIRES_IN_SECONDS,
+  SESSION_UPDATE_AGE_SECONDS: process.env.SESSION_UPDATE_AGE_SECONDS,
 });
