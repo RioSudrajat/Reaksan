@@ -9,5 +9,8 @@ import { ac, roles } from "@/lib/permissions";
 // can hide UI locally. It is a convenience only: every server boundary still
 // checks permissions itself.
 export const authClient = createAuthClient({
-  plugins: [usernameClient({ displayUsername: false }), adminClient({ ac, roles })],
+  plugins: [
+    usernameClient({ displayUsername: false }),
+    adminClient({ ac, roles }),
+  ],
 });

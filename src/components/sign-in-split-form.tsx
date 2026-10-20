@@ -175,8 +175,7 @@ export function SignInSplitForm() {
     }
   }
 
-  const isDemoHidden =
-    process.env.NEXT_PUBLIC_HIDE_DEMO_ACCOUNTS === "true";
+  const isDemoHidden = process.env.NEXT_PUBLIC_HIDE_DEMO_ACCOUNTS === "true";
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#FAF7F2] text-[#212121]">
@@ -292,7 +291,8 @@ export function SignInSplitForm() {
                 <Info className="w-4 h-4 text-[#AE7C1D] shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold">Simulasi SSO Unpad:</span> Pada
-                  tahap evaluasi publik ini, silakan gunakan akun demo atau kredensial yang terdaftar untuk menguji fitur.
+                  tahap evaluasi publik ini, silakan gunakan akun demo atau
+                  kredensial yang terdaftar untuk menguji fitur.
                 </div>
               </div>
             )}
@@ -315,7 +315,8 @@ export function SignInSplitForm() {
               >
                 <Info className="w-4 h-4 shrink-0 text-[#AE7C1D]" />
                 <span>
-                  Sesi Anda telah berakhir karena tidak ada aktivitas. Silakan masuk kembali.
+                  Sesi Anda telah berakhir karena tidak ada aktivitas. Silakan
+                  masuk kembali.
                 </span>
               </div>
             )}
@@ -328,8 +329,12 @@ export function SignInSplitForm() {
               >
                 <Clock className="w-4 h-4 shrink-0 text-amber-700" />
                 <div>
-                  <span className="font-bold">Keamanan Akun:</span> Terlalu banyak percobaan gagal. Formulir dikunci sementara selama{" "}
-                  <span className="font-bold underline">{lockoutSeconds} detik</span>.
+                  <span className="font-bold">Keamanan Akun:</span> Terlalu
+                  banyak percobaan gagal. Formulir dikunci sementara selama{" "}
+                  <span className="font-bold underline">
+                    {lockoutSeconds} detik
+                  </span>
+                  .
                 </div>
               </div>
             )}
@@ -337,7 +342,7 @@ export function SignInSplitForm() {
             {/* NIM / NIP or Username Field */}
             <div className="space-y-1">
               <label htmlFor="login-identifier" className="sr-only">
-                NIM / NIP atau Username
+                NIM / NIP, Username, atau Email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#929292]">
@@ -355,7 +360,8 @@ export function SignInSplitForm() {
                   autoCapitalize="none"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="NIM / NIP atau Username"
+                  placeholder="NIM / NIP, Username, atau Email"
+                  aria-label="Email"
                   className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[#CBD5E1] bg-white placeholder-[#94A3B8] text-[#212121] focus:border-[#F9B129] focus:ring-1 focus:ring-[#F9B129] outline-none transition-all disabled:opacity-50 disabled:bg-slate-100"
                 />
               </div>
@@ -422,7 +428,8 @@ export function SignInSplitForm() {
               >
                 <AlertCircle className="w-3.5 h-3.5 shrink-0 text-[#C2410C]" />
                 <span>
-                  Peringatan keamanan: {5 - failedAttempts} percobaan tersisa sebelum formulir dikunci sementara.
+                  Peringatan keamanan: {5 - failedAttempts} percobaan tersisa
+                  sebelum formulir dikunci sementara.
                 </span>
               </div>
             )}
@@ -467,7 +474,12 @@ export function SignInSplitForm() {
               {showDemoSelector && (
                 <div className="mt-2.5 space-y-2">
                   <div className="p-2 rounded-md bg-[#FAF7F2] border border-[#E8E2D7] text-[10px] text-[#6B6B6B] leading-relaxed">
-                    <span className="font-semibold text-[#212121]">Informasi Keamanan:</span> Akun demo disediakan untuk menguji peran civitas akademika (Mahasiswa, PLP, Admin). Di lingkungan produksi resmi dengan data riset sesungguhnya, opsi ini dapat disembunyikan.
+                    <span className="font-semibold text-[#212121]">
+                      Informasi Keamanan:
+                    </span>{" "}
+                    Akun demo disediakan untuk menguji peran civitas akademika
+                    (Mahasiswa, PLP, Admin). Di lingkungan produksi resmi dengan
+                    data riset sesungguhnya, opsi ini dapat disembunyikan.
                   </div>
 
                   <div className="grid grid-cols-1 gap-1.5 pt-1">
@@ -483,7 +495,9 @@ export function SignInSplitForm() {
                             : "border-[#E1E1E1] bg-white hover:bg-[#FAF7F2] text-[#212121]"
                         } disabled:opacity-50`}
                       >
-                        <span className="font-semibold text-[11px]">{acc.badge}</span>
+                        <span className="font-semibold text-[11px]">
+                          {acc.badge}
+                        </span>
                         <span className="text-[10px] text-[#6B6B6B] font-mono">
                           {acc.identifier}
                         </span>

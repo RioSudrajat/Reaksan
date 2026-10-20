@@ -45,7 +45,11 @@ interface UserDetailModalProps {
 const roleOptions = [
   { value: "user", label: "Mahasiswa", desc: "Akses reservasi & izin lab" },
   { value: "plp", label: "PLP Laboratorium", desc: "Operator lab & validasi" },
-  { value: "admin", label: "Administrator", desc: "Akses master data & sistem" },
+  {
+    value: "admin",
+    label: "Administrator",
+    desc: "Akses master data & sistem",
+  },
 ];
 
 export function UserDetailModal({
@@ -171,7 +175,10 @@ export function UserDetailModal({
     .join("")
     .toUpperCase();
 
-  const roleBadgeConfig: Record<string, { label: string; badge: string; bg: string; text: string }> = {
+  const roleBadgeConfig: Record<
+    string,
+    { label: string; badge: string; bg: string; text: string }
+  > = {
     admin: {
       label: "Administrator",
       badge: "⚙️ Admin",
@@ -192,7 +199,8 @@ export function UserDetailModal({
     },
   };
 
-  const activeRole = roleBadgeConfig[user.role ?? "user"] ?? roleBadgeConfig.user;
+  const activeRole =
+    roleBadgeConfig[user.role ?? "user"] ?? roleBadgeConfig.user;
 
   return (
     <div

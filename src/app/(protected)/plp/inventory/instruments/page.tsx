@@ -223,9 +223,9 @@ export default async function PlpInstrumentsInventoryPage({
               rows={topUsage.instruments.slice(0, 5).map((item) => ({
                 key: item.id,
                 label: item.name,
-                sublabel: `${item.totalRequests} permohonan · ${item.totalDaysBorrowed} hari peminjaman`,
+                sublabel: `${item.totalDaysBorrowed} hari peminjaman (akumulasi 30 hari)`,
                 value: item.totalRequests,
-                tone: "yellow" as const,
+                tone: "amber" as const,
               }))}
             />
           )}

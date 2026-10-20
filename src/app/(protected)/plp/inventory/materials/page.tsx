@@ -109,7 +109,7 @@ export default async function PlpMaterialInventoryPage({
             <ExportLink report="low-stock" label="CSV low stock" />
             <Link
               href="/plp/inventory/opname"
-              className="inline-flex min-h-11 items-center rounded-xl bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] transition hover:bg-[#E5A700] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] shadow-xs"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-[#CBD5E1] bg-white px-4 text-[12px] font-semibold text-[#121826] transition hover:bg-[#FAF7F2] hover:border-[#FDB913] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
             >
               Hitung stok
             </Link>
@@ -118,31 +118,6 @@ export default async function PlpMaterialInventoryPage({
       />
 
       <div className="mb-5 grid gap-5 xl:grid-cols-2">
-        <ChartPanel
-          context="Permohonan (30 Hari)"
-          title="Permintaan & Konsumsi Bahan Kimia Terbanyak"
-          range={`${topUsage.materials.reduce((acc, curr) => acc + curr.totalRequests, 0)} permohonan kebutuhan bahan kimia`}
-          footnote="Data kebutuhan bahan kimia real-time dari seluruh permohonan yang aktif / disetujui dalam 30 hari terakhir."
-        >
-          {topUsage.materials.length === 0 ? (
-            <ChartEmpty
-              title="Belum ada permohonan bahan kimia"
-              description="Bahan kimia yang diajukan dalam permohonan praktikum atau penelitian akan otomatis muncul di grafik ini."
-            />
-          ) : (
-            <HorizontalBarChart
-              unit="permohonan"
-              rows={topUsage.materials.slice(0, 5).map((item) => ({
-                key: item.id,
-                label: item.name,
-                sublabel: `${item.totalRequests} permohonan · Total diminta: ${item.totalQuantity} ${item.unit}`,
-                value: item.totalRequests,
-                tone: "amber" as const,
-              }))}
-            />
-          )}
-        </ChartPanel>
-
         <ChartPanel
           context="Expiry"
           title="Batch mendekati atau terlewat expiry"
@@ -192,6 +167,31 @@ export default async function PlpMaterialInventoryPage({
                 }))}
               unit="batch"
               ariaLabel="Jumlah batch per minggu expiry"
+            />
+          )}
+        </ChartPanel>
+
+        <ChartPanel
+          context="Permohonan (30 Hari)"
+          title="Permintaan & Konsumsi Bahan Kimia Terbanyak"
+          range={`${topUsage.materials.reduce((acc, curr) => acc + curr.totalRequests, 0)} permohonan kebutuhan bahan kimia`}
+          footnote="Data kebutuhan bahan kimia real-time dari seluruh permohonan yang aktif / disetujui dalam 30 hari terakhir."
+        >
+          {topUsage.materials.length === 0 ? (
+            <ChartEmpty
+              title="Belum ada permohonan bahan kimia"
+              description="Bahan kimia yang diajukan dalam permohonan praktikum atau penelitian akan otomatis muncul di grafik ini."
+            />
+          ) : (
+            <HorizontalBarChart
+              unit="permohonan"
+              rows={topUsage.materials.slice(0, 5).map((item) => ({
+                key: item.id,
+                label: item.name,
+                sublabel: `Total diminta: ${item.totalQuantity} ${item.unit} (akumulasi 30 hari)`,
+                value: item.totalRequests,
+                tone: "amber" as const,
+              }))}
             />
           )}
         </ChartPanel>

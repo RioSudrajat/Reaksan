@@ -229,7 +229,8 @@ export function UserCreateDialog() {
                   />
                 </div>
                 <p className="mt-1 text-[11px] text-[#929292]">
-                  Digunakan sebagai identitas utama saat masuk ke dalam aplikasi.
+                  Digunakan sebagai identitas utama saat masuk ke dalam
+                  aplikasi.
                 </p>
               </div>
 
@@ -238,7 +239,8 @@ export function UserCreateDialog() {
                   htmlFor="user-email"
                   className="block text-[12px] font-bold text-[#212121]"
                 >
-                  Alamat Email <span className="text-[#929292] font-normal">(opsional)</span>
+                  Alamat Email{" "}
+                  <span className="text-[#929292] font-normal">(opsional)</span>
                 </label>
                 <div className="relative mt-1.5">
                   <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#929292]" />

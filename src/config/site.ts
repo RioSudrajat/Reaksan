@@ -25,4 +25,3 @@ export const siteConfig = {
     "Sistem Informasi Laboratorium Jatinangor",
   ],
 } as const;
-

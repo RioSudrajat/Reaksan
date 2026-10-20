@@ -6,6 +6,7 @@ import { CatalogImage } from "@/components/catalog-image";
 import {
   EmptyState,
   PageHeader,
+  Pagination,
   Panel,
   formatRange,
 } from "@/components/workspace";
@@ -19,10 +20,20 @@ import { QrTagDialog } from "@/components/qr/qr-tag-dialog";
 
 export const metadata: Metadata = { title: "Asset Detail" };
 
+type SearchParams = Record<string, string | string[] | undefined>;
+
+function pick(params: SearchParams, key: string) {
+  const value = params[key];
+  const str = Array.isArray(value) ? value[0] : value;
+  return str && str.trim().length > 0 ? str.trim() : undefined;
+}
+
 export default async function PlpEquipmentDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ code: string }>;
+  searchParams?: Promise<SearchParams>;
 }) {
   const { code } = await params;
   const { user } = await requirePermission({ plp: ["view"] });
@@ -30,6 +41,15 @@ export default async function PlpEquipmentDetailPage({
   const detail = await getPlpEquipmentDetail(code, scopeRoomCodes(scope));
   if (!detail) notFound();
   const { asset, reservations } = detail;
+
+  const sParams = searchParams ? await searchParams : {};
+  const unitPage = Math.max(1, Number(pick(sParams, "page")) || 1);
+  const unitLimit = 25;
+  const totalUnitPages = Math.max(1, Math.ceil(asset.units.length / unitLimit));
+  const paginatedUnits = asset.units.slice(
+    (unitPage - 1) * unitLimit,
+    unitPage * unitLimit,
+  );
 
   return (
     <>
@@ -122,7 +142,7 @@ export default async function PlpEquipmentDetailPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {asset.units.map((unit) => (
+                  {paginatedUnits.map((unit) => (
                     <tr
                       key={unit.unitId}
                       className="border-b border-[#F1F0EC] last:border-0"
@@ -219,6 +239,15 @@ export default async function PlpEquipmentDetailPage({
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          {totalUnitPages > 1 && (
+            <div className="mt-4 border-t border-[#EEEEEE] pt-4">
+              <Pagination
+                basePath={`/plp/inventory/equipment/${asset.assetCode}`}
+                page={unitPage}
+                totalPages={totalUnitPages}
+              />
             </div>
           )}
         </Panel>

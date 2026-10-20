@@ -1998,3 +1998,74 @@ export async function getAdminDashboard() {
     })),
   };
 }
+
+export type ListUsersAdminInput = {
+  search?: string;
+  role?: string;
+  limit?: number;
+  offset?: number;
+};
+
+export async function listUsersAdmin(input: ListUsersAdminInput = {}) {
+  const limit = Math.min(Math.max(input.limit ?? 25, 1), 100);
+  const offset = Math.max(input.offset ?? 0, 0);
+
+  const conditions = [];
+
+  if (input.search && input.search.trim()) {
+    const q = `%${input.search.trim()}%`;
+    conditions.push(
+      sql`(${user.name} ILIKE ${q} OR ${user.email} ILIKE ${q} OR coalesce(${user.username}, '') ILIKE ${q})`,
+    );
+  }
+
+  if (input.role && input.role !== "all") {
+    if (input.role === "user") {
+      conditions.push(
+        sql`(coalesce(${user.role}, 'user') = 'user' OR ${user.role} IS NULL OR ${user.role} = '')`,
+      );
+    } else {
+      conditions.push(sql`${user.role} = ${input.role}`);
+    }
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const [rows, countResult] = await Promise.all([
+    db
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        banned: user.banned,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      })
+      .from(user)
+      .where(whereClause)
+      .orderBy(desc(user.createdAt))
+      .limit(limit)
+      .offset(offset),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(user)
+      .where(whereClause),
+  ]);
+
+  const total = countResult[0]?.count ?? 0;
+  const page = Math.floor(offset / limit) + 1;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  return {
+    data: rows,
+    meta: {
+      total,
+      limit,
+      offset,
+      page,
+      totalPages,
+    },
+  };
+}

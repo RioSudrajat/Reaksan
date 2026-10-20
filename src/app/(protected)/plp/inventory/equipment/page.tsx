@@ -215,9 +215,9 @@ export default async function PlpEquipmentInventoryPage({
               rows={topUsage.tools.slice(0, 5).map((item) => ({
                 key: item.id,
                 label: item.name,
-                sublabel: `${item.totalRequests} permohonan · ${item.totalDaysBorrowed} hari pemakaian`,
+                sublabel: `${item.totalDaysBorrowed} hari pemakaian (akumulasi 30 hari)`,
                 value: item.totalRequests,
-                tone: "blue" as const,
+                tone: "amber" as const,
               }))}
             />
           )}

@@ -78,23 +78,25 @@ export function ChartPanel({
       context={context}
       title={title}
       action={action}
-      className={className}
+      className={cn("flex flex-col justify-between h-full", className)}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        {range ? (
-          <p className="text-[11px] font-medium text-[#6B6B6B]">{range}</p>
-        ) : (
-          <span />
-        )}
-      </div>
-      {legend && legend.length > 0 && (
-        <div className="mt-2">
-          <Legend items={legend} />
+      <div className="flex-1 flex flex-col">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {range ? (
+            <p className="text-[11px] font-medium text-[#6B6B6B]">{range}</p>
+          ) : (
+            <span />
+          )}
         </div>
-      )}
-      <div className="mt-4">{children}</div>
+        {legend && legend.length > 0 && (
+          <div className="mt-2">
+            <Legend items={legend} />
+          </div>
+        )}
+        <div className="mt-4 flex-1">{children}</div>
+      </div>
       {footnote && (
-        <div className="mt-3 border-t border-[#EEEEEE] pt-3 text-[11px] leading-4 text-[#6B6B6B]">
+        <div className="mt-4 border-t border-[#EEEEEE] pt-3 text-[11px] leading-4 text-[#6B6B6B]">
           {footnote}
         </div>
       )}
@@ -375,32 +377,44 @@ export function StatusBarList({
           />
         ))}
       </div>
-      <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+      <ul className="mt-4 grid gap-2 sm:grid-cols-2">
         {visible.map((row) => (
           <li key={row.key}>
             {row.href ? (
               <Link
                 href={row.href}
-                className="flex items-center gap-2 rounded-lg px-1 py-0.5 text-[12px] text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+                className="group flex items-center justify-between gap-2 rounded-xl border border-[#EEEEEE] bg-[#FAF7F2]/40 px-3 py-2 text-[12px] text-[#212121] transition hover:border-[#FDB913] hover:bg-[#FEF7E6]/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
               >
-                <span
-                  className="size-2.5 shrink-0 rounded-sm"
-                  style={{ backgroundColor: chartColor[row.tone] }}
-                  aria-hidden="true"
-                />
-                <span className="min-w-0 flex-1 truncate">{row.label}</span>
-                <span className="font-semibold tabular-nums">{row.value}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="size-2.5 shrink-0 rounded-sm"
+                    style={{ backgroundColor: chartColor[row.tone] }}
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 truncate font-medium text-[#4B5563] group-hover:text-[#121826]">
+                    {row.label}
+                  </span>
+                </div>
+                <span className="font-bold tabular-nums text-[#121826]">
+                  {row.value}
+                </span>
               </Link>
             ) : (
-              <span className="flex items-center gap-2 px-1 py-0.5 text-[12px] text-[#212121]">
-                <span
-                  className="size-2.5 shrink-0 rounded-sm"
-                  style={{ backgroundColor: chartColor[row.tone] }}
-                  aria-hidden="true"
-                />
-                <span className="min-w-0 flex-1 truncate">{row.label}</span>
-                <span className="font-semibold tabular-nums">{row.value}</span>
-              </span>
+              <div className="flex items-center justify-between gap-2 rounded-xl border border-[#EEEEEE] bg-[#FAF7F2]/40 px-3 py-2 text-[12px] text-[#212121]">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="size-2.5 shrink-0 rounded-sm"
+                    style={{ backgroundColor: chartColor[row.tone] }}
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 truncate font-medium text-[#4B5563]">
+                    {row.label}
+                  </span>
+                </div>
+                <span className="font-bold tabular-nums text-[#121826]">
+                  {row.value}
+                </span>
+              </div>
             )}
           </li>
         ))}

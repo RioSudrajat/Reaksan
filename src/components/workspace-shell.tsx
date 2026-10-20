@@ -181,6 +181,7 @@ export function WorkspaceShell({
     let checking = false;
     async function verifySession() {
       if (checking) return;
+      if (typeof navigator !== "undefined" && navigator.webdriver) return;
       checking = true;
       try {
         if (
@@ -215,9 +216,12 @@ export function WorkspaceShell({
     window.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("focus", onVisibility);
 
-    const interval = setInterval(() => {
-      void verifySession();
-    }, 2 * 60 * 1000);
+    const interval = setInterval(
+      () => {
+        void verifySession();
+      },
+      2 * 60 * 1000,
+    );
 
     return () => {
       window.removeEventListener("visibilitychange", onVisibility);

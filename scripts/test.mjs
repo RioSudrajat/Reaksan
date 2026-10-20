@@ -88,7 +88,11 @@ try {
   } else {
     await run(
       process.execPath,
-      [resolve(root, "node_modules/@playwright/test/cli.js"), "test"],
+      [
+        resolve(root, "node_modules/@playwright/test/cli.js"),
+        "test",
+        ...process.argv.slice(3),
+      ],
       testEnv,
     );
   }

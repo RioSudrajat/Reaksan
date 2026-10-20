@@ -1,34 +1,48 @@
 import type { Metadata } from "next";
 import { UserCreateDialog } from "@/components/admin/user-create-dialog";
 import { UserList } from "@/components/admin/user-list";
-import { EmptyState, PageHeader, Panel } from "@/components/workspace";
-import { db } from "@/db";
-import { user } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import {
+  EmptyState,
+  PageHeader,
+  Pagination,
+  Panel,
+} from "@/components/workspace";
 import { requirePermission } from "@/lib/session";
+import { listUsersAdmin } from "@/services/admin.service";
 
 export const metadata: Metadata = {
   title: "Manajemen Pengguna · Admin Reaksan",
 };
 
-export default async function AdminUsersPage() {
+type SearchParams = Record<string, string | string[] | undefined>;
+
+function pick(params: SearchParams, key: string) {
+  const value = params[key];
+  const str = Array.isArray(value) ? value[0] : value;
+  return str && str.trim().length > 0 ? str.trim() : undefined;
+}
+
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   const { user: currentUser } = await requirePermission({
     configuration: ["manage-any"],
   });
 
-  const users = await db
-    .select({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      username: user.username,
-      role: user.role,
-      banned: user.banned,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    })
-    .from(user)
-    .orderBy(desc(user.createdAt));
+  const params = await searchParams;
+  const page = Math.max(1, Number(pick(params, "page")) || 1);
+  const search = pick(params, "search");
+  const role = pick(params, "role") || "all";
+  const limit = 25;
+
+  const result = await listUsersAdmin({
+    search,
+    role,
+    limit,
+    offset: (page - 1) * limit,
+  });
 
   return (
     <>
@@ -38,12 +52,12 @@ export default async function AdminUsersPage() {
         description="Kelola akun pengguna, daftarkan akun baru, atur peranan (Mahasiswa, PLP, Admin), ubah kata sandi, atau tinjau detail profil civitas akademika."
       />
       <Panel
-        context={`${users.length} akun`}
+        context={`${result.meta.total} akun terdaftar`}
         title="Daftar Akun Pengguna"
         action={<UserCreateDialog />}
         padded={false}
       >
-        {users.length === 0 ? (
+        {result.meta.total === 0 && !search && role === "all" ? (
           <div className="p-5">
             <EmptyState
               title="Belum ada akun"
@@ -52,9 +66,25 @@ export default async function AdminUsersPage() {
             />
           </div>
         ) : (
-          <UserList users={users} currentUserId={currentUser.id} />
+          <UserList
+            key={`${search ?? ""}-${role}`}
+            users={result.data}
+            currentUserId={currentUser.id}
+            currentRole={role}
+            currentSearch={search}
+          />
         )}
       </Panel>
+
+      <Pagination
+        basePath="/admin/users"
+        query={{
+          search,
+          role: role !== "all" ? role : undefined,
+        }}
+        page={page}
+        totalPages={result.meta.totalPages}
+      />
     </>
   );
 }

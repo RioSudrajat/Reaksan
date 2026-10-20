@@ -1,11 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import {
-  ChevronRight,
-  Search,
-  Users,
-} from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ChevronRight, Search, Users } from "lucide-react";
 import { formatDateTime } from "@/components/workspace";
 import { UserDetailModal, type UserDetail } from "./user-detail-modal";
 import { UserRoleForm } from "./user-role-form";
@@ -13,24 +10,46 @@ import { UserRoleForm } from "./user-role-form";
 interface UserListProps {
   users: UserDetail[];
   currentUserId: string;
+  currentRole?: string;
+  currentSearch?: string;
 }
 
-export function UserList({ users, currentUserId }: UserListProps) {
+export function UserList({
+  users,
+  currentUserId,
+  currentRole = "all",
+  currentSearch = "",
+}: UserListProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState(currentSearch);
+  const [roleFilter, setRoleFilter] = useState<string>(currentRole);
+
+  const applyFilters = (newRole: string, newSearch: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (newSearch && newSearch.trim()) {
+      params.set("search", newSearch.trim());
+    } else {
+      params.delete("search");
+    }
+    if (newRole && newRole !== "all") {
+      params.set("role", newRole);
+    } else {
+      params.delete("role");
+    }
+    params.delete("page");
+    const qs = params.toString();
+    router.push(qs ? `/admin/users?${qs}` : "/admin/users");
+  };
 
   const filteredUsers = users.filter((u) => {
     const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
     const matchName = u.name.toLowerCase().includes(q);
     const matchEmail = u.email.toLowerCase().includes(q);
     const matchUsername = (u.username ?? "").toLowerCase().includes(q);
-    const matchesSearch = !q || matchName || matchEmail || matchUsername;
-
-    const matchesRole =
-      roleFilter === "all" || (u.role ?? "user") === roleFilter;
-
-    return matchesSearch && matchesRole;
+    return matchName || matchEmail || matchUsername;
   });
 
   const roleBadgeStyle = (role: string | null | undefined) => {
@@ -57,16 +76,27 @@ export function UserList({ users, currentUserId }: UserListProps) {
     <div>
       {/* SEARCH & FILTER CONTROLS */}
       <div className="p-4 border-b border-[#EEEEEE] bg-[#FAF7F2]/50 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-        <div className="relative flex-1 max-w-md">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            applyFilters(roleFilter, searchQuery);
+          }}
+          className="relative flex-1 max-w-md"
+        >
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#929292]" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari berdasarkan Nama, NIM / NIP, atau Email..."
+            onBlur={() => {
+              if (searchQuery !== currentSearch) {
+                applyFilters(roleFilter, searchQuery);
+              }
+            }}
+            placeholder="Cari berdasarkan Nama, NIM / NIP, atau Email (tekan Enter)..."
             className="h-9.5 w-full rounded-xl border border-[#CBD5E1] bg-white pl-9 pr-3 text-xs text-[#212121] placeholder-[#94A3B8] transition outline-none focus:border-[#F9B129] focus:ring-2 focus:ring-[#F9B129]/20"
           />
-        </div>
+        </form>
 
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
           {[
@@ -78,7 +108,10 @@ export function UserList({ users, currentUserId }: UserListProps) {
             <button
               key={tab.id}
               type="button"
-              onClick={() => setRoleFilter(tab.id)}
+              onClick={() => {
+                setRoleFilter(tab.id);
+                applyFilters(tab.id, searchQuery);
+              }}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
                 roleFilter === tab.id
                   ? "bg-[#212121] text-white shadow-2xs"

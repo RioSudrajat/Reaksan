@@ -269,19 +269,19 @@ export { FilterBar } from "@/components/filter-bar";
 
 export function Pagination({
   basePath,
-  query,
+  query = {},
   page,
   totalPages,
 }: {
   basePath: string;
-  query: Record<string, string | undefined>;
+  query?: Record<string, string | undefined>;
   page: number;
   totalPages: number;
 }) {
   if (totalPages <= 1) return null;
   const link = (target: number) => {
     const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(query)) {
+    for (const [key, value] of Object.entries(query ?? {})) {
       if (value) params.set(key, value);
     }
     if (target > 1) params.set("page", String(target));

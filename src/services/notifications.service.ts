@@ -100,16 +100,29 @@ export async function listNotifications(
   userId: string,
   { limit, offset }: ListNotificationsInput,
 ) {
-  const rows = await db
-    .select()
-    .from(notification)
-    .where(eq(notification.recipientId, userId))
-    .orderBy(desc(notification.createdAt), desc(notification.id))
-    .limit(limit + 1)
-    .offset(offset);
+  const [rows, countRow] = await Promise.all([
+    db
+      .select()
+      .from(notification)
+      .where(eq(notification.recipientId, userId))
+      .orderBy(desc(notification.createdAt), desc(notification.id))
+      .limit(limit + 1)
+      .offset(offset),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(notification)
+      .where(eq(notification.recipientId, userId)),
+  ]);
+  const total = countRow[0]?.count ?? 0;
   return {
     data: rows.slice(0, limit),
-    meta: { limit, offset, hasMore: rows.length > limit },
+    meta: {
+      limit,
+      offset,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      hasMore: rows.length > limit,
+    },
   };
 }
 

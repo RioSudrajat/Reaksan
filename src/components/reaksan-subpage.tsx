@@ -21,6 +21,7 @@ import {
 import { EquipmentGlyph } from "@/components/equipment-glyph";
 import { CalendarRefresh } from "@/components/calendar-refresh";
 import { formatRangeLabel } from "@/components/schedule-data";
+import { Pagination } from "@/components/workspace";
 import type {
   IncidentView,
   LabCatalog,
@@ -386,8 +387,12 @@ function IncidentsPage({ incidents }: { incidents: IncidentView[] }) {
 
 function NotificationsPage({
   notifications,
+  pageNumber,
+  totalPages,
 }: {
   notifications: NotificationView[];
+  pageNumber?: number;
+  totalPages?: number;
 }) {
   const router = useRouter();
   const [read, setRead] = useState<string[]>([]);
@@ -494,6 +499,13 @@ function NotificationsPage({
           })}
         </div>
       )}
+      {totalPages && totalPages > 1 ? (
+        <Pagination
+          basePath="/student/notifications"
+          page={pageNumber ?? 1}
+          totalPages={totalPages}
+        />
+      ) : null}
     </>
   );
 }
@@ -800,6 +812,8 @@ export function ReaksanSubpage({
   unreadCount = 0,
   month,
   initialRoom,
+  pageNumber,
+  totalPages,
 }: {
   page: ReaksanPage;
   userName: string;
@@ -810,6 +824,8 @@ export function ReaksanSubpage({
   unreadCount?: number;
   month: { year: number; month: number };
   initialRoom?: string;
+  pageNumber?: number;
+  totalPages?: number;
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const content =
@@ -818,7 +834,11 @@ export function ReaksanSubpage({
     ) : page === "incidents" ? (
       <IncidentsPage incidents={incidents} />
     ) : page === "notifications" ? (
-      <NotificationsPage notifications={notifications} />
+      <NotificationsPage
+        notifications={notifications}
+        pageNumber={pageNumber}
+        totalPages={totalPages}
+      />
     ) : catalog ? (
       <InventoryPage
         kind={page}
