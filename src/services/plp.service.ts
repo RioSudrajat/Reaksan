@@ -1019,7 +1019,7 @@ export async function loadScheduleCalendar(input: {
     month: input.month,
     months,
     viewerId: input.viewerId,
-    skipSubsumedReservations: false,
+    skipSubsumedReservations: input.kind !== "reservation",
   });
 }
 
