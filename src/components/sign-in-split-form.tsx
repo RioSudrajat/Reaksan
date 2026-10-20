@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -14,6 +14,9 @@ import {
   LoaderCircle,
   AlertCircle,
   Info,
+  Clock,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { ReaksanLogo } from "@/components/reaksan-logo";
@@ -25,20 +28,20 @@ const DEMO_ACCOUNTS = [
   {
     role: "Mahasiswa",
     badge: "🎓 Mahasiswa",
-    email: "student1@reaksan.local",
-    desc: "Reservasi & Izin Lab",
+    identifier: "140310210001",
+    desc: "NIM: 140310210001 (Reservasi Lab)",
   },
   {
     role: "PLP",
     badge: "🔬 PLP Laboratorium",
-    email: "plp@reaksan.local",
-    desc: "Approval & Verifikasi",
+    identifier: "198503152010121001",
+    desc: "NIP: 198503152010121001 (Operator Lab)",
   },
   {
     role: "Admin",
     badge: "⚙️ Admin Lab",
-    email: "admin@reaksan.local",
-    desc: "Manajemen Sistem",
+    identifier: "admin",
+    desc: "Username: admin (Manajemen Sistem)",
   },
 ];
 
@@ -46,15 +49,45 @@ export function SignInSplitForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isExpired = searchParams.get("expired") === "1";
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [ssoNotice, setSsoNotice] = useState(false);
+  const [showDemoSelector, setShowDemoSelector] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
 
-  function handleSelectDemo(demoEmail: string) {
-    setEmail(demoEmail);
+  // Progressive lockout countdown timer
+  useEffect(() => {
+    if (lockoutSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setLockoutSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockoutSeconds]);
+
+  function handleFailedAttempt() {
+    setFailedAttempts((prev) => {
+      const nextCount = prev + 1;
+      if (nextCount >= 5) {
+        setLockoutSeconds(60);
+        return 0; // Reset consecutive counter after lockout triggered
+      }
+      return nextCount;
+    });
+  }
+
+  function handleSelectDemo(demoId: string) {
+    if (lockoutSeconds > 0) return;
+    setIdentifier(demoId);
     setPassword("Reaksan-demo-123!");
     setError("");
     setSsoNotice(false);
@@ -62,26 +95,63 @@ export function SignInSplitForm() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending) return;
+    if (pending || lockoutSeconds > 0) return;
 
-    setPending(true);
     setError("");
     setSsoNotice(false);
 
+    // Client-side Sanitization & Validation (Defense in Depth)
+    const cleanId = identifier.trim();
+    if (!cleanId) {
+      setError("Silakan masukkan NIM / NIP atau Username Anda.");
+      return;
+    }
+
+    if (!password) {
+      setError("Silakan masukkan kata sandi.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Kata sandi minimal 8 karakter.");
+      return;
+    }
+
+    setPending(true);
+
     try {
-      const result = await authClient.signIn.email({
-        email: email.trim(),
-        password,
-        rememberMe: false,
-      });
+      let result;
+      if (cleanId.includes("@")) {
+        result = await authClient.signIn.email({
+          email: cleanId.toLowerCase(),
+          password,
+          rememberMe: false,
+        });
+      } else {
+        result = await authClient.signIn.username({
+          username: cleanId.toLowerCase(),
+          password,
+          rememberMe: false,
+        });
+      }
 
       if (result.error) {
-        setError(
-          result.error.message ||
-            "Email atau kata sandi tidak valid. Silakan coba lagi.",
-        );
+        handleFailedAttempt();
+        // Prevent Account Enumeration: Return uniform message instead of leaking user existence
+        if (result.error.status === 429) {
+          setError(
+            "Terlalu banyak percobaan masuk yang gagal. Mohon tunggu beberapa saat sebelum mencoba lagi.",
+          );
+        } else {
+          setError(
+            "NIM / NIP atau kata sandi tidak valid. Silakan periksa kembali.",
+          );
+        }
         return;
       }
+
+      // Successful login: reset failed attempts
+      setFailedAttempts(0);
 
       // Mark this tab as actively authenticated so closing the tab or exit resets the session
       if (typeof window !== "undefined") {
@@ -104,6 +174,9 @@ export function SignInSplitForm() {
       setPending(false);
     }
   }
+
+  const isDemoHidden =
+    process.env.NEXT_PUBLIC_HIDE_DEMO_ACCOUNTS === "true";
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#FAF7F2] text-[#212121]">
@@ -219,9 +292,7 @@ export function SignInSplitForm() {
                 <Info className="w-4 h-4 text-[#AE7C1D] shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold">Simulasi SSO Unpad:</span> Pada
-                  pengujian lokal ini, silakan klik tombol{" "}
-                  <strong>Pilih Akun Demo</strong> di bawah untuk langsung
-                  mencoba peran Mahasiswa, PLP, atau Admin.
+                  tahap evaluasi publik ini, silakan gunakan akun demo atau kredensial yang terdaftar untuk menguji fitur.
                 </div>
               </div>
             )}
@@ -231,7 +302,7 @@ export function SignInSplitForm() {
           <div className="relative my-5 flex items-center justify-center">
             <div className="w-full border-t border-[#E1E1E1]"></div>
             <span className="absolute bg-white px-3 text-[10px] uppercase font-bold text-[#929292] tracking-wider">
-              login akun lokal (khusus non-SSO / demo)
+              login kredensial lab
             </span>
           </div>
 
@@ -248,25 +319,44 @@ export function SignInSplitForm() {
                 </span>
               </div>
             )}
-            {/* Username / Email Field */}
+
+            {/* Lockout Warning */}
+            {lockoutSeconds > 0 && (
+              <div
+                role="alert"
+                className="p-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-center gap-2.5 animate-pulse"
+              >
+                <Clock className="w-4 h-4 shrink-0 text-amber-700" />
+                <div>
+                  <span className="font-bold">Keamanan Akun:</span> Terlalu banyak percobaan gagal. Formulir dikunci sementara selama{" "}
+                  <span className="font-bold underline">{lockoutSeconds} detik</span>.
+                </div>
+              </div>
+            )}
+
+            {/* NIM / NIP or Username Field */}
             <div className="space-y-1">
-              <label htmlFor="login-email" className="sr-only">
-                Username atau Email
+              <label htmlFor="login-identifier" className="sr-only">
+                NIM / NIP atau Username
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#929292]">
                   <User className="w-4 h-4" />
                 </div>
                 <input
-                  id="login-email"
-                  name="email"
-                  type="email"
+                  id="login-identifier"
+                  name="identifier"
+                  type="text"
                   autoComplete="username"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Username / Email"
-                  className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[#CBD5E1] bg-white placeholder-[#94A3B8] text-[#212121] focus:border-[#F9B129] focus:ring-1 focus:ring-[#F9B129] outline-none transition-all"
+                  disabled={pending || lockoutSeconds > 0}
+                  maxLength={120}
+                  spellCheck={false}
+                  autoCapitalize="none"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="NIM / NIP atau Username"
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[#CBD5E1] bg-white placeholder-[#94A3B8] text-[#212121] focus:border-[#F9B129] focus:ring-1 focus:ring-[#F9B129] outline-none transition-all disabled:opacity-50 disabled:bg-slate-100"
                 />
               </div>
             </div>
@@ -286,15 +376,18 @@ export function SignInSplitForm() {
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   required
+                  disabled={pending || lockoutSeconds > 0}
+                  maxLength={128}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
-                  className="w-full pl-9 pr-9 py-2 text-xs rounded-lg border border-[#CBD5E1] bg-white placeholder-[#94A3B8] text-[#212121] focus:border-[#F9B129] focus:ring-1 focus:ring-[#F9B129] outline-none transition-all"
+                  className="w-full pl-9 pr-9 py-2 text-xs rounded-lg border border-[#CBD5E1] bg-white placeholder-[#94A3B8] text-[#212121] focus:border-[#F9B129] focus:ring-1 focus:ring-[#F9B129] outline-none transition-all disabled:opacity-50 disabled:bg-slate-100"
                 />
                 <button
                   type="button"
+                  disabled={pending || lockoutSeconds > 0}
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#929292] hover:text-[#212121] transition-colors focus:outline-none"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#929292] hover:text-[#212121] transition-colors focus:outline-none disabled:opacity-40"
                   aria-label={
                     showPassword
                       ? "Sembunyikan kata sandi"
@@ -321,54 +414,92 @@ export function SignInSplitForm() {
               </div>
             )}
 
+            {/* Attempts Warning */}
+            {failedAttempts >= 3 && lockoutSeconds === 0 && (
+              <div
+                role="status"
+                className="p-2 rounded-lg bg-orange-50 border border-orange-200 text-[#C2410C] text-[11px] flex items-center gap-2"
+              >
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-[#C2410C]" />
+                <span>
+                  Peringatan keamanan: {5 - failedAttempts} percobaan tersisa sebelum formulir dikunci sementara.
+                </span>
+              </div>
+            )}
+
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={pending}
-              className="w-full py-2.5 px-4 rounded-lg bg-[#212121] hover:bg-[#333333] active:bg-[#000000] text-white text-xs font-bold transition-all flex items-center justify-center gap-2 mt-4 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9B129]"
+              disabled={pending || lockoutSeconds > 0}
+              className="w-full py-2.5 px-4 rounded-lg bg-[#212121] hover:bg-[#333333] active:bg-[#000000] text-white text-xs font-bold transition-all flex items-center justify-center gap-2 mt-4 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9B129] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {pending ? (
                 <>
                   <LoaderCircle className="w-4 h-4 animate-spin text-[#F9B129]" />
                   <span>Memverifikasi...</span>
                 </>
+              ) : lockoutSeconds > 0 ? (
+                <span>Terkunci ({lockoutSeconds}s)</span>
               ) : (
                 <span>Login</span>
               )}
             </button>
           </form>
 
-          {/* Quick Demo Role Selector Pills */}
-          <div className="mt-6 pt-4 border-t border-[#E1E1E1]">
-            <p className="text-[10px] uppercase font-bold text-[#6B6B6B] tracking-wider text-center mb-2.5">
-              Pilih Akun Demo (1-Klik):
-            </p>
-            <div className="grid grid-cols-1 gap-1.5">
-              {DEMO_ACCOUNTS.map((acc) => (
-                <button
-                  key={acc.email}
-                  type="button"
-                  onClick={() => handleSelectDemo(acc.email)}
-                  className={`w-full px-3 py-2 rounded-lg border text-left text-xs transition-all flex items-center justify-between ${
-                    email === acc.email
-                      ? "border-[#F9B129] bg-[#FEF1CC] font-bold text-[#212121] shadow-2xs"
-                      : "border-[#E1E1E1] bg-white hover:bg-[#FAF7F2] text-[#212121]"
-                  }`}
-                >
-                  <span className="font-semibold text-[11px]">{acc.badge}</span>
-                  <span className="text-[10px] text-[#6B6B6B] font-mono">
-                    {acc.email.split("@")[0]}
-                  </span>
-                </button>
-              ))}
+          {/* Quick Demo Role Selector Pills - Wrapped in an evaluative, secure toggle */}
+          {!isDemoHidden && (
+            <div className="mt-6 pt-4 border-t border-[#E1E1E1]">
+              <button
+                type="button"
+                onClick={() => setShowDemoSelector((v) => !v)}
+                className="w-full flex items-center justify-between text-[11px] font-semibold text-[#6B6B6B] hover:text-[#212121] transition-colors py-1 px-1 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#F9B129]"
+              >
+                <span className="uppercase tracking-wider text-[10px]">
+                  Mode Evaluasi & Akun Demo
+                </span>
+                {showDemoSelector ? (
+                  <ChevronUp className="w-3.5 h-3.5 text-[#6B6B6B]" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5 text-[#6B6B6B]" />
+                )}
+              </button>
+
+              {showDemoSelector && (
+                <div className="mt-2.5 space-y-2">
+                  <div className="p-2 rounded-md bg-[#FAF7F2] border border-[#E8E2D7] text-[10px] text-[#6B6B6B] leading-relaxed">
+                    <span className="font-semibold text-[#212121]">Informasi Keamanan:</span> Akun demo disediakan untuk menguji peran civitas akademika (Mahasiswa, PLP, Admin). Di lingkungan produksi resmi dengan data riset sesungguhnya, opsi ini dapat disembunyikan.
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-1.5 pt-1">
+                    {DEMO_ACCOUNTS.map((acc) => (
+                      <button
+                        key={acc.identifier}
+                        type="button"
+                        disabled={lockoutSeconds > 0}
+                        onClick={() => handleSelectDemo(acc.identifier)}
+                        className={`w-full px-3 py-2 rounded-lg border text-left text-xs transition-all flex items-center justify-between ${
+                          identifier === acc.identifier
+                            ? "border-[#F9B129] bg-[#FEF1CC] font-bold text-[#212121] shadow-2xs"
+                            : "border-[#E1E1E1] bg-white hover:bg-[#FAF7F2] text-[#212121]"
+                        } disabled:opacity-50`}
+                      >
+                        <span className="font-semibold text-[11px]">{acc.badge}</span>
+                        <span className="text-[10px] text-[#6B6B6B] font-mono">
+                          {acc.identifier}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-center text-[#929292] mt-1.5">
+                    Password demo default:{" "}
+                    <code className="bg-[#FAF7F2] border border-[#E1E1E1] px-1.5 py-0.5 rounded text-[#212121] font-mono">
+                      Reaksan-demo-123!
+                    </code>
+                  </p>
+                </div>
+              )}
             </div>
-            <p className="text-[10px] text-center text-[#929292] mt-2">
-              Password demo default:{" "}
-              <code className="bg-[#FAF7F2] border border-[#E1E1E1] px-1.5 py-0.5 rounded text-[#212121] font-mono">
-                Reaksan-demo-123!
-              </code>
-            </p>
-          </div>
+          )}
         </div>
 
         {/* Bottom copyright for right pane */}

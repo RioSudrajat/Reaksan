@@ -6,6 +6,8 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
   image: text("image"),
+  username: text("username").unique(),
+  displayUsername: text("display_username"),
   // Better Auth admin plugin. `role` holds one name, or several separated by
   // commas. Signup cannot set it; see src/lib/permissions.ts for the roles.
   role: text("role"),

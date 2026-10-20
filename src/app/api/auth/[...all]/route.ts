@@ -10,11 +10,18 @@ export const GET = handler.GET;
 
 export async function POST(request: Request) {
   if (!isAutomatedTestEnv()) {
+    const isSignInAttempt =
+      request.url.includes("/sign-in/email") ||
+      request.url.includes("/sign-in/username");
+    const limit = isSignInAttempt ? 10 : 20;
+    const namespace = isSignInAttempt ? "auth:sign-in" : "auth:post";
+
     const rl = checkRateLimit(request, {
-      namespace: "auth:post",
-      limit: 20,
+      namespace,
+      limit,
       windowMs: 60_000,
     });
+
     if (!rl.allowed) {
       return Response.json(
         {

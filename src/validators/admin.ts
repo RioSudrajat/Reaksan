@@ -179,9 +179,30 @@ export const userRoleInputSchema = z
 export const userCreateInputSchema = z
   .object({
     name: z.string().trim().min(2, "Nama minimal 2 karakter.").max(120),
-    email: z.string().trim().email("Format email tidak valid.").max(180),
+    username: z
+      .string()
+      .trim()
+      .min(3, "NIM / NIP / Username minimal 3 karakter.")
+      .max(50, "Maksimal 50 karakter.")
+      .regex(
+        /^[a-zA-Z0-9_-]+$/,
+        "NIM/NIP hanya boleh berisi angka, huruf, strip (-), atau garis bawah (_).",
+      ),
+    email: z
+      .string()
+      .trim()
+      .email("Format email tidak valid.")
+      .max(180)
+      .optional()
+      .or(z.literal("")),
     password: z.string().min(8, "Password minimal 8 karakter.").max(128),
     role: z.enum(["user", "plp", "admin"]).default("user"),
+  })
+  .strict();
+
+export const userResetPasswordSchema = z
+  .object({
+    password: z.string().min(8, "Password minimal 8 karakter.").max(128),
   })
   .strict();
 
@@ -218,3 +239,4 @@ export type MaterialBatchInput = z.infer<typeof materialBatchInputSchema>;
 export type AssignmentInput = z.infer<typeof assignmentInputSchema>;
 export type SettingsInput = z.infer<typeof settingsInputSchema>;
 export type UserCreateInput = z.infer<typeof userCreateInputSchema>;
+export type UserResetPasswordInput = z.infer<typeof userResetPasswordSchema>;

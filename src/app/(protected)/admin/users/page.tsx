@@ -1,14 +1,10 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { UserRoleForm } from "@/components/admin/user-role-form";
 import { UserCreateDialog } from "@/components/admin/user-create-dialog";
-import {
-  EmptyState,
-  PageHeader,
-  Panel,
-  formatDateTime,
-} from "@/components/workspace";
-import { auth } from "@/lib/auth";
+import { UserList } from "@/components/admin/user-list";
+import { EmptyState, PageHeader, Panel } from "@/components/workspace";
+import { db } from "@/db";
+import { user } from "@/db/schema";
+import { desc } from "drizzle-orm";
 import { requirePermission } from "@/lib/session";
 
 export const metadata: Metadata = {
@@ -19,18 +15,27 @@ export default async function AdminUsersPage() {
   const { user: currentUser } = await requirePermission({
     configuration: ["manage-any"],
   });
-  const result = await auth.api.listUsers({
-    headers: await headers(),
-    query: { limit: 100, sortBy: "createdAt", sortDirection: "desc" },
-  });
-  const users = result.users ?? [];
+
+  const users = await db
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      username: user.username,
+      role: user.role,
+      banned: user.banned,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    })
+    .from(user)
+    .orderBy(desc(user.createdAt));
 
   return (
     <>
       <PageHeader
         eyebrow="Akses & Keamanan"
         title="Manajemen Pengguna"
-        description="Kelola akun pengguna, daftarkan akun baru, atur peranan (Mahasiswa, PLP, Admin), atau hapus akun. Pendaftaran akun dikelola secara terpusat oleh Admin Laboratorium."
+        description="Kelola akun pengguna, daftarkan akun baru, atur peranan (Mahasiswa, PLP, Admin), ubah kata sandi, atau tinjau detail profil civitas akademika."
       />
       <Panel
         context={`${users.length} akun`}
@@ -47,33 +52,7 @@ export default async function AdminUsersPage() {
             />
           </div>
         ) : (
-          <ul className="divide-y divide-[#EEEEEE]">
-            {users.map((account) => (
-              <li
-                key={account.id}
-                className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-[#212121]">
-                    {account.name}
-                  </p>
-                  <p className="mt-0.5 truncate text-[12px] text-[#6B6B6B]">
-                    {account.email}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-[#929292] [font-variant-numeric:tabular-nums]">
-                    Terdaftar {formatDateTime(account.createdAt)} · role{" "}
-                    {account.role ?? "user"}
-                  </p>
-                </div>
-                <UserRoleForm
-                  userId={account.id}
-                  email={account.email}
-                  currentRole={account.role ?? "user"}
-                  isSelf={account.id === currentUser.id}
-                />
-              </li>
-            ))}
-          </ul>
+          <UserList users={users} currentUserId={currentUser.id} />
         )}
       </Panel>
     </>

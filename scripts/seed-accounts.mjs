@@ -7,27 +7,60 @@ import { databaseUrl, databaseError } from "./postgres.mjs";
 // Development-only demo accounts. The password can be overridden with
 // SEED_ACCOUNT_PASSWORD. Never run this against production data.
 const ACCOUNTS = [
-  { email: "admin@reaksan.local", name: "Admin Reaksan", role: "admin" },
-  { email: "plp@reaksan.local", name: "Koordinator PLP", role: "plp" },
-  { email: "plp.organik@reaksan.local", name: "PLP Lab Organik", role: "plp" },
+  {
+    email: "admin@reaksan.local",
+    username: "admin",
+    name: "Admin Reaksan",
+    role: "admin",
+  },
+  {
+    email: "plp@reaksan.local",
+    username: "198503152010121001",
+    name: "Koordinator PLP",
+    role: "plp",
+  },
+  {
+    email: "plp.organik@reaksan.local",
+    username: "198706202014041002",
+    name: "PLP Lab Organik",
+    role: "plp",
+  },
   {
     email: "plp.anorganik@reaksan.local",
+    username: "198811102015031003",
     name: "PLP Lab Anorganik",
     role: "plp",
   },
   {
     email: "plp.biokimia@reaksan.local",
+    username: "198904052016022001",
     name: "PLP Lab Biokimia",
     role: "plp",
   },
   {
     email: "plp.analitik@reaksan.local",
+    username: "199008122018011002",
     name: "PLP Lab Analitik",
     role: "plp",
   },
-  { email: "plp.fisik@reaksan.local", name: "PLP Lab Fisik", role: "plp" },
-  { email: "student1@reaksan.local", name: "Mahasiswa Satu", role: "user" },
-  { email: "student2@reaksan.local", name: "Mahasiswa Dua", role: "user" },
+  {
+    email: "plp.fisik@reaksan.local",
+    username: "199105222019031001",
+    name: "PLP Lab Fisik",
+    role: "plp",
+  },
+  {
+    email: "student1@reaksan.local",
+    username: "140310210001",
+    name: "Mahasiswa Satu",
+    role: "user",
+  },
+  {
+    email: "student2@reaksan.local",
+    username: "140310210002",
+    name: "Mahasiswa Dua",
+    role: "user",
+  },
 ];
 
 const password = process.env.SEED_ACCOUNT_PASSWORD || "Reaksan-demo-123!";
@@ -47,15 +80,15 @@ async function upsertUser(client, account) {
   );
   if (existing.rowCount > 0) {
     await client.query(
-      'UPDATE "user" SET name = $2, role = $3, banned = false, ban_reason = NULL, ban_expires = NULL WHERE id = $1',
-      [existing.rows[0].id, account.name, account.role],
+      'UPDATE "user" SET name = $2, role = $3, username = $4, banned = false, ban_reason = NULL, ban_expires = NULL WHERE id = $1',
+      [existing.rows[0].id, account.name, account.role, account.username],
     );
     return existing.rows[0].id;
   }
   const id = randomUUID();
   await client.query(
-    'INSERT INTO "user" (id, name, email, email_verified, role) VALUES ($1, $2, $3, false, $4)',
-    [id, account.name, account.email, account.role],
+    'INSERT INTO "user" (id, name, email, email_verified, role, username) VALUES ($1, $2, $3, false, $4, $5)',
+    [id, account.name, account.email, account.role, account.username],
   );
   return id;
 }

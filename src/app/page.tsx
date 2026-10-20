@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -12,9 +13,78 @@ import { TabSessionGuard } from "@/components/tab-session-guard";
 
 export const dynamic = "force-dynamic";
 
+export const metadata: Metadata = {
+  title: "Reaksan Unpad | Sistem Manajemen Laboratorium Terpadu Kimia FMIPA",
+  description:
+    "Reaksan Unpad adalah sistem manajemen laboratorium terpadu Departemen Kimia FMIPA Universitas Padjadjaran untuk peminjaman ruang laboratorium riset, instrumen analitik canggih, dan pengelolaan bahan kimia.",
+  alternates: {
+    canonical: "/",
+  },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "CollegeOrUniversity",
+      "@id": "https://www.unpad.ac.id/#organization",
+      name: "Universitas Padjadjaran",
+      alternateName: "Unpad",
+      url: "https://www.unpad.ac.id",
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: "Jl. Raya Bandung-Sumedang Km. 21",
+        addressLocality: "Jatinangor",
+        addressRegion: "Jawa Barat",
+        postalCode: "45363",
+        addressCountry: "ID",
+      },
+    },
+    {
+      "@type": "EducationalOrganization",
+      "@id": "https://kimia.unpad.ac.id/#department",
+      name: "Departemen Kimia FMIPA Universitas Padjadjaran",
+      alternateName: ["Kimia Unpad", "Dept. Kimia FMIPA Unpad"],
+      url: "https://kimia.unpad.ac.id",
+      parentOrganization: {
+        "@id": "https://www.unpad.ac.id/#organization",
+      },
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://reaksan.vercel.app/#application",
+      name: "Reaksan Unpad",
+      alternateName: "Reaksan",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web Browser",
+      url: "https://reaksan.vercel.app",
+      description:
+        "Sistem Manajemen Laboratorium Terpadu Departemen Kimia FMIPA Universitas Padjadjaran untuk koordinasi peminjaman ruang riset, instrumen analitik, peralatan khusus, dan inventaris bahan kimia.",
+      provider: {
+        "@id": "https://kimia.unpad.ac.id/#department",
+      },
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://reaksan.vercel.app/#website",
+      url: "https://reaksan.vercel.app",
+      name: "Reaksan Unpad",
+      description:
+        "Portal resmi Sistem Manajemen Laboratorium Terpadu Kimia FMIPA Unpad",
+      publisher: {
+        "@id": "https://kimia.unpad.ac.id/#department",
+      },
+    },
+  ],
+};
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-[#FAF7F2] text-[#212121] flex flex-col justify-between selection:bg-[#F9B129]/30">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <TabSessionGuard />
       {/* Top Navigation Bar */}
       <header className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-6 flex items-center justify-between">

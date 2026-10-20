@@ -10,14 +10,11 @@ import {
   KeyRound,
   Loader2,
   Mail,
-  Plus,
-  ShieldCheck,
   User,
   UserPlus,
   X,
 } from "lucide-react";
 import { apiRequest, errorMessage } from "@/components/student-api";
-import { roleLabels } from "@/lib/permission-copy";
 
 const roleOptions = [
   {
@@ -41,6 +38,7 @@ export function UserCreateDialog() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("user");
@@ -53,6 +51,7 @@ export function UserCreateDialog() {
     setError("");
     setSuccess("");
     setName("");
+    setUsername("");
     setEmail("");
     setPassword("");
     setRole("user");
@@ -82,8 +81,8 @@ export function UserCreateDialog() {
       setError("Nama pengguna wajib diisi.");
       return;
     }
-    if (!email.trim() || !email.includes("@")) {
-      setError("Email valid wajib diisi.");
+    if (!username.trim()) {
+      setError("NIM / NIP / Username wajib diisi.");
       return;
     }
     if (password.length < 8) {
@@ -100,6 +99,7 @@ export function UserCreateDialog() {
         method: "POST",
         body: {
           name: name.trim(),
+          username: username.trim(),
           email: email.trim().toLowerCase(),
           password,
           role,
@@ -107,9 +107,10 @@ export function UserCreateDialog() {
       });
 
       setSuccess(
-        `Akun untuk ${name.trim()} (${email.trim()}) berhasil didaftarkan!`,
+        `Akun untuk ${name.trim()} (${username.trim()}) berhasil didaftarkan!`,
       );
       setName("");
+      setUsername("");
       setEmail("");
       setPassword("");
       router.refresh();
@@ -209,20 +210,48 @@ export function UserCreateDialog() {
 
               <div>
                 <label
+                  htmlFor="user-username"
+                  className="block text-[12px] font-bold text-[#212121]"
+                >
+                  NIM / NIP / Username <span className="text-[#DC2626]">*</span>
+                </label>
+                <div className="relative mt-1.5">
+                  <KeyRound className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#929292]" />
+                  <input
+                    id="user-username"
+                    type="text"
+                    required
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="cth. 140310210001 (NIM) atau 19850315... (NIP)"
+                    disabled={pending}
+                    className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-9 pr-3 text-[13px] text-[#212121] placeholder-[#94A3B8] transition outline-none focus:border-[#F9B129] focus:ring-2 focus:ring-[#F9B129]/20"
+                  />
+                </div>
+                <p className="mt-1 text-[11px] text-[#929292]">
+                  Digunakan sebagai identitas utama saat masuk ke dalam aplikasi.
+                </p>
+              </div>
+
+              <div>
+                <label
                   htmlFor="user-email"
                   className="block text-[12px] font-bold text-[#212121]"
                 >
-                  Alamat Email <span className="text-[#DC2626]">*</span>
+                  Alamat Email <span className="text-[#929292] font-normal">(opsional)</span>
                 </label>
                 <div className="relative mt-1.5">
                   <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#929292]" />
                   <input
                     id="user-email"
                     type="email"
-                    required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="cth. budi@unpad.ac.id"
+                    placeholder={
+                      username.trim()
+                        ? `${username.trim()}@mail.unpad.ac.id`
+                        : "cth. budi@unpad.ac.id"
+                    }
                     disabled={pending}
                     className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-9 pr-3 text-[13px] text-[#212121] placeholder-[#94A3B8] transition outline-none focus:border-[#F9B129] focus:ring-2 focus:ring-[#F9B129]/20"
                   />

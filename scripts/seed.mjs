@@ -2456,6 +2456,19 @@ try {
     "UPDATE material_batch SET qr_code = 'RK-MAT-' || COALESCE(lot_number, SUBSTRING(id::text, 1, 8)) WHERE qr_code IS NULL",
   );
 
+  // Ensure demo accounts in any environment have username/NIM/NIP populated
+  await client.query(`
+    UPDATE "user" SET "username" = 'admin' WHERE "email" = 'admin@reaksan.local' AND ("username" IS NULL OR "username" != 'admin');
+    UPDATE "user" SET "username" = '198503152010121001' WHERE "email" = 'plp@reaksan.local' AND ("username" IS NULL OR "username" != '198503152010121001');
+    UPDATE "user" SET "username" = '198706202014041002' WHERE "email" = 'plp.organik@reaksan.local' AND ("username" IS NULL OR "username" != '198706202014041002');
+    UPDATE "user" SET "username" = '198811102015031003' WHERE "email" = 'plp.anorganik@reaksan.local' AND ("username" IS NULL OR "username" != '198811102015031003');
+    UPDATE "user" SET "username" = '198904052016022001' WHERE "email" = 'plp.biokimia@reaksan.local' AND ("username" IS NULL OR "username" != '198904052016022001');
+    UPDATE "user" SET "username" = '199008122018011002' WHERE "email" = 'plp.analitik@reaksan.local' AND ("username" IS NULL OR "username" != '199008122018011002');
+    UPDATE "user" SET "username" = '199105222019031001' WHERE "email" = 'plp.fisik@reaksan.local' AND ("username" IS NULL OR "username" != '199105222019031001');
+    UPDATE "user" SET "username" = '140310210001' WHERE "email" = 'student1@reaksan.local' AND ("username" IS NULL OR "username" != '140310210001');
+    UPDATE "user" SET "username" = '140310210002' WHERE "email" = 'student2@reaksan.local' AND ("username" IS NULL OR "username" != '140310210002');
+  `);
+
   await client.query("COMMIT");
   console.log(
     FRESH

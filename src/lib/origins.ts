@@ -10,6 +10,7 @@ export function trustedOrigins(): string[] {
   const base = new URL(env.BETTER_AUTH_URL);
   const origins = new Set<string>([
     base.origin,
+    "https://reaksan.vercel.app",
     ...env.BETTER_AUTH_TRUSTED_ORIGINS,
   ]);
   if (process.env.NODE_ENV !== "production") {
