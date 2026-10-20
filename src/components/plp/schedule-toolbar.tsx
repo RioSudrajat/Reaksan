@@ -1,7 +1,9 @@
 "use client";
 
+import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { FilterField, controlClass } from "@/components/workspace";
 
 export function ScheduleToolbar({
@@ -16,6 +18,7 @@ export function ScheduleToolbar({
   basePath?: string;
 }) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const activeFilterCount = [
     currentRoom,
     currentKind !== "all" ? currentKind : "",
@@ -25,7 +28,8 @@ export function ScheduleToolbar({
     <form
       method="get"
       action={basePath}
-      className="flex w-full flex-wrap items-end gap-3"
+      className="flex w-full flex-wrap items-end gap-3 transition-opacity duration-200"
+      style={{ opacity: isPending ? 0.7 : 1 }}
       onSubmit={(e) => {
         e.preventDefault();
         const form = e.currentTarget;
@@ -36,13 +40,16 @@ export function ScheduleToolbar({
         if (room.trim()) params.set("room", room.trim());
         if (kind && kind !== "all") params.set("kind", kind);
         const query = params.toString();
-        router.push(`${basePath}${query ? `?${query}` : ""}`);
+        startTransition(() => {
+          router.push(`${basePath}${query ? `?${query}` : ""}`);
+        });
       }}
     >
       <FilterField label="Room" className="w-full sm:w-48">
         <select
           name="room"
           defaultValue={currentRoom ?? ""}
+          disabled={isPending}
           className={controlClass}
           onChange={(e) => {
             e.currentTarget.form?.requestSubmit();
@@ -60,6 +67,7 @@ export function ScheduleToolbar({
         <select
           name="kind"
           defaultValue={currentKind}
+          disabled={isPending}
           className={controlClass}
           onChange={(e) => {
             e.currentTarget.form?.requestSubmit();
@@ -73,9 +81,16 @@ export function ScheduleToolbar({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="submit"
-          className="inline-flex min-h-11 items-center rounded-xl bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] shadow-xs transition hover:bg-[#EAA805] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913]"
+          disabled={isPending}
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#FDB913] px-4 text-[12px] font-bold text-[#121826] shadow-xs transition hover:bg-[#EAA805] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDB913] disabled:opacity-70"
         >
-          Terapkan filter
+          {isPending && (
+            <Loader2
+              className="size-3.5 animate-spin text-[#121826]"
+              aria-hidden="true"
+            />
+          )}
+          {isPending ? "Memuat..." : "Terapkan filter"}
         </button>
         {activeFilterCount > 0 && (
           <Link

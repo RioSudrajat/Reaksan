@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -42,6 +42,7 @@ export function DailyRunSheet({
   const searchParams = useSearchParams();
   const [date, setDate] = useState(currentDate);
   const [downloading, setDownloading] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   function handleDownloadPdf() {
     setDownloading(true);
@@ -65,7 +66,9 @@ export function DailyRunSheet({
     const params = new URLSearchParams(searchParams.toString());
     params.set("date", newDate);
     params.set("view", "runsheet");
-    router.push(`/plp/schedule?${params.toString()}`);
+    startTransition(() => {
+      router.push(`/plp/schedule?${params.toString()}`);
+    });
   }
 
   function handleRoomChange(newRoom: string) {
@@ -76,13 +79,18 @@ export function DailyRunSheet({
       params.delete("room");
     }
     params.set("view", "runsheet");
-    router.push(`/plp/schedule?${params.toString()}`);
+    startTransition(() => {
+      router.push(`/plp/schedule?${params.toString()}`);
+    });
   }
 
   return (
     <div className="space-y-4">
       {/* Action Controls - hidden during print */}
-      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#E5E7EB] bg-white p-4">
+      <div
+        className="print:hidden flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#E5E7EB] bg-white p-4 transition-opacity duration-200"
+        style={{ opacity: isPending ? 0.7 : 1 }}
+      >
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-[12px] font-medium text-[#121826]">
             <Calendar className="size-4 text-[#64748B]" aria-hidden="true" />
@@ -90,6 +98,7 @@ export function DailyRunSheet({
             <input
               type="date"
               value={date}
+              disabled={isPending}
               onChange={(e) => handleDateChange(e.target.value)}
               className={controlClass + " w-auto"}
             />
@@ -100,6 +109,7 @@ export function DailyRunSheet({
             <span>Pilih Ruangan:</span>
             <select
               value={currentRoom ?? ""}
+              disabled={isPending}
               onChange={(e) => handleRoomChange(e.target.value)}
               className={controlClass + " w-auto"}
             >
@@ -111,6 +121,12 @@ export function DailyRunSheet({
               ))}
             </select>
           </label>
+          {isPending && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#8D6500]">
+              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+              Memuat data...
+            </span>
+          )}
         </div>
 
         <div className="inline-flex items-center rounded-xl border border-[#E1E1E1] bg-white p-0.5 shadow-2xs">
