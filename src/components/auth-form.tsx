@@ -2,18 +2,15 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ArrowRight, LoaderCircle } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { landingPathForRole } from "@/lib/landing";
-import { TAB_SESSION_KEY } from "@/components/tab-session-guard";
 
 export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
   const signingUp = mode === "sign-up";
-  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
 
@@ -46,9 +43,6 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
         );
         return;
       }
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem(TAB_SESSION_KEY, "true");
-      }
       // The session response carries the stored role, so PLP and admin land in
       // their own workspace instead of the student dashboard.
       let role = result.data?.user?.role;
@@ -56,8 +50,9 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
         const session = await authClient.getSession();
         role = session.data?.user?.role;
       }
-      router.replace(landingPathForRole(role));
-      router.refresh();
+      if (typeof window !== "undefined") {
+        window.location.href = landingPathForRole(role);
+      }
     } catch {
       setError(
         "We couldn't reach the server. Check your connection and try again.",

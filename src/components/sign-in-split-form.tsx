@@ -2,7 +2,7 @@
 
 import { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   User,
   Lock,
@@ -22,7 +22,6 @@ import { authClient } from "@/lib/auth-client";
 import { ReaksanLogo } from "@/components/reaksan-logo";
 import { LoginResearchIllustration } from "@/components/illustrations/login-research-illustration";
 import { landingPathForRole } from "@/lib/landing";
-import { TAB_SESSION_KEY } from "@/components/tab-session-guard";
 
 const DEMO_ACCOUNTS = [
   {
@@ -46,7 +45,6 @@ const DEMO_ACCOUNTS = [
 ];
 
 export function SignInSplitForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const isExpired = searchParams.get("expired") === "1";
   const [identifier, setIdentifier] = useState("");
@@ -153,11 +151,6 @@ export function SignInSplitForm() {
       // Successful login: reset failed attempts
       setFailedAttempts(0);
 
-      // Mark this tab as actively authenticated so closing the tab or exit resets the session
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem(TAB_SESSION_KEY, "true");
-      }
-
       // Check user role to navigate directly to their dedicated workspace
       let role = result.data?.user?.role;
       if (!role) {
@@ -166,8 +159,7 @@ export function SignInSplitForm() {
       }
 
       const targetPath = landingPathForRole(role);
-      router.replace(targetPath);
-      router.refresh();
+      window.location.href = targetPath;
     } catch {
       setError("Gagal menghubungi server. Periksa koneksi internet Anda.");
     } finally {

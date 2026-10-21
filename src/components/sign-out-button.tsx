@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
@@ -9,22 +8,20 @@ import { Button } from "@/components/ui/button";
 export function SignOutButton() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(false);
-  const router = useRouter();
   async function signOut() {
     setPending(true);
     setError(false);
     try {
-      if (typeof window !== "undefined") {
-        sessionStorage.removeItem("reaksan_active_tab_session");
-      }
-      const result = await authClient.signOut();
-      if (result.error) throw new Error("Sign out failed");
-      router.replace("/sign-in");
-      router.refresh();
+      await authClient.signOut();
     } catch {
       setError(true);
     } finally {
       setPending(false);
+      if (typeof window !== "undefined") {
+        // Hard navigation guarantees fresh session teardown
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+        window.location.href = "/sign-in";
+      }
     }
   }
   return (

@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { ReaksanLogo } from "@/components/reaksan-logo";
 import { LandingLabIllustration } from "@/components/illustrations/landing-lab-illustration";
-import { TabSessionGuard } from "@/components/tab-session-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -85,7 +84,6 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <TabSessionGuard />
       {/* Top Navigation Bar */}
       <header className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-6 flex items-center justify-between">
         {/* Brand Logo - Official Reaksan Unpad Wordmark */}

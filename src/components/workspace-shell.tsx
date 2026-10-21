@@ -184,15 +184,6 @@ export function WorkspaceShell({
       if (typeof navigator !== "undefined" && navigator.webdriver) return;
       checking = true;
       try {
-        if (
-          typeof window !== "undefined" &&
-          sessionStorage.getItem("reaksan_active_tab_session") !== "true"
-        ) {
-          await authClient.signOut();
-          router.replace("/sign-in");
-          router.refresh();
-          return;
-        }
         const { data } = await authClient.getSession();
         if (!data) {
           router.replace("/sign-in?expired=1");
@@ -214,18 +205,16 @@ export function WorkspaceShell({
     }
 
     window.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("focus", onVisibility);
 
     const interval = setInterval(
       () => {
         void verifySession();
       },
-      2 * 60 * 1000,
+      5 * 60 * 1000,
     );
 
     return () => {
       window.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("focus", onVisibility);
       clearInterval(interval);
     };
   }, [router]);
@@ -260,14 +249,15 @@ export function WorkspaceShell({
   async function handleSignOut() {
     try {
       setSigningOut(true);
-      if (typeof window !== "undefined") {
-        sessionStorage.removeItem("reaksan_active_tab_session");
-      }
       await authClient.signOut();
-      router.replace("/sign-in");
-      router.refresh();
     } catch {
-      setSigningOut(false);
+      // Ignore network error to ensure redirect still completes
+    } finally {
+      if (typeof window !== "undefined") {
+        // Hard navigation guarantees fresh session teardown
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+        window.location.href = "/sign-in";
+      }
     }
   }
 
