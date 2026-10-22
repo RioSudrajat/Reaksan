@@ -23,6 +23,7 @@
     "db:seed": "node scripts/seed.mjs",
     "db:seed:fresh": "node scripts/seed.mjs --fresh",
     "db:seed:accounts": "node scripts/seed-accounts.mjs",
+    "db:seed:waste": "node scripts/seed-waste.mjs",
     "role:set": "node scripts/set-role.mjs",
     "db:studio": "drizzle-kit studio",
     "doctor": "node scripts/doctor.mjs",
