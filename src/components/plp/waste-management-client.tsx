@@ -1798,7 +1798,7 @@ export function WasteManagementClient({
                     </option>
                     {initialCategories.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.name} ({c.physicalState === "SOLID" ? "Padat" : "Cair"})
+                        {c.name}
                       </option>
                     ))}
                   </select>

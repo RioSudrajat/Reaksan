@@ -127,6 +127,13 @@
       "when": 1792800000000,
       "tag": "0017_seed_waste_categories",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792900000000,
+      "tag": "0018_simplify_waste_categories",
+      "breakpoints": true
     }
   ]
 }

@@ -89,7 +89,7 @@ export function resolveDateRange(query: WasteExportQuery): {
 export const DEFAULT_WASTE_CATEGORIES = [
   {
     code: "CAIR",
-    name: "Cair (Limbah Cair)",
+    name: "Limbah Cair",
     physicalState: "LIQUID" as const,
     description: "Limbah kimia dan larutan cair B3.",
     hazardBadge: "B3 CAIR",
@@ -97,91 +97,11 @@ export const DEFAULT_WASTE_CATEGORIES = [
   },
   {
     code: "PADAT",
-    name: "Padat (Limbah Padat)",
+    name: "Limbah Padat",
     physicalState: "SOLID" as const,
     description: "Limbah padatan, residu kristal, dan material terkontaminasi B3.",
     hazardBadge: "B3 PADAT",
     colorHex: "#e11d48",
-  },
-  {
-    code: "ACID",
-    name: "Limbah Asam Anorganik",
-    physicalState: "LIQUID" as const,
-    description: "Sisa asam mineral seperti HCl, H2SO4, HNO3 encer, H3PO4 (pH < 2).",
-    hazardBadge: "CORROSIVE",
-    colorHex: "#ea580c",
-  },
-  {
-    code: "BASE",
-    name: "Limbah Basa Anorganik",
-    physicalState: "LIQUID" as const,
-    description: "Sisa larutan alkali seperti NaOH, KOH, NH4OH (pH > 10).",
-    hazardBadge: "CORROSIVE",
-    colorHex: "#2563eb",
-  },
-  {
-    code: "ORG-NONHALO",
-    name: "Pelarut Organik Non-Halogen",
-    physicalState: "LIQUID" as const,
-    description: "Pelarut mudah terbakar seperti Etanol, Aseton, n-Heksana, Toluena.",
-    hazardBadge: "FLAMMABLE",
-    colorHex: "#dc2626",
-  },
-  {
-    code: "ORG-HALO",
-    name: "Pelarut Organik Terhalogenasi",
-    physicalState: "LIQUID" as const,
-    description: "Pelarut klorinasi seperti Kloroform (CHCl3), Diklorometana (DCM).",
-    hazardBadge: "TOXIC",
-    colorHex: "#9333ea",
-  },
-  {
-    code: "COMPLEX-MET",
-    name: "Senyawa Kompleks & Logam Berat",
-    physicalState: "LIQUID" as const,
-    description: "Sisa titrasi kompleksometri (EDTA), ion Cu, Ni, Cr, Pb, Fe.",
-    hazardBadge: "ECO-TOXIC",
-    colorHex: "#d97706",
-  },
-  {
-    code: "BATTERY",
-    name: "Limbah Baterai & Sel Elektrokimia",
-    physicalState: "SOLID" as const,
-    description: "Baterai Li-ion, sel aki, sel galvanik eksperimen energi.",
-    hazardBadge: "CORROSIVE/HEAT",
-    colorHex: "#52525b",
-  },
-  {
-    code: "HPLC-ELUENT",
-    name: "Limbah Fase Gerak HPLC",
-    physicalState: "LIQUID" as const,
-    description: "Campuran efluen HPLC (Metanol, Asetonitril, Air).",
-    hazardBadge: "FLAMMABLE/TOXIC",
-    colorHex: "#0d9488",
-  },
-  {
-    code: "BIO-REAGENT",
-    name: "Residu Reagen Biokimia & Cu",
-    physicalState: "LIQUID" as const,
-    description: "Sisa reagen Biuret, reagen warna uji protein & enzim.",
-    hazardBadge: "IRRITANT",
-    colorHex: "#059669",
-  },
-  {
-    code: "BIO-SHARPS",
-    name: "Benda Tajam & Tip Mikropipet",
-    physicalState: "SOLID" as const,
-    description: "Tip mikropipet bekas, cover glass, tabung mikrosentrifus.",
-    hazardBadge: "BIOHAZARD/SHARPS",
-    colorHex: "#ca8a04",
-  },
-  {
-    code: "SOLID-B3",
-    name: "Limbah Padat B3 Terkontaminasi",
-    physicalState: "SOLID" as const,
-    description: "Kertas saring terkontaminasi, sarung tangan nitril, silica gel.",
-    hazardBadge: "HAZARDOUS",
-    colorHex: "#78716c",
   },
 ];
 
@@ -211,6 +131,17 @@ export async function ensureDefaultWasteCategories() {
         },
       });
   }
+
+  // Deactivate any categories other than CAIR and PADAT
+  await db
+    .update(wasteCategory)
+    .set({ active: false, updatedAt: new Date() })
+    .where(
+      and(
+        eq(wasteCategory.active, true),
+        sql`${wasteCategory.code} NOT IN ('CAIR', 'PADAT')`,
+      ),
+    );
 }
 
 export async function listWasteCategories() {
