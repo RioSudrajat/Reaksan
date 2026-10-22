@@ -85,6 +85,10 @@ export function requestToScheduleEvent(
       ? daysInMonth(month)
       : clampDay(end.day, month);
   const primaryEquipment = request.equipment[0];
+  const isOverdue =
+    request.status === "OVERDUE" ||
+    ((request.status === "ACTIVE" || request.status === "READY_FOR_PICKUP") &&
+      request.overdue);
   return {
     id: `request-${request.id}`,
     requestId: request.id,
@@ -101,13 +105,17 @@ export function requestToScheduleEvent(
     actorId: request.actorId,
     mine: request.actorId === viewerId,
     purpose: request.purpose,
-    status: requestStatusView(request.status),
+    status: isOverdue ? "OVERDUE" : requestStatusView(request.status),
+    overdue: isOverdue,
     kind: "request",
     mode: "borrow",
     supervisor: request.supervisor,
     fieldPic: request.fieldPic,
     revisionNote: request.revisionNote ?? undefined,
     rejectionReason: request.rejectionReason ?? undefined,
+    returnSubmission: request.returnSubmission ?? undefined,
+    returnSubmittedAt: request.returnSubmittedAt ?? undefined,
+    returnRejectionReason: request.returnRejectionReason ?? undefined,
     issuedAt: request.issuedAt,
     returnedAt: request.returnedAt,
     resourceId: primaryEquipment?.assetCode,
@@ -165,10 +173,14 @@ export function reservationToScheduleEvent(
     end.year > start.year || end.month > start.month
       ? daysInMonth(month)
       : clampDay(end.day, month);
+  const isOverdue =
+    reservation.requestStatus === "OVERDUE" ||
+    (reservation.status === "ACTIVE" &&
+      new Date(reservation.endAt).getTime() < Date.now());
   const effectiveStatus =
     reservation.kind === "shared"
       ? "CONFIRMED"
-      : reservation.requestStatus === "OVERDUE"
+      : isOverdue
         ? "OVERDUE"
         : reservationStatusMap[reservation.status];
 
@@ -193,6 +205,7 @@ export function reservationToScheduleEvent(
     mine: reservation.mine,
     purpose: reservation.purpose,
     status: effectiveStatus,
+    overdue: isOverdue,
     kind: reservation.kind === "shared" ? "shared" : "reservation",
     mode: reservation.kind === "shared" ? "shared" : "borrow",
     supervisor: reservation.supervisor ?? undefined,

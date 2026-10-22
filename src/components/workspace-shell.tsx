@@ -28,6 +28,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Tag,
+  Trash2,
   Undo2,
   UserCheck,
   Users,
@@ -64,6 +65,7 @@ const iconMap: Record<string, LucideIcon> = {
   assignments: UserCheck,
   configuration: Settings,
   audit: ScrollText,
+  waste: Trash2,
 };
 
 export type NavItem = {

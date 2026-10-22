@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { StudentReturnDialog } from "@/components/student-return-dialog";
 import { cn } from "cn";
 import {
   displayBarClasses,
@@ -246,6 +247,7 @@ function CalendarGrid({
   onCellPointerDown,
   onCellPointerEnter,
   onCellKeyDown,
+  onCellClick,
   renderCell,
   renderWeekOverlay,
   rootRef,
@@ -266,6 +268,7 @@ function CalendarGrid({
     el: HTMLDivElement,
     inMonth: boolean,
   ) => void;
+  onCellClick?: (date: Date, el: HTMLDivElement) => void;
   renderCell?: (context: {
     date: Date;
     inMonth: boolean;
@@ -347,8 +350,14 @@ function CalendarGrid({
                           inMonth,
                         )
                       }
+                      onClick={(event) => {
+                        const target = event.target as HTMLElement;
+                        if (target.closest("[data-schedule-bar]")) return;
+                        if (!inMonth) return;
+                        onCellClick?.(date, event.currentTarget);
+                      }}
                       className={cn(
-                        "relative select-none p-1.5 pb-2 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#6E8EDA]",
+                        "relative select-none touch-pan-y p-1.5 pb-2 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#6E8EDA]",
                         "min-h-[142px] sm:min-h-[156px] flex flex-col justify-between",
                         inMonth
                           ? "bg-white hover:bg-[#FAFAF8]"
@@ -608,6 +617,31 @@ export function ScheduleCalendar({
   }, [card, closeCard]);
 
   useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      const drag = dragRef.current;
+      if (!drag?.active) return;
+      if (event.pointerType === "touch") {
+        const el = document.elementFromPoint(event.clientX, event.clientY);
+        const cell = el?.closest<HTMLElement>("[data-schedule-date]");
+        if (cell) {
+          const key = cell.getAttribute("data-schedule-date");
+          if (key) {
+            const parts = key.split("-").map(Number);
+            if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
+              const targetDate = atMidnight(
+                new Date(parts[0], parts[1] - 1, parts[2]),
+              );
+              if (targetDate.getMonth() === view.getMonth()) {
+                setSelection({ start: drag.start, end: targetDate });
+                drag.end = targetDate;
+                drag.lastEl = cell;
+              }
+            }
+          }
+        }
+      }
+    };
+
     const finish = () => {
       const drag = dragRef.current;
       if (!drag?.active) return;
@@ -624,13 +658,15 @@ export function ScheduleCalendar({
     const cancel = () => {
       dragRef.current = null;
     };
+    window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", finish);
     window.addEventListener("pointercancel", cancel);
     return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", finish);
       window.removeEventListener("pointercancel", cancel);
     };
-  }, [openCard]);
+  }, [openCard, view]);
 
   const cardStyle = useMemo(() => {
     if (!cardPosition) return undefined;
@@ -690,6 +726,18 @@ export function ScheduleCalendar({
     );
     if (el) drag.lastEl = el;
   }, []);
+
+  const handleCellClick = useCallback(
+    (date: Date, el: HTMLDivElement) => {
+      if (!selectable) return;
+      if (dragRef.current?.active) return;
+      const normalized = atMidnight(date);
+      setSelection({ start: normalized, end: normalized });
+      setSelectedEventId(null);
+      openCard({ start: date.getDate(), end: date.getDate() }, el, "range");
+    },
+    [openCard, selectable],
+  );
 
   const handleCellKeyDown = useCallback(
     (
@@ -751,10 +799,14 @@ export function ScheduleCalendar({
     [openCard, view],
   );
 
-  const targetMonth = card?.month ?? {
-    year: view.getFullYear(),
-    month: view.getMonth(),
-  };
+  const targetMonth = useMemo(
+    () =>
+      card?.month ?? {
+        year: view.getFullYear(),
+        month: view.getMonth(),
+      },
+    [card?.month, view],
+  );
 
   const cardEvents = useMemo(() => {
     if (!card) return [];
@@ -866,6 +918,7 @@ export function ScheduleCalendar({
         rootRef={rootRef}
         onCellPointerDown={handleCellPointerDown}
         onCellPointerEnter={handleCellPointerEnter}
+        onCellClick={handleCellClick}
         onCellKeyDown={handleCellKeyDown}
         renderWeekOverlay={({ row }) => {
           const layout = weekLayouts[row];
@@ -1073,7 +1126,7 @@ function statusSteps(event: ScheduleEvent) {
     "Disetujui",
     "Disiapkan",
     "Sedang digunakan",
-    "Dikembalikan",
+    "Menunggu konfirmasi",
     "Selesai",
   ];
   if (event.status === "REJECTED" || event.status === "CANCELLED")
@@ -2096,7 +2149,7 @@ function jakartaIso(
 
 export function ScheduleRequestForm({
   range,
-  label,
+  label: _label,
   month,
   defaults,
   editingId,
@@ -2111,6 +2164,8 @@ export function ScheduleRequestForm({
 }) {
   const catalog = useLabCatalog();
   const router = useRouter();
+  const [startDay, setStartDay] = useState(Math.min(range.start, range.end));
+  const [endDay, setEndDay] = useState(Math.max(range.start, range.end));
   const [title, setTitle] = useState(defaults?.title ?? "");
   const [roomId, setRoomId] = useState(
     defaults?.roomCode ?? catalog.rooms[0]?.id ?? "",
@@ -2136,6 +2191,19 @@ export function ScheduleRequestForm({
   const toolTriggerRef = useRef<HTMLButtonElement | null>(null);
   const materialTriggerRef = useRef<HTMLButtonElement | null>(null);
   const editing = Boolean(editingId);
+
+  const daysInMonth = useMemo(
+    () => new Date(month.year, month.month + 1, 0).getDate(),
+    [month.year, month.month],
+  );
+  const dayOptions = useMemo(
+    () => Array.from({ length: daysInMonth }, (_, i) => i + 1),
+    [daysInMonth],
+  );
+  const activeRangeLabel = useMemo(
+    () => formatRangeLabel({ start: startDay, end: endDay }, month),
+    [startDay, endDay, month],
+  );
 
   const instruments = useMemo(
     () =>
@@ -2179,11 +2247,11 @@ export function ScheduleRequestForm({
             purpose: purpose.trim(),
             roomCode: roomId,
             startAt: jakartaIso(
-              Math.min(range.start, range.end),
+              startDay,
               startTime,
               month,
             ),
-            endAt: jakartaIso(Math.max(range.start, range.end), endTime, month),
+            endAt: jakartaIso(endDay, endTime, month),
             supervisor: supervisor.trim(),
             fieldPic: fieldPic.trim(),
             equipment: equipment.map((item) => ({
@@ -2216,7 +2284,7 @@ export function ScheduleRequestForm({
           {title.trim() || "Untitled request"}
         </h4>
         <p className="mt-1 text-[11px] font-medium text-[#6B6B6B]">
-          {label} · {startTime}–{endTime}
+          {activeRangeLabel} · {startTime}–{endTime}
         </p>
         <p className="mt-2 rounded-xl bg-[#F4FCF7] p-3 text-[11px] leading-5 text-[#03683A]">
           Request tersimpan di database dan menunggu review PLP. Request ini
@@ -2264,10 +2332,57 @@ export function ScheduleRequestForm({
           </p>
         )}
         <div className="mt-4 space-y-4">
-          <FormRow icon={CalendarDays} label="Tanggal">
-            <p className="text-[13px] font-semibold text-[#212121]">{label}</p>
-            <p className="mt-1 text-[10px] leading-4 text-[#929292]">
-              Pilih rentang tanggal lain pada kalender untuk mengubah waktu.
+          <FormRow icon={CalendarDays} label="Rentang Tanggal">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-medium text-[#64748B]">Mulai:</span>
+                <select
+                  value={startDay}
+                  onChange={(event) => {
+                    const nextStart = Number(event.target.value);
+                    setStartDay(nextStart);
+                    if (nextStart > endDay) {
+                      setEndDay(nextStart);
+                    }
+                  }}
+                  aria-label="Tanggal mulai reservasi"
+                  className={cn(fieldClass, "w-[88px] font-semibold tabular-nums text-xs")}
+                >
+                  {dayOptions.map((d) => (
+                    <option key={d} value={d}>
+                      Tgl {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <span className="text-[12px] text-[#94A3B8] font-bold">s.d.</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-medium text-[#64748B]">Selesai:</span>
+                <select
+                  value={endDay}
+                  onChange={(event) => {
+                    const nextEnd = Number(event.target.value);
+                    setEndDay(nextEnd);
+                    if (nextEnd < startDay) {
+                      setStartDay(nextEnd);
+                    }
+                  }}
+                  aria-label="Tanggal selesai reservasi"
+                  className={cn(fieldClass, "w-[88px] font-semibold tabular-nums text-xs")}
+                >
+                  {dayOptions.map((d) => (
+                    <option key={d} value={d} disabled={d < startDay}>
+                      Tgl {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p className="mt-1.5 text-[11px] font-medium text-[#8D6500]">
+              {activeRangeLabel}
+              <span className="ml-1 text-[#64748B]">
+                ({endDay > startDay ? `${endDay - startDay + 1} hari` : "1 hari"})
+              </span>
             </p>
           </FormRow>
           <FormRow icon={Clock3} label="Waktu">
@@ -2812,7 +2927,15 @@ export function ScheduleEventPopover({
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [returnOpen, setReturnOpen] = useState(false);
   const mine = isOwnEvent(event);
+  const canReturn =
+    mine &&
+    event.kind === "request" &&
+    (event.status === "ACTIVE" || event.status === "OVERDUE") &&
+    Boolean(event.requestId);
+  const isAwaitingReturnConfirmation =
+    mine && event.kind === "request" && event.status === "RETURNED";
   const editable =
     mine &&
     event.kind === "request" &&
@@ -2880,6 +3003,15 @@ export function ScheduleEventPopover({
                   : "Edit Pengajuan"}
               </button>
             )}
+            {canReturn && (
+              <button
+                type="button"
+                onClick={() => setReturnOpen(true)}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F9B129] px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F7B742] shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
+              >
+                Selesai & Kembalikan
+              </button>
+            )}
             {canShare && (
               <button
                 type="button"
@@ -2921,17 +3053,25 @@ export function ScheduleEventPopover({
                     : "Batalkan Pengajuan"}
               </button>
             )}
-            {event.resourceId && (
-              <Link
-                href={`/student/laboratory/equipment/${event.resourceId}`}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E1E1E1] bg-white px-3 text-[11px] font-bold text-[#212121] hover:bg-[#F5F5F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E8EDA]"
-              >
-                Lihat Detail Instrumen
-              </Link>
-            )}
             {extraActions}
           </>
         }
+      />
+      {isAwaitingReturnConfirmation && (
+        <div className="mt-3 rounded-xl border border-[#BBF7D0] bg-[#F0FDF4] p-3 text-[11px] text-[#16A34A] font-medium leading-relaxed">
+          Pengembalian telah Anda ajukan. Menunggu pemeriksaan fisik dan konfirmasi dari PLP laboratorium.
+        </div>
+      )}
+      {canReturn && event.returnRejectionReason && (
+        <div className="mt-3 rounded-xl border border-[#FDE68A] bg-[#FEF7E6] p-3 text-[11px] text-[#8D6500] leading-relaxed">
+          <p className="font-bold">Catatan Penolakan PLP:</p>
+          <p className="mt-0.5">{event.returnRejectionReason}</p>
+        </div>
+      )}
+      <StudentReturnDialog
+        event={event}
+        open={returnOpen}
+        onClose={() => setReturnOpen(false)}
       />
       {error && (
         <p

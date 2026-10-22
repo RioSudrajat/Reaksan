@@ -61,6 +61,10 @@ export type ScheduleEvent = {
   fieldPic?: string;
   revisionNote?: string;
   rejectionReason?: string;
+  returnSubmission?: Record<string, unknown> | null;
+  returnSubmittedAt?: string | null;
+  returnConfirmedAt?: string | null;
+  returnRejectionReason?: string | null;
   issuedAt?: string | null;
   returnedAt?: string | null;
   resourceId?: string;
@@ -69,6 +73,7 @@ export type ScheduleEvent = {
   imageMediaId?: string | null;
   equipment?: RequestEquipmentItem[];
   materials?: RequestMaterialItem[];
+  overdue?: boolean;
 };
 
 export type ScheduleRequestDraft = {
@@ -489,7 +494,7 @@ export const requestStatusLabels: Record<RequestStatus, string> = {
   REJECTED: "Ditolak",
   READY_FOR_PICKUP: "Siap diambil",
   ACTIVE: "Sedang digunakan",
-  RETURNED: "Dikembalikan",
+  RETURNED: "Menunggu konfirmasi",
   COMPLETED: "Selesai",
   CANCELLED: "Dibatalkan",
   OVERDUE: "Lewat tenggat",
@@ -518,7 +523,7 @@ export const displayLabels: Record<RequestStatus, string> = {
   REJECTED: "Ditolak",
   READY_FOR_PICKUP: "Siap diambil",
   ACTIVE: "Sedang digunakan",
-  RETURNED: "Dikembalikan",
+  RETURNED: "Menunggu konfirmasi",
   COMPLETED: "Selesai",
   CANCELLED: "Dibatalkan",
   OVERDUE: "Lewat tenggat",

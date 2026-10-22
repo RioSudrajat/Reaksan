@@ -165,3 +165,23 @@ export const auditActionEnum = pgEnum("audit_action", [
   "RESOLVE_INCIDENT",
   "ADJUST_STOCK",
 ]);
+
+export const wastePhysicalStateEnum = pgEnum("waste_physical_state", [
+  "LIQUID",
+  "SOLID",
+]);
+
+export const wasteContainerStatusEnum = pgEnum("waste_container_status", [
+  "ACTIVE",
+  "FULL",
+  "SEALED",
+  "IN_TPS",
+  "DISPOSED",
+  "ARCHIVED",
+]);
+
+export const wasteLogStatusEnum = pgEnum("waste_log_status", [
+  "LOGGED",
+  "VERIFIED",
+  "REJECTED",
+]);

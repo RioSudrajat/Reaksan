@@ -282,27 +282,81 @@ export async function createIncident(
       if (insRow) {
         assetRow = { ...insRow, type: "INSTRUMENT" };
       } else {
-        const [tolRow] = await tx
+        const [insUnitRow] = await tx
           .select({
-            id: toolAsset.id,
-            assetCode: toolAsset.assetCode,
-            name: toolType.name,
-            roomId: toolAsset.roomId,
+            id: instrumentAsset.id,
+            assetCode: instrumentAsset.assetCode,
+            name: instrumentType.name,
+            roomId: instrumentAsset.roomId,
             roomName: room.name,
           })
-          .from(toolAsset)
-          .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
-          .innerJoin(room, eq(room.id, toolAsset.roomId))
+          .from(instrumentUnit)
+          .innerJoin(
+            instrumentAsset,
+            eq(instrumentAsset.id, instrumentUnit.instrumentAssetId),
+          )
+          .innerJoin(
+            instrumentType,
+            eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+          )
+          .innerJoin(room, eq(room.id, instrumentAsset.roomId))
           .where(
             and(
-              eq(toolAsset.assetCode, input.equipmentCode),
-              eq(toolAsset.active, true),
+              eq(instrumentUnit.code, input.equipmentCode),
+              eq(instrumentUnit.active, true),
             ),
           )
           .limit(1);
 
-        if (tolRow) {
-          assetRow = { ...tolRow, type: "TOOL" };
+        if (insUnitRow) {
+          assetRow = { ...insUnitRow, type: "INSTRUMENT" };
+        } else {
+          const [tolRow] = await tx
+            .select({
+              id: toolAsset.id,
+              assetCode: toolAsset.assetCode,
+              name: toolType.name,
+              roomId: toolAsset.roomId,
+              roomName: room.name,
+            })
+            .from(toolAsset)
+            .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
+            .innerJoin(room, eq(room.id, toolAsset.roomId))
+            .where(
+              and(
+                eq(toolAsset.assetCode, input.equipmentCode),
+                eq(toolAsset.active, true),
+              ),
+            )
+            .limit(1);
+
+          if (tolRow) {
+            assetRow = { ...tolRow, type: "TOOL" };
+          } else {
+            const [tolUnitRow] = await tx
+              .select({
+                id: toolAsset.id,
+                assetCode: toolAsset.assetCode,
+                name: toolType.name,
+                roomId: toolAsset.roomId,
+                roomName: room.name,
+              })
+              .from(toolUnit)
+              .innerJoin(toolAsset, eq(toolAsset.id, toolUnit.toolAssetId))
+              .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
+              .innerJoin(room, eq(room.id, toolAsset.roomId))
+              .where(
+                and(
+                  eq(toolUnit.code, input.equipmentCode),
+                  eq(toolUnit.active, true),
+                ),
+              )
+              .limit(1);
+
+            if (tolUnitRow) {
+              assetRow = { ...tolUnitRow, type: "TOOL" };
+            }
+          }
         }
       }
 

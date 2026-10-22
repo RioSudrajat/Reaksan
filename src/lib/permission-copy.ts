@@ -30,6 +30,7 @@ export const resourceLabels: Record<string, string> = {
   notes: "Catatan",
   user: "Akun pengguna",
   session: "Sesi login",
+  waste: "Pengelolaan limbah B3",
 };
 
 // The edits admins can make. Better Auth's own account-security resources
@@ -49,6 +50,7 @@ export const editableResources = [
   "configuration",
   "audit",
   "notes",
+  "waste",
 ] as const;
 
 export const permissionGroups: Array<{
@@ -64,6 +66,7 @@ export const permissionGroups: Array<{
       "history",
       "incidents",
       "plp",
+      "waste",
     ],
   },
   {
@@ -109,6 +112,10 @@ const actionLabels: Record<string, Record<string, string>> = {
   notes: {
     "read-any": "Melihat catatan semua akun",
     "delete-any": "Menghapus catatan siapa pun",
+  },
+  waste: {
+    "read-any": "Melihat daftar wadah dan riwayat limbah",
+    "manage-any": "Mengelola wadah jerigen dan verifikasi limbah",
   },
   user: {
     create: "Membuat akun pengguna",

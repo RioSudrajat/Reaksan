@@ -68,6 +68,7 @@ const jsonLd = {
       "@id": "https://reaksan.vercel.app/#website",
       url: "https://reaksan.vercel.app",
       name: "Reaksan Unpad",
+      alternateName: ["Reaksan", "Reaksan FMIPA Unpad"],
       description:
         "Portal resmi Sistem Manajemen Laboratorium Terpadu Kimia FMIPA Unpad",
       publisher: {
@@ -115,9 +116,9 @@ export default function Home() {
       </header>
 
       {/* Main Hero Section */}
-      <main className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-8 lg:py-16 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center flex-1">
+      <main className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-6 sm:py-8 lg:py-16 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 items-center flex-1">
         {/* Left Column: Description & Direct Access */}
-        <div className="lg:col-span-6 flex flex-col items-start gap-6 lg:pr-4">
+        <div className="lg:col-span-6 flex flex-col items-start gap-5 sm:gap-6 lg:pr-4">
           {/* Institutional Header - Clean Typographic Kicker (No Pill Badge) */}
           <div className="flex items-center gap-3">
             <span
@@ -130,12 +131,12 @@ export default function Home() {
           </div>
 
           {/* Heading */}
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#212121] tracking-tight leading-[1.18]">
+          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-[#212121] tracking-tight leading-[1.2]">
             Sistem Manajemen Laboratorium Terpadu Kimia
           </h1>
 
           {/* Main Description */}
-          <p className="text-base sm:text-lg text-[#6B6B6B] leading-relaxed">
+          <p className="text-sm sm:text-base lg:text-lg text-[#6B6B6B] leading-relaxed">
             Reaksan Unpad adalah sebuah sistem manajemen laboratorium terpadu
             Departemen Kimia Universitas Padjadjaran yang dirancang untuk
             mempermudah civitas akademika dalam peminjaman ruang laboratorium
@@ -143,8 +144,18 @@ export default function Home() {
             bahan kimia secara digital, tertib, dan transparan.
           </p>
 
-          {/* Role Feature Pills */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full pt-1">
+          {/* Mobile Chemistry Lab Illustration (replaces role cards on mobile) */}
+          <div className="w-full flex justify-center items-center lg:hidden py-1">
+            <div className="w-full max-w-[340px] sm:max-w-[420px] drop-shadow-xs">
+              <LandingLabIllustration
+                idPrefix="mobile-lab"
+                className="w-full h-auto"
+              />
+            </div>
+          </div>
+
+          {/* Role Feature Pills (Desktop) */}
+          <div className="hidden lg:grid grid-cols-3 gap-3 w-full pt-1">
             <div className="p-3.5 rounded-xl bg-white border border-[#E1E1E1] shadow-2xs flex flex-col gap-1.5 transition-all hover:border-[#F9B129]/60">
               <div className="flex items-center gap-2 text-xs font-bold text-[#212121]">
                 <div className="w-6 h-6 rounded-md bg-[#FEF1CC] flex items-center justify-center text-[#8D6500]">
@@ -183,25 +194,28 @@ export default function Home() {
           </div>
 
           {/* Primary CTA Button */}
-          <div className="pt-3 flex flex-wrap items-center gap-4">
+          <div className="pt-2 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
             <Link
               href="/sign-in"
-              className="inline-flex items-center gap-3 px-8 py-3.5 rounded-full bg-[#F9B129] text-[#212121] font-bold shadow-md hover:bg-[#E5A020] hover:shadow-lg active:scale-95 transition-all text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9B129] focus-visible:ring-offset-2"
+              className="inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-full bg-[#F9B129] text-[#212121] font-bold shadow-md hover:bg-[#E5A020] hover:shadow-lg active:scale-95 transition-all text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9B129] focus-visible:ring-offset-2 w-full sm:w-auto"
             >
               <span>Masuk ke Sistem Reaksan</span>
               <ArrowRight className="w-5 h-5" />
             </Link>
 
-            <span className="text-xs text-[#6B6B6B] font-medium">
+            <span className="text-xs text-[#6B6B6B] font-medium text-center sm:text-left">
               Gunakan SSO Unpad atau akun terdaftar
             </span>
           </div>
         </div>
 
-        {/* Right Column: Hero Chemistry Lab Vector Illustration */}
-        <div className="lg:col-span-6 flex justify-center items-center">
+        {/* Right Column: Hero Chemistry Lab Vector Illustration (Desktop) */}
+        <div className="hidden lg:flex lg:col-span-6 justify-center items-center">
           <div className="w-full max-w-[580px] drop-shadow-sm">
-            <LandingLabIllustration className="w-full h-auto" />
+            <LandingLabIllustration
+              idPrefix="desktop-lab"
+              className="w-full h-auto"
+            />
           </div>
         </div>
       </main>

@@ -22,6 +22,7 @@ export const statement = {
   assignments: ["manage-any"],
   configuration: ["manage-any"],
   audit: ["read-any"],
+  waste: ["read-any", "manage-any"],
 } as const;
 
 export const ac = createAccessControl(statement);
@@ -49,6 +50,7 @@ export const roles = {
     schedule: ["read-any"],
     history: ["read-any"],
     incidents: ["read-any", "assess-any", "resolve-any"],
+    waste: ["read-any", "manage-any"],
   }),
   admin: ac.newRole({
     ...adminAc.statements,
@@ -66,6 +68,7 @@ export const roles = {
     assignments: ["manage-any"],
     configuration: ["manage-any"],
     audit: ["read-any"],
+    waste: ["read-any", "manage-any"],
   }),
 } as const;
 

@@ -388,7 +388,8 @@ export function RoomDetailPage({
           </Link>
         </div>
       </section>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+      {/* KPI Cards: Hidden on mobile, visible on desktop */}
+      <div className="hidden lg:grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         {[
           [
             "Total Unit",
@@ -1550,10 +1551,8 @@ export function IncidentFormPage({
   userName: string;
 }) {
   const router = useRouter();
-  const [equipmentCode, setEquipmentCode] = useState(
-    catalog.equipment[0]?.id ?? "",
-  );
-  const [roomCode, setRoomCode] = useState(catalog.rooms[0]?.id ?? "");
+  const [equipmentCode, setEquipmentCode] = useState("");
+  const [roomCode, setRoomCode] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [severity, setSeverity] = useState("MEDIUM");
@@ -1565,6 +1564,14 @@ export function IncidentFormPage({
   const selectedAsset = catalog.equipment.find(
     (asset) => asset.id === equipmentCode,
   );
+
+  const handleEquipmentChange = (newEquipmentId: string) => {
+    setEquipmentCode(newEquipmentId);
+    const asset = catalog.equipment.find((a) => a.id === newEquipmentId);
+    if (asset?.roomId) {
+      setRoomCode(asset.roomId);
+    }
+  };
 
   if (submitted) {
     return (
@@ -1670,7 +1677,7 @@ export function IncidentFormPage({
               Instrumen / Alat Terkait
               <select
                 value={equipmentCode}
-                onChange={(event) => setEquipmentCode(event.target.value)}
+                onChange={(event) => handleEquipmentChange(event.target.value)}
                 className="mt-2 h-11 w-full rounded-xl border border-[#E2E8F0] bg-white px-3 text-[12px] text-[#1E293B] outline-none focus:border-[#F9B129]"
               >
                 <option value="">Tidak terkait instrumen tertentu</option>

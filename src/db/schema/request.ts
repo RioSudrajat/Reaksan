@@ -44,6 +44,13 @@ export const resourceRequest = pgTable(
     rejectionReason: text("rejection_reason"),
     submittedAt: timestamp("submitted_at", { withTimezone: true }),
     approvedAt: timestamp("approved_at", { withTimezone: true }),
+    returnSubmission: jsonb("return_submission"),
+    returnSubmittedAt: timestamp("return_submitted_at", { withTimezone: true }),
+    returnConfirmedAt: timestamp("return_confirmed_at", { withTimezone: true }),
+    returnConfirmedById: text("return_confirmed_by_id").references(
+      () => user.id,
+    ),
+    returnRejectionReason: text("return_rejection_reason"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

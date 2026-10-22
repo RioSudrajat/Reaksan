@@ -20,6 +20,7 @@ import { db } from "@/db";
 import {
   activity,
   auditLog,
+  incident,
   instrumentAsset,
   instrumentConditionHistory,
   instrumentRequestItem,
@@ -41,6 +42,8 @@ import {
   toolType,
   toolUnit,
   user,
+  wasteContainer,
+  wasteDisposalLog,
 } from "@/db/schema";
 import type { DbExecutor } from "@/services/executor";
 import { nextYearlyCode } from "@/services/code-sequence";
@@ -56,7 +59,12 @@ import {
   recordStockTransaction,
   stockTotalsForMaterial,
 } from "@/services/stock.service";
-import type { CreateRequestInput } from "@/validators/requests";
+import type {
+  CreateRequestInput,
+  StudentReturnInput,
+  ConfirmReturnInput,
+  RejectReturnInput,
+} from "@/validators/requests";
 
 export type EquipmentItemDto = {
   id: string;
@@ -107,6 +115,11 @@ export type RequestDto = {
   materials: MaterialItemDto[];
   issuedAt: string | null;
   returnedAt: string | null;
+  returnSubmission?: StudentReturnInput | null;
+  returnSubmittedAt?: string | null;
+  returnConfirmedAt?: string | null;
+  returnConfirmedById?: string | null;
+  returnRejectionReason?: string | null;
 };
 
 export type ReservationDto = {
@@ -505,10 +518,16 @@ export async function loadRequestDtos(
       rejectionReason: resourceRequest.rejectionReason,
       submittedAt: resourceRequest.submittedAt,
       approvedAt: resourceRequest.approvedAt,
+      returnSubmission: resourceRequest.returnSubmission,
+      returnSubmittedAt: resourceRequest.returnSubmittedAt,
+      returnConfirmedAt: resourceRequest.returnConfirmedAt,
+      returnConfirmedById: resourceRequest.returnConfirmedById,
+      returnRejectionReason: resourceRequest.returnRejectionReason,
       createdAt: resourceRequest.createdAt,
       studentId: resourceRequest.studentId,
       activityId: activity.id,
       activityTitle: activity.title,
+      roomId: room.id,
       roomCode: room.code,
       roomName: room.name,
       actorName: user.name,
@@ -643,7 +662,7 @@ export async function loadRequestDtos(
     status: row.status,
     activityId: row.activityId,
     activityTitle: row.activityTitle,
-    roomId: row.roomCode,
+    roomId: row.roomId,
     roomCode: row.roomCode,
     roomName: row.roomName,
     startAt: row.startAt.toISOString(),
@@ -690,6 +709,12 @@ export async function loadRequestDtos(
         .filter((item) => item.requestId === row.id)
         .at(-1)
         ?.returnedAt.toISOString() ?? null,
+    returnSubmission:
+      (row.returnSubmission as StudentReturnInput | null) ?? null,
+    returnSubmittedAt: row.returnSubmittedAt?.toISOString() ?? null,
+    returnConfirmedAt: row.returnConfirmedAt?.toISOString() ?? null,
+    returnConfirmedById: row.returnConfirmedById ?? null,
+    returnRejectionReason: row.returnRejectionReason ?? null,
   }));
 }
 
@@ -1461,6 +1486,51 @@ export async function completeRequest(
           inArray(reservation.status, [...conflictStatuses]),
         ),
       );
+
+    // If request was never issued, release any active material reservations so stock is freed
+    const [hasIssues] = await tx
+      .select({ id: issueTransaction.id })
+      .from(issueTransaction)
+      .where(eq(issueTransaction.requestId, requestId))
+      .limit(1);
+
+    if (!hasIssues) {
+      const reservedStockRows = await tx
+        .select({
+          batchId: stockTransaction.materialBatchId,
+          quantity: stockTransaction.quantity,
+        })
+        .from(stockTransaction)
+        .where(
+          and(
+            eq(stockTransaction.referenceType, "resource_request"),
+            eq(stockTransaction.referenceId, requestId),
+            eq(stockTransaction.type, "RESERVE"),
+          ),
+        );
+      for (const row of reservedStockRows) {
+        const [batch] = await tx
+          .select({ id: materialBatch.id, quantity: materialBatch.quantity })
+          .from(materialBatch)
+          .where(eq(materialBatch.id, row.batchId))
+          .limit(1);
+        if (batch) {
+          const qty = Number(row.quantity);
+          const currentQty = Number(batch.quantity);
+          await recordStockTransaction(tx, {
+            batchId: batch.id,
+            type: "RELEASE",
+            quantity: qty,
+            before: currentQty,
+            after: currentQty,
+            referenceType: "resource_request",
+            referenceId: requestId,
+            performedById: actorId,
+            reason: `Request ${request.code} diselesaikan (alat & bahan tidak diambil)`,
+          });
+        }
+      }
+    }
 
     await tx
       .update(resourceRequest)
@@ -2464,6 +2534,45 @@ export async function returnRequest(
   input: {
     condition: "GOOD" | "MINOR_ISSUE" | "DAMAGED" | "UNKNOWN";
     notes: string;
+    unitConditions?: Array<{
+      unitId?: string;
+      unitCode: string;
+      unitName?: string;
+      condition: "GOOD" | "MINOR_ISSUE" | "DAMAGED" | "UNKNOWN";
+      notes?: string;
+    }>;
+    unitStatuses?: Array<{
+      unitId?: string;
+      unitCode?: string;
+      status: "AVAILABLE" | "MAINTENANCE";
+      notes?: string;
+    }>;
+    incident?: {
+      title: string;
+      description: string;
+      severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+      equipmentCode?: string;
+    };
+    incidents?: Array<{
+      title: string;
+      description: string;
+      severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+      equipmentCode?: string;
+    }>;
+    waste?: {
+      containerId: string;
+      chemicalDescription: string;
+      quantity: number;
+      unit: string;
+      notes?: string;
+    };
+    wastes?: Array<{
+      containerId: string;
+      chemicalDescription: string;
+      quantity: number;
+      unit: string;
+      notes?: string;
+    }>;
   },
 ) {
   return db.transaction(async (tx) => {
@@ -2475,14 +2584,139 @@ export async function returnRequest(
       .for("update");
     if (!request) throw new ApiError(404, "NOT_FOUND", "Request not found.");
     if (request.status !== "ACTIVE" && request.status !== "OVERDUE")
-      throw new ApiError(409, "INVALID_STATE", "Request belum aktif.");
+      throw new ApiError(
+        409,
+        "INVALID_STATE",
+        "Request belum aktif atau sudah selesai.",
+      );
 
+    // 1. Process Waste Logs (if recorded by PLP)
+    const wasteList =
+      input.wastes && input.wastes.length > 0
+        ? input.wastes
+        : input.waste
+          ? [input.waste]
+          : [];
+
+    for (const w of wasteList) {
+      const [container] = await tx
+        .select()
+        .from(wasteContainer)
+        .where(eq(wasteContainer.id, w.containerId))
+        .limit(1);
+
+      if (!container) {
+        throw new ApiError(
+          404,
+          "NOT_FOUND",
+          "Wadah limbah yang dipilih tidak ditemukan.",
+        );
+      }
+
+      const currentVol = Number(container.currentVolume);
+      const maxCap = Number(container.maxCapacity);
+      const remaining = Math.max(0, maxCap - currentVol);
+
+      if (w.quantity > remaining + 0.001) {
+        throw new ApiError(
+          422,
+          "WASTE_CAPACITY_EXCEEDED",
+          `Jumlah limbah (${w.quantity} ${w.unit || "L"}) melebihi sisa kapasitas wadah ${container.code} (${remaining.toFixed(2)} ${container.unit}).`,
+        );
+      }
+
+      const year = new Date().getFullYear();
+      const code = `WLOG-${year}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      await tx.insert(wasteDisposalLog).values({
+        code,
+        containerId: w.containerId,
+        requestId,
+        studentId: request.studentId,
+        quantity: w.quantity.toFixed(2),
+        unit: w.unit || container.unit || "L",
+        chemicalDescription: w.chemicalDescription,
+        notes: w.notes || null,
+        status: "VERIFIED",
+        verifiedById: actorId,
+        verifiedAt: new Date(),
+      });
+
+      // Update container capacity
+      const newVol = (currentVol + w.quantity).toFixed(2);
+      const isFull = Number(newVol) >= maxCap * 0.95;
+      await tx
+        .update(wasteContainer)
+        .set({
+          currentVolume: newVol,
+          status: isFull ? "FULL" : container.status,
+        })
+        .where(eq(wasteContainer.id, w.containerId));
+    }
+
+    // 2. Process Incident Reports (if recorded by PLP)
+    const incidentList =
+      input.incidents && input.incidents.length > 0
+        ? input.incidents
+        : input.incident
+          ? [input.incident]
+          : [];
+
+    for (const inc of incidentList) {
+      const year = new Date().getFullYear();
+      const code = `INC-${year}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+      let insAssetId: string | null = null;
+      let toolAssetId: string | null = null;
+
+      if (inc.equipmentCode) {
+        const [insRow] = await tx
+          .select({ assetId: instrumentAsset.id })
+          .from(instrumentUnit)
+          .innerJoin(
+            instrumentAsset,
+            eq(instrumentAsset.id, instrumentUnit.instrumentAssetId),
+          )
+          .where(eq(instrumentUnit.code, inc.equipmentCode))
+          .limit(1);
+
+        if (insRow) {
+          insAssetId = insRow.assetId;
+        } else {
+          const [toolRow] = await tx
+            .select({ assetId: toolAsset.id })
+            .from(toolUnit)
+            .innerJoin(toolAsset, eq(toolAsset.id, toolUnit.toolAssetId))
+            .where(eq(toolUnit.code, inc.equipmentCode))
+            .limit(1);
+          if (toolRow) {
+            toolAssetId = toolRow.assetId;
+          }
+        }
+      }
+
+      await tx.insert(incident).values({
+        code,
+        roomId: request.roomId,
+        requestId,
+        reporterId: actorId,
+        instrumentAssetId: insAssetId,
+        toolAssetId: toolAssetId,
+        title: inc.title,
+        description: inc.description,
+        severity: inc.severity,
+        status: "REPORTED",
+        occurredAt: new Date(),
+      });
+    }
+
+    // 3. Process Equipment & Tools return
     const [instrumentIssues, toolIssues] = await Promise.all([
       tx
         .select({
           id: issueTransaction.id,
           assetId: issueTransaction.instrumentAssetId,
           unitId: issueTransaction.instrumentUnitId,
+          unitCode: instrumentUnit.code,
           issuedToId: issueTransaction.issuedToId,
           kind: sql<"INSTRUMENT">`'INSTRUMENT'`,
         })
@@ -2494,6 +2728,10 @@ export async function returnRequest(
         .innerJoin(
           instrumentType,
           eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+        )
+        .leftJoin(
+          instrumentUnit,
+          eq(instrumentUnit.id, issueTransaction.instrumentUnitId),
         )
         .leftJoin(
           returnTransaction,
@@ -2512,12 +2750,14 @@ export async function returnRequest(
           id: issueTransaction.id,
           assetId: issueTransaction.toolAssetId,
           unitId: issueTransaction.toolUnitId,
+          unitCode: toolUnit.code,
           issuedToId: issueTransaction.issuedToId,
           kind: sql<"TOOL">`'TOOL'`,
         })
         .from(issueTransaction)
         .innerJoin(toolAsset, eq(toolAsset.id, issueTransaction.toolAssetId))
         .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
+        .leftJoin(toolUnit, eq(toolUnit.id, issueTransaction.toolUnitId))
         .leftJoin(
           returnTransaction,
           eq(returnTransaction.issueTransactionId, issueTransaction.id),
@@ -2531,15 +2771,21 @@ export async function returnRequest(
           ),
         ),
     ]);
+
     const issues = [...instrumentIssues, ...toolIssues];
-    if (issues.length === 0)
-      throw new ApiError(
-        409,
-        "NOTHING_TO_RETURN",
-        "Tidak ada equipment borrowable yang masih dipinjam. Gunakan Selesaikan penggunaan untuk equipment usage-only.",
-      );
+
     for (const issue of issues) {
       if (!issue.assetId) continue;
+      const unitOverride = input.unitStatuses?.find(
+        (u) =>
+          (u.unitId && u.unitId === issue.unitId) ||
+          (u.unitCode && issue.unitCode && u.unitCode === issue.unitCode),
+      );
+      const conditionAtReturn =
+        unitOverride?.status === "MAINTENANCE"
+          ? "MINOR_ISSUE"
+          : input.condition;
+
       if (issue.kind === "INSTRUMENT") {
         await tx.insert(returnTransaction).values({
           issueTransactionId: issue.id,
@@ -2547,26 +2793,8 @@ export async function returnRequest(
           instrumentUnitId: issue.unitId ?? null,
           returnedById: issue.issuedToId,
           receivedById: actorId,
-          conditionAtReturn: input.condition,
-          notes: input.notes || null,
-        });
-        await tx
-          .update(instrumentAsset)
-          .set({ condition: input.condition })
-          .where(eq(instrumentAsset.id, issue.assetId));
-        if (issue.unitId) {
-          await tx
-            .update(instrumentUnit)
-            .set({ status: "UNDER_INSPECTION", condition: input.condition })
-            .where(eq(instrumentUnit.id, issue.unitId));
-        }
-        await tx.insert(instrumentConditionHistory).values({
-          instrumentAssetId: issue.assetId,
-          instrumentUnitId: issue.unitId ?? null,
-          condition: input.condition,
-          source: "RETURN",
-          recordedById: actorId,
-          notes: input.notes || null,
+          conditionAtReturn,
+          notes: unitOverride?.notes || input.notes || null,
         });
       } else {
         await tx.insert(returnTransaction).values({
@@ -2575,70 +2803,970 @@ export async function returnRequest(
           toolUnitId: issue.unitId ?? null,
           returnedById: issue.issuedToId,
           receivedById: actorId,
-          conditionAtReturn: input.condition,
-          notes: input.notes || null,
-        });
-        await tx
-          .update(toolAsset)
-          .set({ condition: input.condition })
-          .where(eq(toolAsset.id, issue.assetId));
-        if (issue.unitId) {
-          await tx
-            .update(toolUnit)
-            .set({ status: "UNDER_INSPECTION", condition: input.condition })
-            .where(eq(toolUnit.id, issue.unitId));
-        }
-        await tx.insert(toolConditionHistory).values({
-          toolAssetId: issue.assetId,
-          toolUnitId: issue.unitId ?? null,
-          condition: input.condition,
-          source: "RETURN",
-          recordedById: actorId,
-          notes: input.notes || null,
+          conditionAtReturn,
+          notes: unitOverride?.notes || input.notes || null,
         });
       }
     }
-    // The borrowable reservation closes at return; completeRequest still finds
-    // the unit through its return transaction for the inspection result.
-    const returnedUnitIds = issues
-      .map((issue) => issue.unitId)
-      .filter((unitId): unitId is string => Boolean(unitId));
-    if (returnedUnitIds.length > 0)
-      await tx
-        .update(reservation)
-        .set({ status: "COMPLETED" })
+
+    // 4. Update Reservations & Unit Statuses
+    const [instrumentResRows, toolResRows] = await Promise.all([
+      tx
+        .select({
+          id: reservation.id,
+          unitId: reservation.instrumentUnitId,
+          assetId: reservation.instrumentAssetId,
+          unitCode: instrumentUnit.code,
+          kind: sql<"INSTRUMENT">`'INSTRUMENT'`,
+        })
+        .from(reservation)
+        .leftJoin(
+          instrumentUnit,
+          eq(instrumentUnit.id, reservation.instrumentUnitId),
+        )
         .where(
           and(
             eq(reservation.requestId, requestId),
-            inArray(reservation.status, [...conflictStatuses]),
-            or(
-              inArray(reservation.instrumentUnitId, returnedUnitIds),
-              inArray(reservation.toolUnitId, returnedUnitIds),
-            ),
+            isNotNull(reservation.instrumentUnitId),
+            isNotNull(reservation.instrumentAssetId),
           ),
-        );
+        ),
+      tx
+        .select({
+          id: reservation.id,
+          unitId: reservation.toolUnitId,
+          assetId: reservation.toolAssetId,
+          unitCode: toolUnit.code,
+          kind: sql<"TOOL">`'TOOL'`,
+        })
+        .from(reservation)
+        .leftJoin(toolUnit, eq(toolUnit.id, reservation.toolUnitId))
+        .where(
+          and(
+            eq(reservation.requestId, requestId),
+            isNotNull(reservation.toolUnitId),
+            isNotNull(reservation.toolAssetId),
+          ),
+        ),
+    ]);
+
+    await tx
+      .update(reservation)
+      .set({ status: "COMPLETED" })
+      .where(
+        and(
+          eq(reservation.requestId, requestId),
+          inArray(reservation.status, [...conflictStatuses]),
+        ),
+      );
+
+    const targetUnits = new Map<
+      string,
+      {
+        unitId: string;
+        assetId: string;
+        unitCode: string | null;
+        kind: "INSTRUMENT" | "TOOL";
+      }
+    >();
+    for (const row of [...instrumentResRows, ...toolResRows]) {
+      if (row.unitId && row.assetId) {
+        targetUnits.set(row.unitId, {
+          unitId: row.unitId,
+          assetId: row.assetId,
+          unitCode: row.unitCode ?? null,
+          kind: row.kind,
+        });
+      }
+    }
+    for (const issue of issues) {
+      if (issue.unitId && issue.assetId && !targetUnits.has(issue.unitId)) {
+        targetUnits.set(issue.unitId, {
+          unitId: issue.unitId,
+          assetId: issue.assetId,
+          unitCode: issue.unitCode ?? null,
+          kind: issue.kind,
+        });
+      }
+    }
+
+    for (const target of targetUnits.values()) {
+      const unitOverride = input.unitStatuses?.find(
+        (u) =>
+          (u.unitId && u.unitId === target.unitId) ||
+          (u.unitCode && target.unitCode && u.unitCode === target.unitCode),
+      );
+      const nextStatus = unitOverride?.status ?? "AVAILABLE";
+      const unitCondition =
+        nextStatus === "MAINTENANCE" ? "MINOR_ISSUE" : "GOOD";
+
+      if (target.kind === "INSTRUMENT") {
+        await tx
+          .update(instrumentUnit)
+          .set({ status: nextStatus, condition: unitCondition })
+          .where(eq(instrumentUnit.id, target.unitId));
+
+        await tx.insert(instrumentConditionHistory).values({
+          instrumentAssetId: target.assetId,
+          instrumentUnitId: target.unitId,
+          condition: unitCondition,
+          source: "PLP_INSPECTION",
+          recordedById: actorId,
+          notes:
+            unitOverride?.notes ||
+            input.notes ||
+            "Pengembalian dicatat manual oleh PLP",
+        });
+
+        const remainingBusy = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(instrumentUnit)
+          .where(
+            and(
+              eq(instrumentUnit.instrumentAssetId, target.assetId),
+              inArray(instrumentUnit.status, [
+                "RESERVED",
+                "IN_USE",
+                "UNDER_INSPECTION",
+              ]),
+            ),
+          );
+        if ((remainingBusy[0]?.count ?? 0) === 0) {
+          const attention = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(instrumentUnit)
+            .where(
+              and(
+                eq(instrumentUnit.instrumentAssetId, target.assetId),
+                inArray(instrumentUnit.status, ["MAINTENANCE", "DAMAGED"]),
+              ),
+            );
+          await tx
+            .update(instrumentAsset)
+            .set({
+              status:
+                (attention[0]?.count ?? 0) > 0 ? "MAINTENANCE" : "AVAILABLE",
+            })
+            .where(eq(instrumentAsset.id, target.assetId));
+        }
+      } else {
+        await tx
+          .update(toolUnit)
+          .set({ status: nextStatus, condition: unitCondition })
+          .where(eq(toolUnit.id, target.unitId));
+
+        await tx.insert(toolConditionHistory).values({
+          toolAssetId: target.assetId,
+          toolUnitId: target.unitId,
+          condition: unitCondition,
+          source: "PLP_INSPECTION",
+          recordedById: actorId,
+          notes:
+            unitOverride?.notes ||
+            input.notes ||
+            "Pengembalian dicatat manual oleh PLP",
+        });
+
+        const remainingBusy = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(toolUnit)
+          .where(
+            and(
+              eq(toolUnit.toolAssetId, target.assetId),
+              inArray(toolUnit.status, [
+                "RESERVED",
+                "IN_USE",
+                "UNDER_INSPECTION",
+              ]),
+            ),
+          );
+        if ((remainingBusy[0]?.count ?? 0) === 0) {
+          const attention = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(toolUnit)
+            .where(
+              and(
+                eq(toolUnit.toolAssetId, target.assetId),
+                inArray(toolUnit.status, ["MAINTENANCE", "DAMAGED"]),
+              ),
+            );
+          await tx
+            .update(toolAsset)
+            .set({
+              status:
+                (attention[0]?.count ?? 0) > 0 ? "MAINTENANCE" : "AVAILABLE",
+            })
+            .where(eq(toolAsset.id, target.assetId));
+        }
+      }
+    }
+
+    const now = new Date();
+    const submissionData = {
+      condition: input.condition,
+      notes: input.notes,
+      unitConditions: input.unitConditions,
+      incidents: incidentList,
+      wastes: wasteList,
+    };
 
     await tx
       .update(resourceRequest)
-      .set({ status: "RETURNED" })
+      .set({
+        status: "COMPLETED",
+        returnSubmission: submissionData,
+        returnSubmittedAt: now,
+        returnConfirmedAt: now,
+        returnConfirmedById: actorId,
+        completedAt: now,
+      })
       .where(eq(resourceRequest.id, requestId));
+
     await createNotification(tx, {
       recipientId: request.studentId,
-      type: "EQUIPMENT_RETURNED",
-      title: "Resource dikembalikan",
-      message: `${request.code} sudah dikembalikan dan menunggu inspeksi.`,
+      type: "REQUEST_COMPLETED",
+      title: "Sesi diselesaikan oleh PLP",
+      message: `${request.code} telah diselesaikan dan diperiksa langsung oleh PLP laboratorium.`,
       referenceType: "resource_request",
       referenceId: requestId,
     });
+
     await writeAudit(tx, {
       actorId,
+      action: "COMPLETE",
+      entityType: "resource_request",
+      entityId: requestId,
+      before: { status: request.status },
+      after: { status: "COMPLETED" },
+      reason:
+        input.notes ||
+        "Pengembalian dan penyelesaian dicatat langsung oleh operator PLP.",
+    });
+
+    return loadRequestDto(tx, requestId);
+  });
+}
+
+export async function submitStudentReturn(
+  userId: string,
+  requestId: string,
+  input: StudentReturnInput,
+) {
+  return db.transaction(async (tx) => {
+    const [request] = await tx
+      .select({
+        id: resourceRequest.id,
+        code: resourceRequest.code,
+        title: resourceRequest.title,
+        status: resourceRequest.status,
+        studentId: resourceRequest.studentId,
+        roomId: resourceRequest.roomId,
+      })
+      .from(resourceRequest)
+      .where(eq(resourceRequest.id, requestId))
+      .limit(1)
+      .for("update");
+
+    if (!request) {
+      throw new ApiError(404, "NOT_FOUND", "Request tidak ditemukan.");
+    }
+    if (request.studentId !== userId) {
+      throw new ApiError(403, "FORBIDDEN", "Anda bukan pemilik request ini.");
+    }
+    if (request.status !== "ACTIVE" && request.status !== "OVERDUE") {
+      throw new ApiError(
+        409,
+        "INVALID_STATE",
+        "Pengembalian hanya bisa diajukan saat request aktif atau lewat tenggat.",
+      );
+    }
+
+    const wasteList =
+      input.wastes && input.wastes.length > 0
+        ? input.wastes
+        : input.waste
+          ? [input.waste]
+          : [];
+
+    for (const w of wasteList) {
+      const [container] = await tx
+        .select()
+        .from(wasteContainer)
+        .where(eq(wasteContainer.id, w.containerId))
+        .limit(1);
+
+      if (!container) {
+        throw new ApiError(
+          404,
+          "NOT_FOUND",
+          "Wadah limbah yang dipilih tidak ditemukan.",
+        );
+      }
+
+      if (
+        container.status === "SEALED" ||
+        container.status === "ARCHIVED" ||
+        !container.active
+      ) {
+        throw new ApiError(
+          422,
+          "CONTAINER_NOT_ACTIVE",
+          `Wadah ${container.code} (${container.name}) sudah disegel atau tidak aktif. Silakan pilih wadah lain.`,
+        );
+      }
+
+      const currentVol = Number(container.currentVolume);
+      const maxCap = Number(container.maxCapacity);
+      const remaining = Math.max(0, maxCap - currentVol);
+
+      if (w.quantity > remaining + 0.001) {
+        throw new ApiError(
+          422,
+          "WASTE_CAPACITY_EXCEEDED",
+          `Jumlah limbah (${w.quantity} ${w.unit || "L"}) melebihi sisa kapasitas wadah ${container.code} (${remaining.toFixed(2)} ${container.unit}). Silakan kurangi volume pada wadah ini atau bagi ke wadah lain.`,
+        );
+      }
+
+      const year = new Date().getFullYear();
+      const code = `WLOG-${year}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      await tx.insert(wasteDisposalLog).values({
+        code,
+        containerId: w.containerId,
+        requestId,
+        studentId: userId,
+        quantity: w.quantity.toFixed(2),
+        unit: w.unit || container.unit || "L",
+        chemicalDescription: w.chemicalDescription,
+        notes: w.notes || null,
+        status: "LOGGED",
+      });
+
+      // Reserve volume immediately to prevent overcommit across consecutive returns
+      const newVol = (currentVol + w.quantity).toFixed(2);
+      const isFull = Number(newVol) >= maxCap * 0.95;
+      await tx
+        .update(wasteContainer)
+        .set({
+          currentVolume: newVol,
+          status: isFull ? "FULL" : container.status,
+        })
+        .where(eq(wasteContainer.id, w.containerId));
+    }
+
+    const incidentList =
+      input.incidents && input.incidents.length > 0
+        ? input.incidents
+        : input.incident
+          ? [input.incident]
+          : [];
+
+    for (const inc of incidentList) {
+      const year = new Date().getFullYear();
+      const code = `INC-${year}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+      let insAssetId: string | null = null;
+      let toolAssetId: string | null = null;
+
+      if (inc.equipmentCode) {
+        const [insRow] = await tx
+          .select({ assetId: instrumentAsset.id })
+          .from(instrumentUnit)
+          .innerJoin(
+            instrumentAsset,
+            eq(instrumentAsset.id, instrumentUnit.instrumentAssetId),
+          )
+          .where(eq(instrumentUnit.code, inc.equipmentCode))
+          .limit(1);
+
+        if (insRow) {
+          insAssetId = insRow.assetId;
+        } else {
+          const [toolRow] = await tx
+            .select({ assetId: toolAsset.id })
+            .from(toolUnit)
+            .innerJoin(toolAsset, eq(toolAsset.id, toolUnit.toolAssetId))
+            .where(eq(toolUnit.code, inc.equipmentCode))
+            .limit(1);
+          if (toolRow) {
+            toolAssetId = toolRow.assetId;
+          }
+        }
+      }
+
+      await tx.insert(incident).values({
+        code,
+        roomId: request.roomId,
+        requestId,
+        reporterId: userId,
+        instrumentAssetId: insAssetId,
+        toolAssetId: toolAssetId,
+        title: inc.title,
+        description: inc.description,
+        severity: inc.severity,
+        status: "REPORTED",
+        occurredAt: new Date(),
+      });
+    }
+
+    const now = new Date();
+    await tx
+      .update(resourceRequest)
+      .set({
+        status: "RETURNED",
+        returnSubmission: input,
+        returnSubmittedAt: now,
+        returnRejectionReason: null,
+      })
+      .where(eq(resourceRequest.id, requestId));
+
+    const staffIds = await listStaffRecipients(tx, request.roomId);
+    if (staffIds.length > 0) {
+      await createNotifications(
+        tx,
+        staffIds.map((staffId) => ({
+          recipientId: staffId,
+          type: "EQUIPMENT_RETURNED",
+          title: "Pengembalian diajukan",
+          message: `${request.code} telah diajukan pengembalian oleh mahasiswa. Silakan periksa alat di lab dan konfirmasi.`,
+          referenceType: "resource_request",
+          referenceId: requestId,
+        })),
+      );
+    }
+
+    await writeAudit(tx, {
+      actorId: userId,
       action: "RETURN",
       entityType: "resource_request",
       entityId: requestId,
       before: { status: request.status },
       after: { status: "RETURNED" },
-      reason: input.notes || undefined,
+      reason:
+        input.notes || "Mahasiswa mengajukan pengembalian dan penyelesaian sesi.",
     });
+
+    return loadRequestDto(tx, requestId);
+  });
+}
+
+export async function confirmAndCompleteReturn(
+  actorId: string,
+  requestId: string,
+  input: ConfirmReturnInput,
+) {
+  return db.transaction(async (tx) => {
+    const [request] = await tx
+      .select()
+      .from(resourceRequest)
+      .where(eq(resourceRequest.id, requestId))
+      .limit(1)
+      .for("update");
+
+    if (!request) throw new ApiError(404, "NOT_FOUND", "Request not found.");
+    if (!["RETURNED", "ACTIVE", "OVERDUE"].includes(request.status)) {
+      throw new ApiError(
+        409,
+        "INVALID_STATE",
+        "Request tidak dalam status yang dapat dikonfirmasi/diselesaikan.",
+      );
+    }
+
+    const [instrumentIssues, toolIssues] = await Promise.all([
+      tx
+        .select({
+          id: issueTransaction.id,
+          assetId: issueTransaction.instrumentAssetId,
+          unitId: issueTransaction.instrumentUnitId,
+          unitCode: instrumentUnit.code,
+          issuedToId: issueTransaction.issuedToId,
+          kind: sql<"INSTRUMENT">`'INSTRUMENT'`,
+        })
+        .from(issueTransaction)
+        .innerJoin(
+          instrumentAsset,
+          eq(instrumentAsset.id, issueTransaction.instrumentAssetId),
+        )
+        .innerJoin(
+          instrumentType,
+          eq(instrumentType.id, instrumentAsset.instrumentTypeId),
+        )
+        .leftJoin(
+          instrumentUnit,
+          eq(instrumentUnit.id, issueTransaction.instrumentUnitId),
+        )
+        .leftJoin(
+          returnTransaction,
+          eq(returnTransaction.issueTransactionId, issueTransaction.id),
+        )
+        .where(
+          and(
+            eq(issueTransaction.requestId, requestId),
+            isNotNull(issueTransaction.instrumentAssetId),
+            isNull(returnTransaction.id),
+            eq(instrumentType.usageType, "BORROWABLE"),
+          ),
+        ),
+      tx
+        .select({
+          id: issueTransaction.id,
+          assetId: issueTransaction.toolAssetId,
+          unitId: issueTransaction.toolUnitId,
+          unitCode: toolUnit.code,
+          issuedToId: issueTransaction.issuedToId,
+          kind: sql<"TOOL">`'TOOL'`,
+        })
+        .from(issueTransaction)
+        .innerJoin(toolAsset, eq(toolAsset.id, issueTransaction.toolAssetId))
+        .innerJoin(toolType, eq(toolType.id, toolAsset.toolTypeId))
+        .leftJoin(toolUnit, eq(toolUnit.id, issueTransaction.toolUnitId))
+        .leftJoin(
+          returnTransaction,
+          eq(returnTransaction.issueTransactionId, issueTransaction.id),
+        )
+        .where(
+          and(
+            eq(issueTransaction.requestId, requestId),
+            isNotNull(issueTransaction.toolAssetId),
+            isNull(returnTransaction.id),
+            eq(toolType.usageType, "BORROWABLE"),
+          ),
+        ),
+    ]);
+
+    const issues = [...instrumentIssues, ...toolIssues];
+    const reportedCondition =
+      (request.returnSubmission as StudentReturnInput | null)?.condition ?? "GOOD";
+
+    for (const issue of issues) {
+      if (!issue.assetId) continue;
+      const unitOverride = input.unitStatuses?.find(
+        (u) =>
+          (u.unitId && u.unitId === issue.unitId) ||
+          (u.unitCode && issue.unitCode && u.unitCode === issue.unitCode),
+      );
+      const conditionAtReturn =
+        unitOverride?.status === "MAINTENANCE" ||
+        input.equipmentStatus === "MAINTENANCE"
+          ? "MINOR_ISSUE"
+          : reportedCondition;
+
+      if (issue.kind === "INSTRUMENT") {
+        await tx.insert(returnTransaction).values({
+          issueTransactionId: issue.id,
+          instrumentAssetId: issue.assetId,
+          instrumentUnitId: issue.unitId ?? null,
+          returnedById: issue.issuedToId,
+          receivedById: actorId,
+          conditionAtReturn: conditionAtReturn,
+          notes: unitOverride?.notes || input.notes || null,
+        });
+      } else {
+        await tx.insert(returnTransaction).values({
+          issueTransactionId: issue.id,
+          toolAssetId: issue.assetId,
+          toolUnitId: issue.unitId ?? null,
+          returnedById: issue.issuedToId,
+          receivedById: actorId,
+          conditionAtReturn: conditionAtReturn,
+          notes: unitOverride?.notes || input.notes || null,
+        });
+      }
+    }
+
+    const [instrumentResRows, toolResRows] = await Promise.all([
+      tx
+        .select({
+          id: reservation.id,
+          unitId: reservation.instrumentUnitId,
+          assetId: reservation.instrumentAssetId,
+          unitCode: instrumentUnit.code,
+          kind: sql<"INSTRUMENT">`'INSTRUMENT'`,
+        })
+        .from(reservation)
+        .leftJoin(
+          instrumentUnit,
+          eq(instrumentUnit.id, reservation.instrumentUnitId),
+        )
+        .where(
+          and(
+            eq(reservation.requestId, requestId),
+            isNotNull(reservation.instrumentUnitId),
+            isNotNull(reservation.instrumentAssetId),
+          ),
+        ),
+      tx
+        .select({
+          id: reservation.id,
+          unitId: reservation.toolUnitId,
+          assetId: reservation.toolAssetId,
+          unitCode: toolUnit.code,
+          kind: sql<"TOOL">`'TOOL'`,
+        })
+        .from(reservation)
+        .leftJoin(toolUnit, eq(toolUnit.id, reservation.toolUnitId))
+        .where(
+          and(
+            eq(reservation.requestId, requestId),
+            isNotNull(reservation.toolUnitId),
+            isNotNull(reservation.toolAssetId),
+          ),
+        ),
+    ]);
+
+    await tx
+      .update(reservation)
+      .set({ status: "COMPLETED" })
+      .where(
+        and(
+          eq(reservation.requestId, requestId),
+          inArray(reservation.status, [...conflictStatuses]),
+        ),
+      );
+
+    const targetUnits = new Map<
+      string,
+      {
+        unitId: string;
+        assetId: string;
+        unitCode: string | null;
+        kind: "INSTRUMENT" | "TOOL";
+      }
+    >();
+    for (const row of [...instrumentResRows, ...toolResRows]) {
+      if (row.unitId && row.assetId) {
+        targetUnits.set(row.unitId, {
+          unitId: row.unitId,
+          assetId: row.assetId,
+          unitCode: row.unitCode ?? null,
+          kind: row.kind,
+        });
+      }
+    }
+    for (const issue of issues) {
+      if (issue.unitId && issue.assetId && !targetUnits.has(issue.unitId)) {
+        targetUnits.set(issue.unitId, {
+          unitId: issue.unitId,
+          assetId: issue.assetId,
+          unitCode: issue.unitCode ?? null,
+          kind: issue.kind,
+        });
+      }
+    }
+
+    for (const target of targetUnits.values()) {
+      const unitOverride = input.unitStatuses?.find(
+        (u) =>
+          (u.unitId && u.unitId === target.unitId) ||
+          (u.unitCode && target.unitCode && u.unitCode === target.unitCode),
+      );
+      const nextStatus =
+        unitOverride?.status ?? input.equipmentStatus ?? "AVAILABLE";
+
+      if (target.kind === "INSTRUMENT") {
+        await tx
+          .update(instrumentUnit)
+          .set({
+            status: nextStatus,
+            condition: nextStatus === "MAINTENANCE" ? "MINOR_ISSUE" : "GOOD",
+          })
+          .where(eq(instrumentUnit.id, target.unitId));
+
+        await tx.insert(instrumentConditionHistory).values({
+          instrumentAssetId: target.assetId,
+          instrumentUnitId: target.unitId,
+          condition: nextStatus === "MAINTENANCE" ? "MINOR_ISSUE" : "GOOD",
+          source: "PLP_INSPECTION",
+          recordedById: actorId,
+          notes:
+            unitOverride?.notes ||
+            input.notes ||
+            "Inspeksi saat konfirmasi pengembalian",
+        });
+
+        const remainingBusy = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(instrumentUnit)
+          .where(
+            and(
+              eq(instrumentUnit.instrumentAssetId, target.assetId),
+              inArray(instrumentUnit.status, [
+                "RESERVED",
+                "IN_USE",
+                "UNDER_INSPECTION",
+              ]),
+            ),
+          );
+        if ((remainingBusy[0]?.count ?? 0) === 0) {
+          const attention = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(instrumentUnit)
+            .where(
+              and(
+                eq(instrumentUnit.instrumentAssetId, target.assetId),
+                inArray(instrumentUnit.status, ["MAINTENANCE", "DAMAGED"]),
+              ),
+            );
+          await tx
+            .update(instrumentAsset)
+            .set({
+              status:
+                (attention[0]?.count ?? 0) > 0 ? "MAINTENANCE" : "AVAILABLE",
+            })
+            .where(eq(instrumentAsset.id, target.assetId));
+        }
+      } else {
+        await tx
+          .update(toolUnit)
+          .set({
+            status: nextStatus,
+            condition: nextStatus === "MAINTENANCE" ? "MINOR_ISSUE" : "GOOD",
+          })
+          .where(eq(toolUnit.id, target.unitId));
+
+        await tx.insert(toolConditionHistory).values({
+          toolAssetId: target.assetId,
+          toolUnitId: target.unitId,
+          condition: nextStatus === "MAINTENANCE" ? "MINOR_ISSUE" : "GOOD",
+          source: "PLP_INSPECTION",
+          recordedById: actorId,
+          notes:
+            unitOverride?.notes ||
+            input.notes ||
+            "Inspeksi saat konfirmasi pengembalian",
+        });
+
+        const remainingBusy = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(toolUnit)
+          .where(
+            and(
+              eq(toolUnit.toolAssetId, target.assetId),
+              inArray(toolUnit.status, [
+                "RESERVED",
+                "IN_USE",
+                "UNDER_INSPECTION",
+              ]),
+            ),
+          );
+        if ((remainingBusy[0]?.count ?? 0) === 0) {
+          const attention = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(toolUnit)
+            .where(
+              and(
+                eq(toolUnit.toolAssetId, target.assetId),
+                inArray(toolUnit.status, ["MAINTENANCE", "DAMAGED"]),
+              ),
+            );
+          await tx
+            .update(toolAsset)
+            .set({
+              status:
+                (attention[0]?.count ?? 0) > 0 ? "MAINTENANCE" : "AVAILABLE",
+            })
+            .where(eq(toolAsset.id, target.assetId));
+        }
+      }
+    }
+
+    const pendingWasteLogs = await tx
+      .select()
+      .from(wasteDisposalLog)
+      .where(
+        and(
+          eq(wasteDisposalLog.requestId, requestId),
+          eq(wasteDisposalLog.status, "LOGGED"),
+        ),
+      );
+
+    for (const log of pendingWasteLogs) {
+      const specific =
+        input.wasteVerifications?.find((v) => v.logId === log.id) ||
+        (input.wasteVerification && input.wasteVerification.logId === log.id
+          ? input.wasteVerification
+          : null);
+      const verifyStatus = specific?.status ?? "VERIFIED";
+      const finalQuantity =
+        specific && specific.quantity !== undefined
+          ? specific.quantity
+          : Number(log.quantity);
+      const targetContainerId = specific?.containerId || log.containerId;
+
+      await tx
+        .update(wasteDisposalLog)
+        .set({
+          status: verifyStatus,
+          quantity: finalQuantity.toFixed(2),
+          containerId: targetContainerId,
+          verifiedById: actorId,
+          verifiedAt: new Date(),
+          notes: specific?.notes || log.notes,
+        })
+        .where(eq(wasteDisposalLog.id, log.id));
+
+      if (verifyStatus === "REJECTED") {
+        // Rollback reserved volume on rejection
+        const [origContainer] = await tx
+          .select()
+          .from(wasteContainer)
+          .where(eq(wasteContainer.id, log.containerId))
+          .limit(1);
+
+        if (origContainer) {
+          const rolledBackVol = Math.max(
+            0,
+            Number(origContainer.currentVolume) - Number(log.quantity),
+          ).toFixed(2);
+          await tx
+            .update(wasteContainer)
+            .set({ currentVolume: rolledBackVol })
+            .where(eq(wasteContainer.id, log.containerId));
+        }
+      } else {
+        // Handle target container change or quantity adjustment
+        if (targetContainerId !== log.containerId) {
+          // Deduct from original
+          const [orig] = await tx
+            .select()
+            .from(wasteContainer)
+            .where(eq(wasteContainer.id, log.containerId))
+            .limit(1);
+          if (orig) {
+            const v = Math.max(0, Number(orig.currentVolume) - Number(log.quantity)).toFixed(2);
+            await tx
+              .update(wasteContainer)
+              .set({ currentVolume: v })
+              .where(eq(wasteContainer.id, log.containerId));
+          }
+          // Add to new target
+          const [target] = await tx
+            .select()
+            .from(wasteContainer)
+            .where(eq(wasteContainer.id, targetContainerId))
+            .limit(1);
+          if (target) {
+            const v = (Number(target.currentVolume) + finalQuantity).toFixed(2);
+            const isFull = Number(v) >= Number(target.maxCapacity) * 0.95;
+            await tx
+              .update(wasteContainer)
+              .set({
+                currentVolume: v,
+                status: isFull ? "FULL" : target.status,
+              })
+              .where(eq(wasteContainer.id, targetContainerId));
+          }
+        } else if (finalQuantity !== Number(log.quantity)) {
+          // Adjust difference in same container
+          const diff = finalQuantity - Number(log.quantity);
+          const [container] = await tx
+            .select()
+            .from(wasteContainer)
+            .where(eq(wasteContainer.id, targetContainerId))
+            .limit(1);
+          if (container) {
+            const v = Math.max(0, Number(container.currentVolume) + diff).toFixed(2);
+            const isFull = Number(v) >= Number(container.maxCapacity) * 0.95;
+            await tx
+              .update(wasteContainer)
+              .set({
+                currentVolume: v,
+                status: isFull ? "FULL" : container.status,
+              })
+              .where(eq(wasteContainer.id, targetContainerId));
+          }
+        }
+      }
+    }
+
+    const now = new Date();
+    await tx
+      .update(resourceRequest)
+      .set({
+        status: "COMPLETED",
+        completedAt: now,
+        returnConfirmedAt: now,
+        returnConfirmedById: actorId,
+      })
+      .where(eq(resourceRequest.id, requestId));
+
+    await createNotification(tx, {
+      recipientId: request.studentId,
+      type: "REQUEST_COMPLETED",
+      title: "Pengembalian dikonfirmasi",
+      message: `${request.code} telah diverifikasi dan dikonfirmasi oleh PLP. Sesi penggunaan selesai.`,
+      referenceType: "resource_request",
+      referenceId: requestId,
+    });
+
+    await writeAudit(tx, {
+      actorId,
+      action: "COMPLETE",
+      entityType: "resource_request",
+      entityId: requestId,
+      before: { status: request.status },
+      after: { status: "COMPLETED" },
+      reason:
+        input.notes || "PLP mengonfirmasi pengembalian dan menyelesaikan sesi.",
+    });
+
+    return loadRequestDto(tx, requestId);
+  });
+}
+
+export async function rejectStudentReturn(
+  actorId: string,
+  requestId: string,
+  input: RejectReturnInput,
+) {
+  return db.transaction(async (tx) => {
+    const [request] = await tx
+      .select({
+        id: resourceRequest.id,
+        code: resourceRequest.code,
+        status: resourceRequest.status,
+        studentId: resourceRequest.studentId,
+      })
+      .from(resourceRequest)
+      .where(eq(resourceRequest.id, requestId))
+      .limit(1)
+      .for("update");
+
+    if (!request) throw new ApiError(404, "NOT_FOUND", "Request not found.");
+    if (request.status !== "RETURNED") {
+      throw new ApiError(
+        409,
+        "INVALID_STATE",
+        "Hanya request dengan status pengembalian diajukan yang dapat ditolak/dikembalikan ke mahasiswa.",
+      );
+    }
+
+    await tx
+      .update(resourceRequest)
+      .set({
+        status: "ACTIVE",
+        returnRejectionReason: input.reason,
+      })
+      .where(eq(resourceRequest.id, requestId));
+
+    await createNotification(tx, {
+      recipientId: request.studentId,
+      type: "REQUEST_REVISION",
+      title: "Pengembalian perlu perbaikan",
+      message: `Pengembalian ${request.code} belum dapat disetujui: ${input.reason}. Harap periksa kembali alat/bahan di lab.`,
+      referenceType: "resource_request",
+      referenceId: requestId,
+    });
+
+    await writeAudit(tx, {
+      actorId,
+      action: "REQUEST_REVISION",
+      entityType: "resource_request",
+      entityId: requestId,
+      before: { status: "RETURNED" },
+      after: { status: "ACTIVE" },
+      reason: input.reason,
+    });
+
     return loadRequestDto(tx, requestId);
   });
 }

@@ -67,10 +67,15 @@ export function plpNav(counts: {
           href: "/plp/inventory/opname",
           icon: "batches",
         },
+        {
+          label: "Manajemen Limbah",
+          href: "/plp/waste",
+          icon: "waste",
+        },
       ],
     },
     {
-      label: "Laporan & Riwayat",
+      label: "K3 & Aktivitas",
       items: [
         { label: "Insiden Lab", href: "/plp/incidents", icon: "incidents" },
         { label: "Riwayat Aktivitas", href: "/plp/history", icon: "history" },

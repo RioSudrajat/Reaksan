@@ -67,11 +67,27 @@ export async function getRolePermissions(
     .from(appRole)
     .where(eq(appRole.name, roleName))
     .limit(1);
-  const permissions: Permissions = row
-    ? (row.permissions as Permissions)
-    : roleName in roles
-      ? defaultPermissionsFor(roleName)
-      : {};
+
+  let permissions: Permissions;
+  if (!row) {
+    permissions = roleName in roles ? defaultPermissionsFor(roleName) : {};
+  } else {
+    const stored = (row.permissions ?? {}) as PermissionMap;
+    if (roleName in roles) {
+      // Inherit compile-time defaults for newly introduced system resources
+      // that do not exist in the stored row yet.
+      const defaults = defaultPermissionsFor(roleName);
+      permissions = { ...stored };
+      for (const [res, acts] of Object.entries(defaults)) {
+        if (!(res in stored)) {
+          (permissions as Record<string, string[]>)[res] = acts;
+        }
+      }
+    } else {
+      permissions = stored as Permissions;
+    }
+  }
+
   cache.set(roleName, {
     permissions,
     expiresAt: Date.now() + CACHE_TTL_MS,
@@ -177,12 +193,20 @@ export async function listRoleAccess(): Promise<RoleAccessSummary[]> {
   return names.map((name) => {
     const row = byName.get(name);
     const defaults = defaultPermissionsFor(name);
-    const permissions =
-      name === "admin"
-        ? defaults
-        : row
-          ? (row.permissions as PermissionMap)
-          : defaults;
+    let permissions: PermissionMap;
+    if (name === "admin") {
+      permissions = defaults;
+    } else if (row) {
+      const stored = (row.permissions ?? {}) as PermissionMap;
+      permissions = { ...stored };
+      for (const [res, acts] of Object.entries(defaults)) {
+        if (!(res in stored)) {
+          permissions[res] = acts;
+        }
+      }
+    } else {
+      permissions = defaults;
+    }
     return {
       name,
       label: roleLabels[name] ?? name,

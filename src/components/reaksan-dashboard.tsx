@@ -19,6 +19,7 @@ import {
   Search,
   ShieldAlert,
   SlidersHorizontal,
+  PackageCheck,
   X,
 } from "lucide-react";
 import { cn } from "cn";
@@ -26,6 +27,8 @@ import { ReaksanLogo, ReaksanSymbol } from "@/components/reaksan-logo";
 import { SignOutButton } from "@/components/sign-out-button";
 import { CatalogImage } from "@/components/catalog-image";
 import { StatusBadge, toneClasses } from "@/components/status-badge";
+import { StudentReturnDialog } from "@/components/student-return-dialog";
+import { StudentMobileLabView } from "@/components/student-mobile-lab-view";
 import {
   requestStatusLabels,
   requestStatusTone,
@@ -481,6 +484,22 @@ export function LabMap({
   );
 }
 
+function formatRequestResources(event: ScheduleEvent): string {
+  const instruments =
+    event.equipment?.filter((e) => e.classification === "INSTRUMENT").length ??
+    0;
+  const tools =
+    event.equipment?.filter((e) => e.classification === "TOOL").length ?? 0;
+  const materials = event.materials?.length ?? 0;
+
+  const parts: string[] = [];
+  if (instruments > 0) parts.push(`${instruments} instrumen`);
+  if (tools > 0) parts.push(`${tools} alat`);
+  if (materials > 0) parts.push(`${materials} bahan`);
+
+  return parts.length > 0 ? parts.join(", ") : "Peminjaman ruangan";
+}
+
 export function ReaksanDashboard({
   userName,
   catalog,
@@ -502,6 +521,8 @@ export function ReaksanDashboard({
   const [requestView, setRequestView] = useState<"upcoming" | "requests">(
     "upcoming",
   );
+  const [selectedReturnEvent, setSelectedReturnEvent] =
+    useState<ScheduleEvent | null>(null);
   const currentRoom =
     selectedRoom && rooms.some((room) => room.id === selectedRoom.id)
       ? selectedRoom
@@ -523,40 +544,50 @@ export function ReaksanDashboard({
       event.status === "PENDING_PLP" || event.status === "REQUEST_REVISION",
   );
   const approvedEvents = myEvents.filter(
-    (event) => event.status === "APPROVED" || event.status === "ACTIVE",
+    (event) =>
+      event.status === "APPROVED" ||
+      event.status === "ACTIVE" ||
+      event.status === "OVERDUE" ||
+      event.status === "RETURNED",
   );
-  const reservationRows = approvedEvents.map((event) => ({
-    id: event.id,
-    time: `${event.time}`,
-    mediaId: event.imageMediaId ?? null,
-    title:
-      event.resourceId && event.resourceUnit
-        ? `${event.title} · ${event.resourceUnit}`
+  const reservationRows = approvedEvents.map((event) => {
+    const isOverdue = event.status === "OVERDUE" || Boolean(event.overdue);
+    return {
+      id: event.id,
+      requestId: event.requestId || event.id,
+      roomId: event.roomId,
+      time: `${event.time}`,
+      mediaId: event.imageMediaId ?? null,
+      title: event.requestCode
+        ? `${event.title} · ${event.requestCode}`
         : event.title,
-    detail: `${event.roomName} · ${
-      event.equipment?.length
-        ? `${event.equipment.length} alat/instrumen`
-        : "tanpa instrumen"
-    }`,
-    status: requestStatusLabels[event.status],
-    tone: requestStatusTone(event.status),
-  }));
-  const requestRows = myEvents.map((event) => ({
-    id: event.resourceUnit ?? event.resourceId ?? event.requestCode ?? event.id,
-    key: event.id,
-    mediaId: event.imageMediaId ?? null,
-    title: event.title,
-    detail:
-      [
-        event.requestCode,
-        event.equipment?.length ? `${event.equipment.length} instrumen` : null,
-        event.materials?.length ? `${event.materials.length} bahan` : null,
-      ]
-        .filter(Boolean)
-        .join(" · ") || "Belum ada instrumen/bahan",
-    status: requestStatusLabels[event.status],
-    tone: requestStatusTone(event.status),
-  }));
+      detail: `${event.roomName} · ${formatRequestResources(event)}`,
+      status: isOverdue ? "Terlambat" : requestStatusLabels[event.status],
+      rawStatus: isOverdue ? "OVERDUE" : event.status,
+      tone: isOverdue ? "rose" : requestStatusTone(event.status),
+      isOverdue,
+      materials: event.materials,
+      rawEvent: event,
+    };
+  });
+  const requestRows = myEvents.map((event) => {
+    const isOverdue = event.status === "OVERDUE" || Boolean(event.overdue);
+    return {
+      id: event.requestCode || event.id,
+      key: event.id,
+      requestId: event.requestId || event.id,
+      roomId: event.roomId,
+      mediaId: event.imageMediaId ?? null,
+      title: event.title,
+      detail: `${event.roomName} · ${formatRequestResources(event)}`,
+      status: isOverdue ? "Terlambat" : requestStatusLabels[event.status],
+      rawStatus: isOverdue ? "OVERDUE" : event.status,
+      tone: isOverdue ? "rose" : requestStatusTone(event.status),
+      isOverdue,
+      materials: event.materials,
+      rawEvent: event,
+    };
+  });
 
   const firstName = userName.trim().split(/\s+/)[0] || "Peneliti";
   const equipmentByRoom = useMemo(() => {
@@ -598,7 +629,16 @@ export function ReaksanDashboard({
 
   return (
     <div id="top" className="space-y-6">
-      <section className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      {/* Mobile-Only: Streamlined Lab Components View with .map-grid */}
+      <div className="block lg:hidden">
+        <StudentMobileLabView
+          rooms={rooms}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+        />
+      </div>
+
+      <section className="hidden lg:flex mb-7 flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="text-[13px] font-medium text-[#64748B]">
             Selamat datang kembali, {firstName}
@@ -632,7 +672,7 @@ export function ReaksanDashboard({
       </section>
 
       <section
-        className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]"
+        className="hidden lg:grid mb-6 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]"
         aria-labelledby="lab-overview-title"
       >
         <div>
@@ -862,7 +902,7 @@ export function ReaksanDashboard({
       </section>
 
       <section
-        className="mb-6 grid gap-4 md:grid-cols-3"
+        className="hidden lg:grid mb-6 gap-4 md:grid-cols-3"
         aria-label="Ringkasan sumber daya"
       >
         <div className="dashboard-card flex items-start justify-between gap-4 p-5">
@@ -915,7 +955,7 @@ export function ReaksanDashboard({
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
+      <section className="hidden lg:grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
         <div id="reservations" className="dashboard-card p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <SectionTitle
@@ -1018,15 +1058,49 @@ export function ReaksanDashboard({
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between gap-4 sm:justify-end">
+                      <div className="flex items-center justify-between gap-3 sm:justify-end">
                         <p className="text-[11px] font-medium text-[#64748B]">
                           {reservation.time}
                         </p>
-                        <StatusBadge
-                          tone={reservation.tone as keyof typeof toneClasses}
-                        >
-                          Terkonfirmasi
-                        </StatusBadge>
+                        {reservation.isOverdue ||
+                        reservation.rawStatus === "OVERDUE" ? (
+                          <div className="flex items-center gap-2">
+                            <StatusBadge tone="rose">
+                              Terlambat
+                            </StatusBadge>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSelectedReturnEvent(reservation.rawEvent)
+                              }
+                              className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-[#F9B129] px-3 py-1.5 text-[11px] font-bold text-[#1E293B] hover:bg-[#F7B742] transition shadow-xs"
+                            >
+                              <PackageCheck className="size-3.5" />
+                              Selesai & Kembalikan
+                            </button>
+                          </div>
+                        ) : reservation.rawStatus === "ACTIVE" ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedReturnEvent(reservation.rawEvent)
+                            }
+                            className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-[#F9B129] px-3 py-1.5 text-[11px] font-bold text-[#1E293B] hover:bg-[#F7B742] transition shadow-xs"
+                          >
+                            <PackageCheck className="size-3.5" />
+                            Selesai & Kembalikan
+                          </button>
+                        ) : reservation.rawStatus === "RETURNED" ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-[#FED7AA] bg-[#FFF7ED] px-2.5 py-0.5 text-[10px] font-bold text-[#EA580C]">
+                            Menunggu Konfirmasi PLP
+                          </span>
+                        ) : (
+                          <StatusBadge
+                            tone={reservation.tone as keyof typeof toneClasses}
+                          >
+                            {reservation.status}
+                          </StatusBadge>
+                        )}
                       </div>
                     </div>
                   ))
@@ -1069,11 +1143,47 @@ export function ReaksanDashboard({
                           </p>
                         </div>
                       </div>
-                      <StatusBadge
-                        tone={request.tone as keyof typeof toneClasses}
-                      >
-                        {request.status}
-                      </StatusBadge>
+                      <div className="flex items-center gap-2">
+                        {request.isOverdue ||
+                        request.rawStatus === "OVERDUE" ? (
+                          <div className="flex items-center gap-2">
+                            <StatusBadge tone="rose">
+                              Terlambat
+                            </StatusBadge>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSelectedReturnEvent(request.rawEvent)
+                              }
+                              className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-[#F9B129] px-3 py-1.5 text-[11px] font-bold text-[#1E293B] hover:bg-[#F7B742] transition shadow-xs"
+                            >
+                              <PackageCheck className="size-3.5" />
+                              Selesai & Kembalikan
+                            </button>
+                          </div>
+                        ) : request.rawStatus === "ACTIVE" ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedReturnEvent(request.rawEvent)
+                            }
+                            className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-[#F9B129] px-3 py-1.5 text-[11px] font-bold text-[#1E293B] hover:bg-[#F7B742] transition shadow-xs"
+                          >
+                            <PackageCheck className="size-3.5" />
+                            Selesai & Kembalikan
+                          </button>
+                        ) : request.rawStatus === "RETURNED" ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-[#FED7AA] bg-[#FFF7ED] px-2.5 py-0.5 text-[10px] font-bold text-[#EA580C]">
+                            Menunggu Konfirmasi PLP
+                          </span>
+                        ) : (
+                          <StatusBadge
+                            tone={request.tone as keyof typeof toneClasses}
+                          >
+                            {request.status}
+                          </StatusBadge>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
@@ -1154,7 +1264,7 @@ export function ReaksanDashboard({
         </div>
       </section>
 
-      <section className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <section className="hidden lg:grid mt-4 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div id="requests" className="dashboard-card p-5 sm:p-6">
           <SectionTitle
             title="Alur Pengajuan Reservasi"
@@ -1263,6 +1373,14 @@ export function ReaksanDashboard({
       <div id="notifications" className="sr-only" aria-live="polite">
         Notifications are available from the header.
       </div>
+
+      {selectedReturnEvent && (
+        <StudentReturnDialog
+          event={selectedReturnEvent}
+          open={Boolean(selectedReturnEvent)}
+          onClose={() => setSelectedReturnEvent(null)}
+        />
+      )}
     </div>
   );
 }

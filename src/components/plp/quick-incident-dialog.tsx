@@ -10,6 +10,7 @@ export function QuickIncidentDialog({
   defaultRoomCode = "",
   defaultEquipmentCode = "",
   defaultRequestId,
+  availableEquipment,
   triggerLabel = "Lapor Insiden",
   triggerVariant = "default",
   onSuccess,
@@ -17,6 +18,7 @@ export function QuickIncidentDialog({
   defaultRoomCode?: string;
   defaultEquipmentCode?: string;
   defaultRequestId?: string;
+  availableEquipment?: Array<{ code: string; label: string }>;
   triggerLabel?: string;
   triggerVariant?: "default" | "warning" | "outline";
   onSuccess?: () => void;
@@ -172,15 +174,30 @@ export function QuickIncidentDialog({
                 </div>
                 <div>
                   <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#64748B]">
-                    Kode Asset Alat (Opsional)
+                    Alat / Unit Terkait (Opsional)
                   </label>
-                  <input
-                    type="text"
-                    value={equipmentCode}
-                    onChange={(e) => setEquipmentCode(e.target.value)}
-                    placeholder="Contoh: EQ-MC-001"
-                    className={controlClass + " mt-1"}
-                  />
+                  {availableEquipment && availableEquipment.length > 0 ? (
+                    <select
+                      value={equipmentCode}
+                      onChange={(e) => setEquipmentCode(e.target.value)}
+                      className={controlClass + " mt-1"}
+                    >
+                      <option value="">-- Pilih Alat / Unit --</option>
+                      {availableEquipment.map((eq) => (
+                        <option key={eq.code} value={eq.code}>
+                          {eq.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={equipmentCode}
+                      onChange={(e) => setEquipmentCode(e.target.value)}
+                      placeholder="Contoh: BTS-001 atau BTS-001-01"
+                      className={controlClass + " mt-1"}
+                    />
+                  )}
                 </div>
               </div>
 

@@ -99,6 +99,27 @@
       "when": 1792420000000,
       "tag": "0013_add_username_to_user",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792500000000,
+      "tag": "0014_add_waste_management",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792600000000,
+      "tag": "0015_add_return_submission",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792700000000,
+      "tag": "0016_add_waste_manifest_and_tps",
+      "breakpoints": true
     }
   ]
 }

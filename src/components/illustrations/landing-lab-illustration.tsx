@@ -1,8 +1,20 @@
 export function LandingLabIllustration({
   className = "w-full max-w-[560px] h-auto",
+  idPrefix = "lab",
 }: {
   className?: string;
+  idPrefix?: string;
 }) {
+  const chemGlow = `${idPrefix}-chem-glow`;
+  const glassGrad = `${idPrefix}-glass-grad`;
+  const liquidBlue = `${idPrefix}-liquid-blue`;
+  const liquidAmber = `${idPrefix}-liquid-amber`;
+  const liquidPurple = `${idPrefix}-liquid-purple`;
+  const liquidEmerald = `${idPrefix}-liquid-emerald`;
+  const screenGradGold = `${idPrefix}-screen-grad-gold`;
+  const chemShadow = `${idPrefix}-chem-shadow`;
+  const benchShadow = `${idPrefix}-bench-shadow`;
+
   return (
     <svg
       viewBox="0 0 640 500"
@@ -14,40 +26,40 @@ export function LandingLabIllustration({
     >
       <defs>
         {/* Soft atmospheric gradient */}
-        <radialGradient id="chem-glow" cx="50%" cy="50%" r="50%">
+        <radialGradient id={chemGlow} cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#FEF1CC" stopOpacity="0.8" />
           <stop offset="60%" stopColor="#FEF7E6" stopOpacity="0.4" />
           <stop offset="100%" stopColor="#FAF7F2" stopOpacity="0" />
         </radialGradient>
 
-        <linearGradient id="glass-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={glassGrad} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.75" />
           <stop offset="40%" stopColor="#EAF3FA" stopOpacity="0.5" />
           <stop offset="100%" stopColor="#D2E6F5" stopOpacity="0.6" />
         </linearGradient>
 
-        <linearGradient id="liquid-blue" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id={liquidBlue} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#73A5E8" stopOpacity="0.85" />
           <stop offset="100%" stopColor="#3B74C4" stopOpacity="0.95" />
         </linearGradient>
 
-        <linearGradient id="liquid-amber" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id={liquidAmber} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#FBD47A" stopOpacity="0.9" />
           <stop offset="100%" stopColor="#F9B129" stopOpacity="0.95" />
         </linearGradient>
 
-        <linearGradient id="liquid-purple" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id={liquidPurple} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#D7A9E3" stopOpacity="0.85" />
           <stop offset="100%" stopColor="#9B59B6" stopOpacity="0.95" />
         </linearGradient>
 
-        <linearGradient id="liquid-emerald" x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id={liquidEmerald} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#5CD88F" stopOpacity="0.85" />
           <stop offset="100%" stopColor="#048444" stopOpacity="0.95" />
         </linearGradient>
 
         <linearGradient
-          id="screen-grad-gold"
+          id={screenGradGold}
           x1="0%"
           y1="0%"
           x2="100%"
@@ -58,7 +70,7 @@ export function LandingLabIllustration({
         </linearGradient>
 
         <filter
-          id="chem-shadow"
+          id={chemShadow}
           x="-8%"
           y="-8%"
           width="120%"
@@ -74,7 +86,7 @@ export function LandingLabIllustration({
           />
         </filter>
         <filter
-          id="bench-shadow"
+          id={benchShadow}
           x="-5%"
           y="-5%"
           width="110%"
@@ -92,7 +104,7 @@ export function LandingLabIllustration({
       </defs>
 
       {/* Background Soft Chemistry Aura */}
-      <circle cx="340" cy="250" r="220" fill="url(#chem-glow)" />
+      <circle cx="340" cy="250" r="220" fill={`url(#${chemGlow})`} />
 
       {/* Floating Organic Molecular Formula Badges */}
       {/* Molecule 1: Benzene Ring Hexagon */}
@@ -158,7 +170,7 @@ export function LandingLabIllustration({
       </g>
 
       {/* Floating Analytical Status Metric: UV-Vis Absorbance */}
-      <g filter="url(#chem-shadow)">
+      <g filter={`url(#${chemShadow})`}>
         <rect
           x="70"
           y="115"
@@ -210,7 +222,7 @@ export function LandingLabIllustration({
       </g>
 
       {/* Floating Lab Safety & GHS Symbol Card */}
-      <g filter="url(#chem-shadow)">
+      <g filter={`url(#${chemShadow})`}>
         <rect
           x="475"
           y="125"
@@ -256,7 +268,7 @@ export function LandingLabIllustration({
       </g>
 
       {/* Heavy Chemical Laboratory Workstation Bench */}
-      <g filter="url(#bench-shadow)">
+      <g filter={`url(#${benchShadow})`}>
         {/* Main Bench Top (Epoxy chemical-resistant gray top) */}
         <path d="M60 340 L580 340 L565 355 L75 355 Z" fill="#D8DEE4" />
         <rect
@@ -322,7 +334,7 @@ export function LandingLabIllustration({
           width="8"
           height="130"
           rx="3"
-          fill="url(#glass-grad)"
+          fill={`url(#${glassGrad})`}
           stroke="#94A3B8"
           strokeWidth="1"
         />
@@ -389,7 +401,7 @@ export function LandingLabIllustration({
           y="200"
           width="6"
           height="98"
-          fill="url(#liquid-amber)"
+          fill={`url(#${liquidAmber})`}
           opacity="0.85"
         />
         {/* Stopcock valve */}
@@ -401,20 +413,20 @@ export function LandingLabIllustration({
         {/* Erlenmeyer Flask collecting titrant */}
         <path
           d="M136 308 L148 308 L158 333 L126 333 Z"
-          fill="url(#glass-grad)"
+          fill={`url(#${glassGrad})`}
           stroke="#94A3B8"
           strokeWidth="1.2"
         />
         {/* Titration liquid in Erlenmeyer (Reacting pink/purple indicator) */}
         <path
           d="M130 324 Q142 322 154 324 L157 332 L127 332 Z"
-          fill="url(#liquid-purple)"
+          fill={`url(#${liquidPurple})`}
           opacity="0.85"
         />
       </g>
 
       {/* APPARATUS 2: Magnetic Stirrer / Hotplate with Beaker */}
-      <g filter="url(#chem-shadow)">
+      <g filter={`url(#${chemShadow})`}>
         {/* Hotplate unit */}
         <rect
           x="180"
@@ -451,7 +463,7 @@ export function LandingLabIllustration({
           width="40"
           height="46"
           rx="2"
-          fill="url(#glass-grad)"
+          fill={`url(#${glassGrad})`}
           stroke="#94A3B8"
           strokeWidth="1.2"
         />
@@ -490,7 +502,7 @@ export function LandingLabIllustration({
         {/* Blue Copper(II) Sulfate solution reacting */}
         <path
           d="M196 280 Q215 275 234 280 L234 305 L196 305 Z"
-          fill="url(#liquid-blue)"
+          fill={`url(#${liquidBlue})`}
         />
         {/* Magnetic stir bar in beaker */}
         <rect x="210" y="299" width="10" height="3" rx="1.5" fill="#FFFFFF" />
@@ -508,7 +520,7 @@ export function LandingLabIllustration({
       </g>
 
       {/* APPARATUS 3: Test Tube Rack with Multi-Colored Reagents */}
-      <g filter="url(#chem-shadow)">
+      <g filter={`url(#${chemShadow})`}>
         {/* Wooden / Acrylic Rack */}
         <rect
           x="265"
@@ -536,7 +548,7 @@ export function LandingLabIllustration({
           width="8"
           height="52"
           rx="4"
-          fill="url(#glass-grad)"
+          fill={`url(#${glassGrad})`}
           stroke="#94A3B8"
           strokeWidth="1"
         />
@@ -546,7 +558,7 @@ export function LandingLabIllustration({
           width="6"
           height="35"
           rx="3"
-          fill="url(#liquid-amber)"
+          fill={`url(#${liquidAmber})`}
         />
 
         {/* Tube 2: Emerald Green Solution */}
@@ -556,7 +568,7 @@ export function LandingLabIllustration({
           width="8"
           height="57"
           rx="4"
-          fill="url(#glass-grad)"
+          fill={`url(#${glassGrad})`}
           stroke="#94A3B8"
           strokeWidth="1"
         />
@@ -566,7 +578,7 @@ export function LandingLabIllustration({
           width="6"
           height="40"
           rx="3"
-          fill="url(#liquid-emerald)"
+          fill={`url(#${liquidEmerald})`}
         />
 
         {/* Tube 3: Azure Blue Solution */}
@@ -576,7 +588,7 @@ export function LandingLabIllustration({
           width="8"
           height="50"
           rx="4"
-          fill="url(#glass-grad)"
+          fill={`url(#${glassGrad})`}
           stroke="#94A3B8"
           strokeWidth="1"
         />
@@ -586,7 +598,7 @@ export function LandingLabIllustration({
           width="6"
           height="30"
           rx="3"
-          fill="url(#liquid-blue)"
+          fill={`url(#${liquidBlue})`}
         />
 
         {/* Tube 4: Violet Permanganate Solution */}
@@ -596,7 +608,7 @@ export function LandingLabIllustration({
           width="8"
           height="54"
           rx="4"
-          fill="url(#glass-grad)"
+          fill={`url(#${glassGrad})`}
           stroke="#94A3B8"
           strokeWidth="1"
         />
@@ -606,12 +618,12 @@ export function LandingLabIllustration({
           width="6"
           height="38"
           rx="3"
-          fill="url(#liquid-purple)"
+          fill={`url(#${liquidPurple})`}
         />
       </g>
 
       {/* APPARATUS 4: Computer Monitor with Analytical Chemistry Software */}
-      <g filter="url(#chem-shadow)">
+      <g filter={`url(#${chemShadow})`}>
         {/* Monitor Stand */}
         <rect x="400" y="315" width="30" height="20" rx="2" fill="#94A3B8" />
         <rect x="385" y="331" width="60" height="4" rx="2" fill="#64748B" />
@@ -634,7 +646,7 @@ export function LandingLabIllustration({
           width="135"
           height="128"
           rx="6"
-          fill="url(#screen-grad-gold)"
+          fill={`url(#${screenGradGold})`}
         />
 
         {/* Software Top App Bar */}
@@ -885,7 +897,7 @@ export function LandingLabIllustration({
       </g>
 
       {/* APPARATUS 5 (FOREGROUND RIGHT): Chemical Reagent Amber Bottle & Wash Bottle */}
-      <g filter="url(#chem-shadow)">
+      <g filter={`url(#${chemShadow})`}>
         {/* Brown / Amber Reagent Bottle (e.g. H2SO4) */}
         <rect
           x="555"

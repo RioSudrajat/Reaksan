@@ -22,3 +22,4 @@ export * from "./app-setting";
 export * from "./app-role";
 export * from "./media";
 export * from "./stock-opname";
+export * from "./waste";
